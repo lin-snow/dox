@@ -15,6 +15,16 @@ export interface TodoPatch {
   done?: boolean;
 }
 
+// TodoApi is the contract surface that callers (TUI / CLI commands) depend on.
+// Test fakes can implement it without needing a Config or real network.
+export interface TodoApi {
+  listTodos(): Promise<Todo[]>;
+  getTodo(id: string): Promise<Todo>;
+  createTodo(title: string): Promise<Todo>;
+  updateTodo(id: string, patch: TodoPatch): Promise<Todo>;
+  deleteTodo(id: string): Promise<void>;
+}
+
 // Subset of grpc-gateway's error body format.
 interface ApiErrorBody {
   code?: number;
@@ -66,7 +76,7 @@ export class ApiError extends Error {
   }
 }
 
-export class ApiClient {
+export class ApiClient implements TodoApi {
   constructor(private readonly cfg: Config) {}
 
   async listTodos(): Promise<Todo[]> {
