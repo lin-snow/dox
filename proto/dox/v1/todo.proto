@@ -22,9 +22,37 @@ message Todo {
 
 // TodoService manages todos for the authenticated device.
 service TodoService {
-  // ListTodos returns all todos.
+  // ListTodos returns all todos, newest first.
   rpc ListTodos(ListTodosRequest) returns (ListTodosResponse) {
     option (google.api.http) = {get: "/v1/todos"};
+  }
+
+  // GetTodo returns a single todo by id.
+  rpc GetTodo(GetTodoRequest) returns (Todo) {
+    option (google.api.http) = {get: "/v1/todos/{id}"};
+  }
+
+  // CreateTodo creates a new todo and returns it with server-generated fields.
+  rpc CreateTodo(CreateTodoRequest) returns (Todo) {
+    option (google.api.http) = {
+      post: "/v1/todos"
+      body: "*"
+    };
+  }
+
+  // UpdateTodo applies a partial update to a todo. Fields absent in the request
+  // are left unchanged.
+  rpc UpdateTodo(UpdateTodoRequest) returns (Todo) {
+    option (google.api.http) = {
+      patch: "/v1/todos/{id}"
+      body: "*"
+    };
+  }
+
+  // DeleteTodo permanently deletes a todo (hard delete — no tombstones since
+  // server is the single source of truth in thin-client mode).
+  rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse) {
+    option (google.api.http) = {delete: "/v1/todos/{id}"};
   }
 }
 
@@ -33,3 +61,23 @@ message ListTodosRequest {}
 message ListTodosResponse {
   repeated Todo todos = 1;
 }
+
+message GetTodoRequest {
+  string id = 1;
+}
+
+message CreateTodoRequest {
+  string title = 1;
+}
+
+message UpdateTodoRequest {
+  string id = 1;
+  optional string title = 2;
+  optional bool done = 3;
+}
+
+message DeleteTodoRequest {
+  string id = 1;
+}
+
+message DeleteTodoResponse {}

@@ -11,7 +11,7 @@ paths:
         get:
             tags:
                 - TodoService
-            description: ListTodos returns all todos.
+            description: ListTodos returns all todos, newest first.
             operationId: TodoService_ListTodos
             responses:
                 "200":
@@ -26,8 +26,123 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+        post:
+            tags:
+                - TodoService
+            description: CreateTodo creates a new todo and returns it with server-generated fields.
+            operationId: TodoService_CreateTodo
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateTodoRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Todo'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/todos/{id}:
+        get:
+            tags:
+                - TodoService
+            description: GetTodo returns a single todo by id.
+            operationId: TodoService_GetTodo
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Todo'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        delete:
+            tags:
+                - TodoService
+            description: |-
+                DeleteTodo permanently deletes a todo (hard delete — no tombstones since
+                 server is the single source of truth in thin-client mode).
+            operationId: TodoService_DeleteTodo
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteTodoResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - TodoService
+            description: |-
+                UpdateTodo applies a partial update to a todo. Fields absent in the request
+                 are left unchanged.
+            operationId: TodoService_UpdateTodo
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateTodoRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Todo'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
 components:
     schemas:
+        CreateTodoRequest:
+            type: object
+            properties:
+                title:
+                    type: string
+        DeleteTodoResponse:
+            type: object
+            properties: {}
         GoogleProtobufAny:
             type: object
             properties:
@@ -78,5 +193,14 @@ components:
                     type: string
                     description: Last update time, UTC unix milliseconds.
             description: Todo is a single todo item.
+        UpdateTodoRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                title:
+                    type: string
+                done:
+                    type: boolean
 tags:
     - name: TodoService

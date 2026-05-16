@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/todo.proto.
  */
 export const file_dox_v1_todo: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIlcKBFRvZG8SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEZG9uZRgDIAEoCBISCgpjcmVhdGVkX2F0GAQgASgDEhIKCnVwZGF0ZWRfYXQYBSABKAMiEgoQTGlzdFRvZG9zUmVxdWVzdCIwChFMaXN0VG9kb3NSZXNwb25zZRIbCgV0b2RvcxgBIAMoCzIMLmRveC52MS5Ub2RvMmIKC1RvZG9TZXJ2aWNlElMKCUxpc3RUb2RvcxIYLmRveC52MS5MaXN0VG9kb3NSZXF1ZXN0GhkuZG94LnYxLkxpc3RUb2Rvc1Jlc3BvbnNlIhGC0+STAgsSCS92MS90b2Rvc0I2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIlcKBFRvZG8SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEZG9uZRgDIAEoCBISCgpjcmVhdGVkX2F0GAQgASgDEhIKCnVwZGF0ZWRfYXQYBSABKAMiEgoQTGlzdFRvZG9zUmVxdWVzdCIwChFMaXN0VG9kb3NSZXNwb25zZRIbCgV0b2RvcxgBIAMoCzIMLmRveC52MS5Ub2RvIhwKDkdldFRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJIiIKEUNyZWF0ZVRvZG9SZXF1ZXN0Eg0KBXRpdGxlGAEgASgJIlkKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBQggKBl90aXRsZUIHCgVfZG9uZSIfChFEZWxldGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUb2RvUmVzcG9uc2UypwMKC1RvZG9TZXJ2aWNlElMKCUxpc3RUb2RvcxIYLmRveC52MS5MaXN0VG9kb3NSZXF1ZXN0GhkuZG94LnYxLkxpc3RUb2Rvc1Jlc3BvbnNlIhGC0+STAgsSCS92MS90b2RvcxJHCgdHZXRUb2RvEhYuZG94LnYxLkdldFRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFoLT5JMCEBIOL3YxL3RvZG9zL3tpZH0SSwoKQ3JlYXRlVG9kbxIZLmRveC52MS5DcmVhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhSC0+STAg46ASoiCS92MS90b2RvcxJQCgpVcGRhdGVUb2RvEhkuZG94LnYxLlVwZGF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iGYLT5JMCEzoBKjIOL3YxL3RvZG9zL3tpZH0SWwoKRGVsZXRlVG9kbxIZLmRveC52MS5EZWxldGVUb2RvUmVxdWVzdBoaLmRveC52MS5EZWxldGVUb2RvUmVzcG9uc2UiFoLT5JMCECoOL3YxL3RvZG9zL3tpZH1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
 
 /**
  * Todo is a single todo item.
@@ -93,13 +93,104 @@ export const ListTodosResponseSchema: GenMessage<ListTodosResponse> = /*@__PURE_
   messageDesc(file_dox_v1_todo, 2);
 
 /**
+ * @generated from message dox.v1.GetTodoRequest
+ */
+export type GetTodoRequest = Message<"dox.v1.GetTodoRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dox.v1.GetTodoRequest.
+ * Use `create(GetTodoRequestSchema)` to create a new message.
+ */
+export const GetTodoRequestSchema: GenMessage<GetTodoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 3);
+
+/**
+ * @generated from message dox.v1.CreateTodoRequest
+ */
+export type CreateTodoRequest = Message<"dox.v1.CreateTodoRequest"> & {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message dox.v1.CreateTodoRequest.
+ * Use `create(CreateTodoRequestSchema)` to create a new message.
+ */
+export const CreateTodoRequestSchema: GenMessage<CreateTodoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 4);
+
+/**
+ * @generated from message dox.v1.UpdateTodoRequest
+ */
+export type UpdateTodoRequest = Message<"dox.v1.UpdateTodoRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional string title = 2;
+   */
+  title?: string | undefined;
+
+  /**
+   * @generated from field: optional bool done = 3;
+   */
+  done?: boolean | undefined;
+};
+
+/**
+ * Describes the message dox.v1.UpdateTodoRequest.
+ * Use `create(UpdateTodoRequestSchema)` to create a new message.
+ */
+export const UpdateTodoRequestSchema: GenMessage<UpdateTodoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 5);
+
+/**
+ * @generated from message dox.v1.DeleteTodoRequest
+ */
+export type DeleteTodoRequest = Message<"dox.v1.DeleteTodoRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dox.v1.DeleteTodoRequest.
+ * Use `create(DeleteTodoRequestSchema)` to create a new message.
+ */
+export const DeleteTodoRequestSchema: GenMessage<DeleteTodoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 6);
+
+/**
+ * @generated from message dox.v1.DeleteTodoResponse
+ */
+export type DeleteTodoResponse = Message<"dox.v1.DeleteTodoResponse"> & {
+};
+
+/**
+ * Describes the message dox.v1.DeleteTodoResponse.
+ * Use `create(DeleteTodoResponseSchema)` to create a new message.
+ */
+export const DeleteTodoResponseSchema: GenMessage<DeleteTodoResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 7);
+
+/**
  * TodoService manages todos for the authenticated device.
  *
  * @generated from service dox.v1.TodoService
  */
 export const TodoService: GenService<{
   /**
-   * ListTodos returns all todos.
+   * ListTodos returns all todos, newest first.
    *
    * @generated from rpc dox.v1.TodoService.ListTodos
    */
@@ -107,6 +198,48 @@ export const TodoService: GenService<{
     methodKind: "unary";
     input: typeof ListTodosRequestSchema;
     output: typeof ListTodosResponseSchema;
+  },
+  /**
+   * GetTodo returns a single todo by id.
+   *
+   * @generated from rpc dox.v1.TodoService.GetTodo
+   */
+  getTodo: {
+    methodKind: "unary";
+    input: typeof GetTodoRequestSchema;
+    output: typeof TodoSchema;
+  },
+  /**
+   * CreateTodo creates a new todo and returns it with server-generated fields.
+   *
+   * @generated from rpc dox.v1.TodoService.CreateTodo
+   */
+  createTodo: {
+    methodKind: "unary";
+    input: typeof CreateTodoRequestSchema;
+    output: typeof TodoSchema;
+  },
+  /**
+   * UpdateTodo applies a partial update to a todo. Fields absent in the request
+   * are left unchanged.
+   *
+   * @generated from rpc dox.v1.TodoService.UpdateTodo
+   */
+  updateTodo: {
+    methodKind: "unary";
+    input: typeof UpdateTodoRequestSchema;
+    output: typeof TodoSchema;
+  },
+  /**
+   * DeleteTodo permanently deletes a todo (hard delete — no tombstones since
+   * server is the single source of truth in thin-client mode).
+   *
+   * @generated from rpc dox.v1.TodoService.DeleteTodo
+   */
+  deleteTodo: {
+    methodKind: "unary";
+    input: typeof DeleteTodoRequestSchema;
+    output: typeof DeleteTodoResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_todo, 0);

@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./api": "./src/api/index.ts",
-    "./config": "./src/config/index.ts"
+    "./config": "./src/config/index.ts",
+    "./output": "./src/output/index.ts"
   },
   "dependencies": {
     "@dox/proto-gen": "workspace:*",

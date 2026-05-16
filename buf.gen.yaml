@@ -1,5 +1,7 @@
 version: v2
-clean: true
+# clean: true would wipe packages/proto-gen/src/ on every run, taking
+# hand-written index.ts with it. Until we have a removed-proto migration
+# story, prefer stale files (they get overwritten anyway).
 plugins:
   # === Go ===
   # Message types
