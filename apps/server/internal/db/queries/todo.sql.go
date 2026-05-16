@@ -7,6 +7,7 @@ package queries
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createTodo = `-- name: CreateTodo :one
@@ -51,6 +52,36 @@ func (q *Queries) DeleteTodo(ctx context.Context, id string) (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const findTodoIDsByPrefix = `-- name: FindTodoIDsByPrefix :many
+SELECT id FROM todos
+WHERE id LIKE ?1 || '%'
+ORDER BY id
+LIMIT 2
+`
+
+func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, prefix sql.NullString) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, findTodoIDsByPrefix, prefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTodo = `-- name: GetTodo :one

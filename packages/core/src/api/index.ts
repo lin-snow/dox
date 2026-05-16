@@ -27,6 +27,7 @@ const grpcCodeName: Record<number, string> = {
   5: "NotFound",
   6: "AlreadyExists",
   7: "PermissionDenied",
+  9: "FailedPrecondition",
   13: "Internal",
   14: "Unavailable",
   16: "Unauthenticated",
@@ -41,6 +42,7 @@ function friendlyMessage(status: number, body: ApiErrorBody): string {
   if (code === 5) return `未找到${detail ? `: ${detail}` : ""}`;
   if (code === 3) return `参数错误${detail ? `: ${detail}` : ""}`;
   if (code === 7) return `权限不足${detail ? `: ${detail}` : ""}`;
+  if (code === 9) return `操作前置条件不满足${detail ? `: ${detail}` : ""}`;
   if (code === 14 || status === 503) return `服务暂不可用${detail ? `: ${detail}` : ""}`;
   if (status >= 500) return `服务器错误 (${status})${detail ? `: ${detail}` : ""}`;
 
