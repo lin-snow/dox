@@ -28,7 +28,7 @@ type Querier interface {
 	CreateTodo(ctx context.Context, arg queries.CreateTodoParams) (queries.Todo, error)
 	UpdateTodo(ctx context.Context, arg queries.UpdateTodoParams) (queries.Todo, error)
 	DeleteTodo(ctx context.Context, id string) (int64, error)
-	FindTodoIDsByPrefix(ctx context.Context, prefix sql.NullString) ([]string, error)
+	FindTodoIDsByPrefix(ctx context.Context, prefix string) ([]string, error)
 }
 
 type TodoService struct {
@@ -63,10 +63,7 @@ func (s *TodoService) GetTodo(ctx context.Context, req *doxv1.GetTodoRequest) (*
 	}
 	row, err := s.q.GetTodo(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "todo %q not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "get todo: %v", err)
+		return nil, translateGetErr(err, id)
 	}
 	return modelToProto(row), nil
 }
@@ -105,10 +102,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoReque
 	// transaction would be overkill until multi-device support lands.
 	existing, err := s.q.GetTodo(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "todo %q not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "get todo: %v", err)
+		return nil, translateGetErr(err, id)
 	}
 
 	title := existing.Title
@@ -125,7 +119,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoReque
 
 	done := existing.Done
 	if req.Done != nil {
-		done = btoi(*req.Done)
+		done = *req.Done
 	}
 
 	row, err := s.q.UpdateTodo(ctx, queries.UpdateTodoParams{
@@ -169,7 +163,7 @@ func (s *TodoService) resolveID(ctx context.Context, raw string) (string, error)
 		return normalized, nil
 	}
 
-	matches, err := s.q.FindTodoIDsByPrefix(ctx, sql.NullString{String: normalized, Valid: true})
+	matches, err := s.q.FindTodoIDsByPrefix(ctx, normalized)
 	if err != nil {
 		return "", status.Errorf(codes.Internal, "resolve prefix: %v", err)
 	}
@@ -183,19 +177,21 @@ func (s *TodoService) resolveID(ctx context.Context, raw string) (string, error)
 	}
 }
 
+// translateGetErr maps a single-row lookup error to gRPC: no-rows → NotFound,
+// anything else → Internal.
+func translateGetErr(err error, id string) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return status.Errorf(codes.NotFound, "todo %q not found", id)
+	}
+	return status.Errorf(codes.Internal, "get todo: %v", err)
+}
+
 func modelToProto(t queries.Todo) *doxv1.Todo {
 	return &doxv1.Todo{
 		Id:        t.ID,
 		Title:     t.Title,
-		Done:      t.Done != 0,
+		Done:      t.Done,
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
 	}
-}
-
-func btoi(b bool) int64 {
-	if b {
-		return 1
-	}
-	return 0
 }

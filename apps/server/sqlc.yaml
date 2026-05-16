@@ -10,3 +10,7 @@ sql:
         emit_json_tags: false
         emit_interface: false
         emit_empty_slices: true
+        overrides:
+          # SQLite has no native bool; map the done column from INTEGER → bool.
+          - column: "todos.done"
+            go_type: "bool"

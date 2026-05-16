@@ -25,7 +25,8 @@ DELETE FROM todos
 WHERE id = ?;
 
 -- name: FindTodoIDsByPrefix :many
+-- CAST forces sqlc to type prefix as non-null string instead of sql.NullString.
 SELECT id FROM todos
-WHERE id LIKE sqlc.arg('prefix') || '%'
+WHERE id LIKE CAST(sqlc.arg('prefix') AS TEXT) || '%'
 ORDER BY id
 LIMIT 2;

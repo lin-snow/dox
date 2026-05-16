@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package dox.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
+
+// AuthService is the only public surface (no Authorization header required).
+// All other RPCs require a bearer token issued via RedeemPairingCode.
+service AuthService {
+  // RedeemPairingCode trades a one-time pairing code for a per-device bearer
+  // token. The code is invalidated on success and rejected if expired or
+  // already consumed.
+  rpc RedeemPairingCode(RedeemPairingCodeRequest) returns (RedeemPairingCodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/redeem"
+      body: "*"
+    };
+  }
+}
+
+message RedeemPairingCodeRequest {
+  string code = 1;
+}
+
+message RedeemPairingCodeResponse {
+  string token = 1;
+  string device_id = 2;
+  string device_name = 3;
+}

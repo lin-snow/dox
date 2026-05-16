@@ -7,7 +7,6 @@ package queries
 
 import (
 	"context"
-	"database/sql"
 )
 
 const createTodo = `-- name: CreateTodo :one
@@ -56,12 +55,13 @@ func (q *Queries) DeleteTodo(ctx context.Context, id string) (int64, error) {
 
 const findTodoIDsByPrefix = `-- name: FindTodoIDsByPrefix :many
 SELECT id FROM todos
-WHERE id LIKE ?1 || '%'
+WHERE id LIKE CAST(?1 AS TEXT) || '%'
 ORDER BY id
 LIMIT 2
 `
 
-func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, prefix sql.NullString) ([]string, error) {
+// CAST forces sqlc to type prefix as non-null string instead of sql.NullString.
+func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, prefix string) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, findTodoIDsByPrefix, prefix)
 	if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ RETURNING id, title, done, created_at, updated_at
 
 type UpdateTodoParams struct {
 	Title     string
-	Done      int64
+	Done      bool
 	UpdatedAt int64
 	ID        string
 }

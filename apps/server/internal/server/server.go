@@ -28,15 +28,19 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	q := queries.New(dbConn)
 	todoSvc := service.NewTodoService(q)
+	authSvc := service.NewAuthService(q)
 
 	mux := runtime.NewServeMux()
 	if err := doxv1.RegisterTodoServiceHandlerServer(ctx, mux, todoSvc); err != nil {
-		return fmt.Errorf("register handlers: %w", err)
+		return fmt.Errorf("register todo handlers: %w", err)
+	}
+	if err := doxv1.RegisterAuthServiceHandlerServer(ctx, mux, authSvc); err != nil {
+		return fmt.Errorf("register auth handlers: %w", err)
 	}
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           auth.Middleware(cfg.BootstrapToken)(mux),
+		Handler:           auth.Middleware(cfg.BootstrapToken, &deviceVerifier{q: q})(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
 
-import { saveConfig } from "@dox/core/config";
+import { redeemPairingCode, saveConfig } from "@dox/core";
 
 interface LoginOptions {
   server: string;
@@ -17,16 +17,25 @@ export async function loginCommand(opts: LoginOptions): Promise<void> {
 
   p.intro(`Login to ${serverUrl.origin}`);
 
-  const token = await p.password({
-    message: "Paste your bootstrap token:",
-    validate: (v) => (v.length < 16 ? "Token looks too short (expected 32+ hex chars)" : undefined),
+  const code = await p.text({
+    message: "Enter pairing code (run `dox-server pair --name <device>` on the server):",
+    placeholder: "ABCD-EFGH",
+    validate: (v) => (v.replace(/[-\s]/g, "").length < 6 ? "Pairing code looks too short" : undefined),
   });
 
-  if (p.isCancel(token)) {
+  if (p.isCancel(code)) {
     p.cancel("Login cancelled");
     process.exit(1);
   }
 
-  await saveConfig({ server: serverUrl.origin, token });
-  p.outro(`Logged in. Config saved to ~/.config/dox/config.toml`);
+  let result;
+  try {
+    result = await redeemPairingCode(serverUrl.origin, code);
+  } catch (err) {
+    p.cancel(`Login failed: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  await saveConfig({ server: serverUrl.origin, token: result.token });
+  p.outro(`Logged in as "${result.deviceName}". Config saved to ~/.config/dox/config.toml`);
 }
