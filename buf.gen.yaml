@@ -1,0 +1,29 @@
+version: v2
+clean: true
+plugins:
+  # === Go ===
+  # Message types
+  - remote: buf.build/protocolbuffers/go
+    out: apps/server/gen
+    opt: paths=source_relative
+  # gRPC service stubs
+  - remote: buf.build/grpc/go
+    out: apps/server/gen
+    opt: paths=source_relative
+  # grpc-gateway HTTP/JSON reverse proxy
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: apps/server/gen
+    opt: paths=source_relative
+
+  # === OpenAPI 3 documentation (gnostic) ===
+  - remote: buf.build/community/google-gnostic-openapi
+    out: apps/server/gen/openapi
+
+  # === TypeScript ===
+  # Message types only — we hit grpc-gateway HTTP/JSON with fetch, no gRPC-Web.
+  # include_imports pulls in google.api.* so the file_descriptor reference resolves.
+  - remote: buf.build/bufbuild/es
+    out: packages/proto-gen/src
+    opt:
+      - target=ts
+    include_imports: true

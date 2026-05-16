@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package dox.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
+
+// Todo is a single todo item.
+message Todo {
+  // Server-generated ULID, primary key.
+  string id = 1;
+  // Human-readable title.
+  string title = 2;
+  // Whether the todo is marked done.
+  bool done = 3;
+  // Creation time, UTC unix milliseconds.
+  int64 created_at = 4;
+  // Last update time, UTC unix milliseconds.
+  int64 updated_at = 5;
+}
+
+// TodoService manages todos for the authenticated device.
+service TodoService {
+  // ListTodos returns all todos.
+  rpc ListTodos(ListTodosRequest) returns (ListTodosResponse) {
+    option (google.api.http) = {get: "/v1/todos"};
+  }
+}
+
+message ListTodosRequest {}
+
+message ListTodosResponse {
+  repeated Todo todos = 1;
+}
