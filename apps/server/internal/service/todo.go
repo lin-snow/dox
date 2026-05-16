@@ -15,16 +15,20 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
 
-const maxTitleLen = 1024
+const (
+	maxTitleLen = 1024
+	ulidLen     = 26
+)
 
-// Querier is the subset of queries.Queries used by TodoService, defined here so
-// tests can substitute an in-memory fake without spinning up SQLite.
+// Querier is the subset of *queries.Queries used here; defined as an interface
+// so tests can substitute a fake without a real database.
 type Querier interface {
 	ListTodos(ctx context.Context) ([]queries.Todo, error)
 	GetTodo(ctx context.Context, id string) (queries.Todo, error)
 	CreateTodo(ctx context.Context, arg queries.CreateTodoParams) (queries.Todo, error)
 	UpdateTodo(ctx context.Context, arg queries.UpdateTodoParams) (queries.Todo, error)
 	DeleteTodo(ctx context.Context, id string) (int64, error)
+	FindTodoIDsByPrefix(ctx context.Context, prefix sql.NullString) ([]string, error)
 }
 
 type TodoService struct {
@@ -53,13 +57,14 @@ func (s *TodoService) ListTodos(ctx context.Context, _ *doxv1.ListTodosRequest) 
 }
 
 func (s *TodoService) GetTodo(ctx context.Context, req *doxv1.GetTodoRequest) (*doxv1.Todo, error) {
-	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+	id, err := s.resolveID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
 	}
-	row, err := s.q.GetTodo(ctx, req.GetId())
+	row, err := s.q.GetTodo(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "todo %q not found", req.GetId())
+			return nil, status.Errorf(codes.NotFound, "todo %q not found", id)
 		}
 		return nil, status.Errorf(codes.Internal, "get todo: %v", err)
 	}
@@ -90,17 +95,18 @@ func (s *TodoService) CreateTodo(ctx context.Context, req *doxv1.CreateTodoReque
 }
 
 func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*doxv1.Todo, error) {
-	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+	id, err := s.resolveID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
 	}
 
-	// Read-modify-write under a single connection (SetMaxOpenConns(1) in db.Open
-	// effectively serializes writers, so the lost-update race window stays tiny
-	// for single-user dox; a real transaction is overkill until multi-device.)
-	existing, err := s.q.GetTodo(ctx, req.GetId())
+	// Read-modify-write. SetMaxOpenConns(1) in db.Open serializes writers, so
+	// the lost-update race window is tiny at single-user scope; an explicit
+	// transaction would be overkill until multi-device support lands.
+	existing, err := s.q.GetTodo(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "todo %q not found", req.GetId())
+			return nil, status.Errorf(codes.NotFound, "todo %q not found", id)
 		}
 		return nil, status.Errorf(codes.Internal, "get todo: %v", err)
 	}
@@ -126,7 +132,7 @@ func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoReque
 		Title:     title,
 		Done:      done,
 		UpdatedAt: s.now(),
-		ID:        req.GetId(),
+		ID:        id,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "update todo: %v", err)
@@ -135,17 +141,46 @@ func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoReque
 }
 
 func (s *TodoService) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*doxv1.DeleteTodoResponse, error) {
-	if req.GetId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "id is required")
+	id, err := s.resolveID(ctx, req.GetId())
+	if err != nil {
+		return nil, err
 	}
-	n, err := s.q.DeleteTodo(ctx, req.GetId())
+	n, err := s.q.DeleteTodo(ctx, id)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "delete todo: %v", err)
 	}
 	if n == 0 {
-		return nil, status.Errorf(codes.NotFound, "todo %q not found", req.GetId())
+		return nil, status.Errorf(codes.NotFound, "todo %q not found", id)
 	}
 	return &doxv1.DeleteTodoResponse{}, nil
+}
+
+// resolveID accepts either a full ULID or a unique prefix and returns the
+// canonical 26-char id. ULIDs are case-insensitive per Crockford Base32.
+func (s *TodoService) resolveID(ctx context.Context, raw string) (string, error) {
+	if raw == "" {
+		return "", status.Error(codes.InvalidArgument, "id is required")
+	}
+	normalized := strings.ToUpper(raw)
+	if len(normalized) > ulidLen {
+		return "", status.Errorf(codes.InvalidArgument, "id too long (%d > %d)", len(normalized), ulidLen)
+	}
+	if len(normalized) == ulidLen {
+		return normalized, nil
+	}
+
+	matches, err := s.q.FindTodoIDsByPrefix(ctx, sql.NullString{String: normalized, Valid: true})
+	if err != nil {
+		return "", status.Errorf(codes.Internal, "resolve prefix: %v", err)
+	}
+	switch len(matches) {
+	case 0:
+		return "", status.Errorf(codes.NotFound, "no todo matches prefix %q", raw)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", status.Errorf(codes.FailedPrecondition, "prefix %q matches multiple todos — specify more characters", raw)
+	}
 }
 
 func modelToProto(t queries.Todo) *doxv1.Todo {

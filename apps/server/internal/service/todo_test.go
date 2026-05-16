@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -162,8 +163,6 @@ func TestUpdateTodo(t *testing.T) {
 	t.Run("updated_at advances", func(t *testing.T) {
 		title := "another"
 		fresh, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "fresh"})
-		// Simulate clock advance — the service uses time.Now() so we just call
-		// twice and assert second is >= first.
 		got, err := s.UpdateTodo(ctx, &doxv1.UpdateTodoRequest{Id: fresh.Id, Title: &title})
 		if err != nil {
 			t.Fatal(err)
@@ -209,6 +208,92 @@ func TestDeleteTodo(t *testing.T) {
 	})
 }
 
+func TestIDPrefixResolution(t *testing.T) {
+	s, _ := newTestService(t)
+	ctx := context.Background()
+	a, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "alpha"})
+	b, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "beta"})
+
+	t.Run("full id works", func(t *testing.T) {
+		got, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: a.Id})
+		if err != nil || got.Id != a.Id {
+			t.Fatalf("want %q, got %q (err=%v)", a.Id, got.GetId(), err)
+		}
+	})
+
+	t.Run("lowercase full id normalizes", func(t *testing.T) {
+		got, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: strings.ToLower(a.Id)})
+		if err != nil || got.Id != a.Id {
+			t.Fatalf("want %q, got %q (err=%v)", a.Id, got.GetId(), err)
+		}
+	})
+
+	t.Run("unique prefix resolves", func(t *testing.T) {
+		// Find a prefix that uniquely identifies `a` (longer than the common
+		// timestamp prefix b shares).
+		prefix := uniquePrefix(t, a.Id, b.Id)
+		got, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: prefix})
+		if err != nil {
+			t.Fatalf("unique prefix should resolve, got %v", err)
+		}
+		if got.Id != a.Id {
+			t.Errorf("want %q, got %q", a.Id, got.Id)
+		}
+	})
+
+	t.Run("ambiguous prefix rejected", func(t *testing.T) {
+		// ULIDs created in the same ms share their 10-char timestamp prefix.
+		// Use just the first 3 chars to guarantee ambiguity (or skip if
+		// timestamps differ enough to avoid collision).
+		shared := commonPrefix(a.Id, b.Id)
+		if len(shared) < 3 {
+			t.Skip("ULIDs diverge too early to construct an ambiguous prefix")
+		}
+		ambiguous := shared[:max(1, len(shared)-1)]
+		_, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: ambiguous})
+		if status.Code(err) != codes.FailedPrecondition {
+			t.Errorf("want FailedPrecondition for ambiguous prefix %q, got %v", ambiguous, err)
+		}
+	})
+
+	t.Run("prefix with no match", func(t *testing.T) {
+		_, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: "ZZZ"})
+		if status.Code(err) != codes.NotFound {
+			t.Errorf("want NotFound, got %v", err)
+		}
+	})
+
+	t.Run("oversize id rejected", func(t *testing.T) {
+		_, err := s.GetTodo(ctx, &doxv1.GetTodoRequest{Id: strings.Repeat("A", 30)})
+		if status.Code(err) != codes.InvalidArgument {
+			t.Errorf("want InvalidArgument, got %v", err)
+		}
+	})
+}
+
+// uniquePrefix returns the shortest prefix of target that does not also match other.
+func uniquePrefix(t *testing.T, target, other string) string {
+	t.Helper()
+	common := commonPrefix(target, other)
+	if len(common) >= len(target) {
+		t.Fatalf("target %q is a prefix of other %q", target, other)
+	}
+	return target[:len(common)+1]
+}
+
+func commonPrefix(a, b string) string {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	for i := 0; i < n; i++ {
+		if a[i] != b[i] {
+			return a[:i]
+		}
+	}
+	return a[:n]
+}
+
 func TestListTodos(t *testing.T) {
 	s, _ := newTestService(t)
 	ctx := context.Background()
@@ -223,7 +308,7 @@ func TestListTodos(t *testing.T) {
 		}
 	})
 
-	t.Run("ordering newest first", func(t *testing.T) {
+	t.Run("returns all created", func(t *testing.T) {
 		a, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "a"})
 		b, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "b"})
 		c, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "c"})
@@ -235,10 +320,8 @@ func TestListTodos(t *testing.T) {
 		if len(resp.Todos) != 3 {
 			t.Fatalf("want 3, got %d", len(resp.Todos))
 		}
-		// Created a, b, c in order; ULID-based created_at should preserve order
-		// strictly only if SystemClock advances between calls. In practice the
-		// test is fast enough that created_at may tie — only assert set equality
-		// of IDs rather than strict ordering.
+		// ULIDs created in the same millisecond may tie on created_at, so only
+		// assert set membership rather than order.
 		ids := map[string]bool{}
 		for _, todo := range resp.Todos {
 			ids[todo.Id] = true

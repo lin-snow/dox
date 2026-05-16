@@ -30,7 +30,7 @@ export async function saveConfig(cfg: Config): Promise<void> {
   const raw = toml.stringify({ server: cfg.server, token: cfg.token });
   const path = configPath();
   await writeFile(path, raw, { mode: 0o600 });
-  // writeFile mode may be ignored if file already existed; explicit chmod ensures 600.
+  // writeFile ignores mode when the file already exists; chmod ensures 600.
   await chmod(path, 0o600);
 }
 

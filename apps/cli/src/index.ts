@@ -11,9 +11,10 @@ import { rmCommand } from "./cli/rm";
 
 const args = process.argv.slice(2);
 
-// TTY without subcommand → TUI mode (M3 placeholder for now).
+// TTY without subcommand → launch TUI mode.
 if (args.length === 0 && process.stdout.isTTY) {
-  console.error("dox: TUI mode coming in M3. Run 'dox --help' for available commands.");
+  const { runTui } = await import("./tui");
+  await runTui();
   process.exit(0);
 }
 

@@ -23,3 +23,9 @@ RETURNING id, title, done, created_at, updated_at;
 -- name: DeleteTodo :execrows
 DELETE FROM todos
 WHERE id = ?;
+
+-- name: FindTodoIDsByPrefix :many
+SELECT id FROM todos
+WHERE id LIKE sqlc.arg('prefix') || '%'
+ORDER BY id
+LIMIT 2;
