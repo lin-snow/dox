@@ -25,8 +25,7 @@ interface FakeApi {
 }
 
 function makeFakeApi(initial: Todo[] = []): FakeApi {
-  // Use mutable arrays/state so the fake behaves like a real store across
-  // sequential operations within one test.
+  // Mutable store so the fake reflects mutations across sequential calls.
   const store = new Map(initial.map((t) => [t.id, t]));
 
   const listMock = mock(async () => Array.from(store.values()));
@@ -65,8 +64,6 @@ function makeFakeApi(initial: Todo[] = []): FakeApi {
   };
 }
 
-// Yield to the event loop a few times to flush queued microtasks (initial
-// listTodos refresh, subsequent state updates, etc.).
 async function flush() {
   for (let i = 0; i < 5; i++) {
     await new Promise<void>((r) => setImmediate(r));
@@ -98,12 +95,12 @@ describe("App", () => {
   });
 
   test("renders todos with cursor on first", async () => {
-    const { api } = makeFakeApi([makeTodo({ title: "买菜" }), makeTodo({ title: "写代码" })]);
+    const { api } = makeFakeApi([makeTodo({ title: "buy milk" }), makeTodo({ title: "write code" })]);
     const { lastFrame } = mountApp(api);
     await flush();
     const frame = lastFrame() ?? "";
-    expect(frame).toContain("买菜");
-    expect(frame).toContain("写代码");
+    expect(frame).toContain("buy milk");
+    expect(frame).toContain("write code");
     expect(frame).toContain(">"); // cursor pointer
   });
 
@@ -153,9 +150,7 @@ describe("App", () => {
     stdin.write("i");
     await flush();
     expect(lastFrame() ?? "").toContain("new todo title");
-    // Write text and Enter separately so the TextInput has a chance to settle
-    // between input events. Stick to ASCII; multibyte chars over fake stdin
-    // are handled by Ink but introduce decoding ordering risks in tests.
+    // Send text and Enter separately so TextInput observes each event.
     stdin.write("buy milk");
     await flush();
     stdin.write("\r");

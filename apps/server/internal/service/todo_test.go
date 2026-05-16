@@ -163,8 +163,6 @@ func TestUpdateTodo(t *testing.T) {
 	t.Run("updated_at advances", func(t *testing.T) {
 		title := "another"
 		fresh, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "fresh"})
-		// Simulate clock advance — the service uses time.Now() so we just call
-		// twice and assert second is >= first.
 		got, err := s.UpdateTodo(ctx, &doxv1.UpdateTodoRequest{Id: fresh.Id, Title: &title})
 		if err != nil {
 			t.Fatal(err)
@@ -273,8 +271,7 @@ func TestIDPrefixResolution(t *testing.T) {
 	})
 }
 
-// uniquePrefix returns the shortest prefix of `target` that does not match
-// `other` — i.e. the first differing character plus everything before.
+// uniquePrefix returns the shortest prefix of target that does not also match other.
 func uniquePrefix(t *testing.T, target, other string) string {
 	t.Helper()
 	common := commonPrefix(target, other)
@@ -311,7 +308,7 @@ func TestListTodos(t *testing.T) {
 		}
 	})
 
-	t.Run("ordering newest first", func(t *testing.T) {
+	t.Run("returns all created", func(t *testing.T) {
 		a, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "a"})
 		b, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "b"})
 		c, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "c"})
@@ -323,10 +320,8 @@ func TestListTodos(t *testing.T) {
 		if len(resp.Todos) != 3 {
 			t.Fatalf("want 3, got %d", len(resp.Todos))
 		}
-		// Created a, b, c in order; ULID-based created_at should preserve order
-		// strictly only if SystemClock advances between calls. In practice the
-		// test is fast enough that created_at may tie — only assert set equality
-		// of IDs rather than strict ordering.
+		// ULIDs created in the same millisecond may tie on created_at, so only
+		// assert set membership rather than order.
 		ids := map[string]bool{}
 		for _, todo := range resp.Todos {
 			ids[todo.Id] = true

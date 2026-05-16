@@ -20,8 +20,8 @@ const (
 	ulidLen     = 26
 )
 
-// Querier is the subset of queries.Queries used by TodoService. Defined here so
-// tests can substitute an in-memory fake without spinning up SQLite.
+// Querier is the subset of *queries.Queries used here; defined as an interface
+// so tests can substitute a fake without a real database.
 type Querier interface {
 	ListTodos(ctx context.Context) ([]queries.Todo, error)
 	GetTodo(ctx context.Context, id string) (queries.Todo, error)
@@ -100,9 +100,9 @@ func (s *TodoService) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoReque
 		return nil, err
 	}
 
-	// Read-modify-write. SetMaxOpenConns(1) in db.Open serializes writers,
-	// keeping the lost-update race window tiny at single-user scope; a real
-	// transaction is overkill until multi-device support lands.
+	// Read-modify-write. SetMaxOpenConns(1) in db.Open serializes writers, so
+	// the lost-update race window is tiny at single-user scope; an explicit
+	// transaction would be overkill until multi-device support lands.
 	existing, err := s.q.GetTodo(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -155,12 +155,8 @@ func (s *TodoService) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoReque
 	return &doxv1.DeleteTodoResponse{}, nil
 }
 
-// resolveID normalizes a raw input (full ULID or prefix) into the canonical
-// 26-char ULID. ULIDs are case-insensitive per Crockford Base32, so we
-// upper-case the input before any DB lookup.
-//
-// Returns InvalidArgument for empty / too-long input, NotFound when no todo
-// matches the prefix, FailedPrecondition when a short prefix matches multiple.
+// resolveID accepts either a full ULID or a unique prefix and returns the
+// canonical 26-char id. ULIDs are case-insensitive per Crockford Base32.
 func (s *TodoService) resolveID(ctx context.Context, raw string) (string, error) {
 	if raw == "" {
 		return "", status.Error(codes.InvalidArgument, "id is required")

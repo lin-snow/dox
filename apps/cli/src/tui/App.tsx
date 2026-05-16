@@ -24,15 +24,13 @@ export function App({ api }: { api: TodoApi }) {
     }
   }, [api]);
 
-  // Initial load + background poll.
   useEffect(() => {
     void refresh();
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [refresh]);
 
-  // List-mode keybindings. TextInput captures keys when mounted (add/edit
-  // modes), so we deactivate useInput then to avoid duplicate handling.
+  // Deactivate in add/edit modes so TextInput owns the keystrokes.
   useInput(
     (input, key) => {
       if (input === "q" || (key.ctrl && input === "c")) {

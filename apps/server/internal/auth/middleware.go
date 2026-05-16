@@ -5,11 +5,7 @@ import (
 	"net/http"
 )
 
-// Middleware enforces Authorization: Bearer <token> on all requests.
-//
-// v0.x validates against the env bootstrap token only. M4 (Pairing Code Flow)
-// extends this to also accept device tokens looked up from the device_tokens
-// table.
+// Middleware enforces Authorization: Bearer <token> on every request.
 func Middleware(bootstrapToken string) func(http.Handler) http.Handler {
 	expected := []byte("Bearer " + bootstrapToken)
 	return func(next http.Handler) http.Handler {

@@ -19,9 +19,6 @@ async function buildContext(opts: GlobalOpts): Promise<CliContext> {
   return { api: new ApiClient(cfg), output };
 }
 
-// withContext wraps a command body with config loading, output selection, and
-// uniform error → friendly message handling. Commands declare what they want
-// to do; they don't repeat boilerplate.
 export async function withContext(
   opts: GlobalOpts,
   fn: (ctx: CliContext) => Promise<void>,
