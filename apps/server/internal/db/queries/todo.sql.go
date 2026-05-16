@@ -9,6 +9,70 @@ import (
 	"context"
 )
 
+const createTodo = `-- name: CreateTodo :one
+INSERT INTO todos (id, title, done, created_at, updated_at)
+VALUES (?, ?, 0, ?, ?)
+RETURNING id, title, done, created_at, updated_at
+`
+
+type CreateTodoParams struct {
+	ID        string
+	Title     string
+	CreatedAt int64
+	UpdatedAt int64
+}
+
+func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, createTodo,
+		arg.ID,
+		arg.Title,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteTodo = `-- name: DeleteTodo :execrows
+DELETE FROM todos
+WHERE id = ?
+`
+
+func (q *Queries) DeleteTodo(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTodo, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const getTodo = `-- name: GetTodo :one
+SELECT id, title, done, created_at, updated_at
+FROM todos
+WHERE id = ?
+LIMIT 1
+`
+
+func (q *Queries) GetTodo(ctx context.Context, id string) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, getTodo, id)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listTodos = `-- name: ListTodos :many
 SELECT id, title, done, created_at, updated_at
 FROM todos
@@ -42,4 +106,36 @@ func (q *Queries) ListTodos(ctx context.Context) ([]Todo, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTodo = `-- name: UpdateTodo :one
+UPDATE todos
+SET title = ?, done = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, created_at, updated_at
+`
+
+type UpdateTodoParams struct {
+	Title     string
+	Done      int64
+	UpdatedAt int64
+	ID        string
+}
+
+func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodo,
+		arg.Title,
+		arg.Done,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
