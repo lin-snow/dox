@@ -1,96 +1,93 @@
 # dox
 
-A self-hosted personal todo. **Go** server (grpc-gateway + sqlc + SQLite) and a
-**TypeScript** Ink TUI / CLI client. The server is the single source of truth;
-the client is thin and doesn't cache.
+A self-hosted todo — for one person, or a few.
 
-Multiple users can share one server with project-level collaboration:
-- The first user to register becomes the **owner**.
-- Default registration is **invite-only**; the owner can flip a setting to
-  allow open registration.
-- Every user has a private **Inbox** (their `project_id IS NULL` todos).
-- Projects are explicit entities; owners can invite collaborators as
-  **editors** (read + write todos) or **viewers** (read-only).
+A single Go binary on your server, a thin TUI client on your laptop. The
+server holds every byte of truth; the client never caches. Whoever registers
+first becomes the owner and decides who else gets in.
 
-## Quick start
+## Deploy
+
+The server is one container. One command, one persistent volume:
 
 ```bash
-# Server
-just generate          # regenerate proto + ts types
-just server-sqlc       # regenerate Go DB bindings
-just server-dev        # start server (env DOX_DB_PATH/DOX_LISTEN_ADDR optional)
-
-# Client — first run makes you the owner
-bun run apps/cli/src/index.ts register --server http://localhost:8080 --name alice --device laptop
-
-# Create a project and invite a friend
-bun run apps/cli/src/index.ts project create "Family"
-bun run apps/cli/src/index.ts project invite <project-id> --role editor
-# share the code; the friend runs:
-#   bun run apps/cli/src/index.ts accept <code> --server http://localhost:8080
-
-# Open registration if you want anyone to join without invite (owner only)
-bun run apps/cli/src/index.ts server set-registration true
+docker run -d --name dox \
+  -p 8080:8080 \
+  -v dox-data:/data \
+  -e DOX_DB_PATH=/data/dox.db \
+  ghcr.io/lin-snow/dox:latest
 ```
 
-## Client commands
+Or with `compose.yml`:
 
-```
-dox register --server <url> [--name X --device Y --invite CODE]   # create a new account
-dox login    --server <url>                                       # pair THIS device with an existing account
-dox accept   <code> [--server <url>]                              # join a project (or register, if not logged in)
+```yaml
+services:
+  dox:
+    image: ghcr.io/lin-snow/dox:latest
+    ports: ["8080:8080"]
+    volumes: ["dox-data:/data"]
+    environment:
+      DOX_DB_PATH: /data/dox.db
+    restart: unless-stopped
 
-dox list [--project <id|inbox|all>]    dox add <title> [--project ...]
-dox done <id>   dox undone <id>   dox edit <id> --title ...   dox rm <id>
-
-dox project list | create <name> | rename <id> <name> | archive <id> | rm <id>
-dox project invite <id> [--role editor|viewer]
-dox project members <id> | member-rm <projectId> <userId>
-
-dox device pair --name <device>   dox device list   dox device revoke <id>
-
-dox server me | users | invite [--ttl-ms N] | set-registration <true|false>
+volumes:
+  dox-data:
 ```
 
-## Architecture (non-obvious bits)
+Optional env: `DOX_LISTEN_ADDR` (default `:8080`), `DOX_LOG_LEVEL`
+(`debug` · `info` · `warn` · `error`), `DOX_EVENT_RETENTION` (Go duration,
+e.g. `720h`), `DOX_JWT_SECRET` (base64; rotating it invalidates every paired
+device).
 
-- **proto** under `proto/dox/v1/` is the single cross-process contract: five
-  services (`AuthService`, `UserService`, `ProjectService`, `InviteService`,
-  `TodoService`). `int64` timestamps in unix milliseconds; ULID strings for IDs.
-- The server's **auth middleware** does one thing: looks up `Authorization: Bearer`
-  in `device_tokens` (JOIN users), injects `Caller{UserID, Role, ...}` into the
-  request context. Two paths are public: `/v1/auth/register` and `/v1/auth/redeem`.
-- **Visibility** is enforced inside service handlers via tiny `authz` helpers
-  (`CanReadProject`, `CanWriteProjectTodos`, `CanAdminProject`). Non-member
-  reads return `NotFound`; non-member writes return `PermissionDenied`.
-- **Invites** are one table with optional `project_id`; redeeming a server
-  invite goes through `Register` (creates user + maybe joins project), a
-  project invite for an existing user goes through `InviteService.AcceptInvite`.
-- Pairing codes are **same-user only** ("add another device" flow), with
-  `user_id` stamped on the row.
+## First run
 
-## Layout
+```bash
+# 1. Pair your device — first registrant becomes the owner
+dox register --server http://your-server:8080 --name alice --device laptop
 
+# 2. (optional) Share a project
+dox project create "Family"
+dox project invite <project-id> --role editor
+#   they run:  dox accept <code> --server http://your-server:8080
 ```
-proto/dox/v1/             *.proto contracts (auth, user, project, invite, todo)
-apps/server/              Go server
-  cmd/dox-server/main.go  entry: load config, run HTTP server
-  internal/auth/          AuthService + middleware + Verifier + pairing code/token primitives
-  internal/user/          UserService (me, list, devices, settings)
-  internal/project/       ProjectService (CRUD + members)
-  internal/invite/        InviteService (create + accept)
-  internal/todo/          TodoService (project-scoped, Inbox-aware)
-  internal/authctx/       Caller context wiring (read by every handler)
-  internal/authz/         CanRead/Write/AdminProject helpers
-  internal/settings/      registration_open KV wrapper
-  internal/db/migrations/ goose .sql (append-only)
-  internal/db/queries/    sqlc .sql + generated Go
-  internal/httpserver/    grpc-gateway mux + lifecycle
-apps/cli/                 TS Ink TUI + CLI
-packages/core/            @dox/core: clients, config, fetcher middleware
-packages/proto-gen/       generated TS message types
+
+Run `dox` on a TTY for the TUI, or use the subcommands below.
+
+## Commands
+
+| group | verbs |
+|---|---|
+| todos | `add` · `list` · `done` · `undone` · `edit` · `rm` |
+| projects | `project list / create / rename / archive / rm` |
+| members | `project invite / members / member-rm` |
+| devices | `device pair / list / revoke` |
+| server *(owner)* | `server me / users / invite / set-registration` |
+| session | `register` · `login` · `accept <code>` |
+
+`dox <command> --help` for the full signature.
+
+## Stack
+
+- **Server** — Go · grpc-gateway · sqlc · goose · SQLite
+- **Client** — TypeScript · Ink · Bun
+- **Contract** — `proto/dox/v1/` (auth, user, project, invite, todo)
+
+IDs are ULID, timestamps are `int64` unix milliseconds, and only two routes
+are public: `/v1/auth/register` and `/v1/auth/redeem`. Everything else needs
+a device bearer token.
+
+## Develop
+
+```bash
+just generate       # proto → Go + TS
+just server-sqlc    # regenerate sqlc Go bindings
+just serve          # run the server locally
+just cli -- list    # run the CLI against the local server
 ```
+
+See [`docs/onboarding.md`](docs/onboarding.md) for how the auth/onboarding
+flow actually works.
 
 ## License
 
-AGPL-3.0
+[AGPL-3.0](LICENSE)

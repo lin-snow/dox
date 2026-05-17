@@ -12,11 +12,13 @@ interface FooterProps {
   outerPadX?: number;
 }
 
+const POWERED_BY = "powered by dox";
+
 // Bottom-of-screen status strip. Visual hierarchy:
-//   ─── dash filler ────  ⏎ open · ␣ toggle · …    ┃ NORMAL ┃   ◆ dox v0.0.0
-//                          ↑ keys in accent           ↑ inverse   ↑ brand glyph
-//                            labels in muted            mode       in 2-tone
-//                            `·` separators
+//   powered by dox  ─── filler ───  ⏎ open · ␣ toggle · …    ┃ NORMAL ┃   ◆ dox v0.0.0
+//   ↑ attribution                    ↑ keys in accent          ↑ inverse   ↑ brand glyph
+//                                      labels in muted           mode       in 2-tone
+//                                      `·` separators
 export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
   const { cols } = useTerminalSize();
 
@@ -34,15 +36,21 @@ export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
   // hint chips + mode pill take priority over decorative branding. The user
   // can always check version in the Status panel.
   const brandCell = version ? `  ${icon.brand} dox` : "";
+  const leftLen = POWERED_BY.length + 2;
   const visibleRightLen = 2 + hintLen + 4 + modeCell.length + brandCell.length;
   // Safety margin: some unicode glyphs (e.g. ◆, ␣) measure as 2 cells in
   // BiDi-aware terminals, so .length undercounts the rendered width.
   const SAFETY = 2;
-  const dashes = Math.max(3, cols - visibleRightLen - 2 - outerPadX * 2 - SAFETY);
+  const dashes = Math.max(
+    3,
+    cols - leftLen - visibleRightLen - 2 - outerPadX * 2 - SAFETY,
+  );
 
   return (
     <Box paddingX={1} marginTop={1}>
       <Text>
+        <Text color={color.muted} dimColor>{POWERED_BY}</Text>
+        <Text color={color.muted}>{"  "}</Text>
         <Text color={color.muted}>{"─".repeat(dashes)}</Text>
         <Text color={color.muted}>{"  "}</Text>
         {hints.map(([k, l], idx) => (

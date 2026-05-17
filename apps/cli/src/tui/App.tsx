@@ -15,6 +15,7 @@ import type {
 } from "@dox/core";
 import { fetchServerInfo, loadConfig, saveConfig } from "@dox/core";
 
+import { AboutView } from "./components/views/about/AboutView";
 import { ActivityFeed } from "./components/views/todo/ActivityFeed";
 import { DualBarChart } from "./components/charts/DualBarChart";
 import { ErrorAlert } from "./components/primitives/ErrorAlert";
@@ -352,6 +353,10 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         dispatch({ type: "OPEN_SETTINGS" });
         return;
       }
+      if (input === "A") {
+        dispatch({ type: "OPEN_ABOUT" });
+        return;
+      }
       if (input === "/") {
         dispatch({ type: "OPEN_SEARCH" });
         return;
@@ -504,9 +509,11 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
 
   // ── layout heights ────────────────────────────────────────────────────────
   // Grow with the terminal so a tall window translates directly into a taller
-  // Todos viewport. Reserves a few rows for the footer + outer padding so the
-  // bottom panels don't push the footer off-screen.
-  const innerH = Math.max(32, totalRows - 4);
+  // Todos viewport, but cap at MAX so an oversized terminal stops stretching
+  // the list/info panes past the point where the extra rows stop being useful
+  // (and start feeling like dead space inside a panel border).
+  const MAX_INNER_H = 48;
+  const innerH = Math.min(MAX_INNER_H, Math.max(32, totalRows - 4));
   const topRowH = 14;
   const rowGap = 1;
   const todosH = Math.max(18, innerH - topRowH - rowGap);
@@ -776,6 +783,15 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
             }
           })();
         }}
+      />
+    );
+  }
+
+  if (state.mode === "about") {
+    return (
+      <AboutView
+        version={VERSION}
+        onClose={() => dispatch({ type: "CLOSE_ABOUT" })}
       />
     );
   }

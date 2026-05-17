@@ -13,7 +13,8 @@ export type Mode =
   | "projectConfirmDelete"
   | "todoDetail"
   | "search"
-  | "searchDetail";
+  | "searchDetail"
+  | "about";
 
 // Sub-state for the project manage screen. Mutually exclusive with the main
 // member-list view of that screen — exactly one is up at a time.
@@ -143,7 +144,9 @@ export type Action =
   | { type: "SEARCH_CLOSE_DETAIL" }
   | { type: "TODO_ADDED"; todo: Todo }
   | { type: "TODO_UPDATED"; todo: Todo }
-  | { type: "TODO_DELETED"; id: string };
+  | { type: "TODO_DELETED"; id: string }
+  | { type: "OPEN_ABOUT" }
+  | { type: "CLOSE_ABOUT" };
 
 export const initialState: State = {
   mode: "list",
@@ -470,6 +473,10 @@ export function reducer(state: State, action: Action): State {
       const next = { ...state, todos };
       return { ...next, cursor: clampCursor(state.cursor, visibleTodos(next).length) };
     }
+    case "OPEN_ABOUT":
+      return { ...state, mode: "about", helpOpen: false, error: null };
+    case "CLOSE_ABOUT":
+      return { ...state, mode: "list" };
     default:
       return state;
   }

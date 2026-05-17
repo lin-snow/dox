@@ -31,6 +31,7 @@ const sections: { title: string; rows: ReadonlyArray<readonly [string, string]> 
     title: "App",
     rows: [
       ["s", "open settings"],
+      ["A", "about dox"],
       ["?", "toggle this help"],
       ["q / Ctrl+C", "quit"],
       ["esc", "close overlay / cancel"],
