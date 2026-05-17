@@ -22,6 +22,7 @@ const sections: { title: string; rows: ReadonlyArray<readonly [string, string]> 
       ["d", "delete todo"],
       ["p", "new project"],
       ["D", "delete project"],
+      ["/", "search todos"],
       ["r", "refresh"],
     ],
   },

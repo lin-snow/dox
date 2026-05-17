@@ -11,6 +11,7 @@ import { ErrorAlert } from "./components/ErrorAlert";
 import { Footer } from "./components/Footer";
 import { HelpOverlay } from "./components/HelpOverlay";
 import { Logo } from "./components/Logo";
+import { SearchView } from "./components/SearchView";
 import { SettingsView } from "./components/SettingsView";
 import { Tabs } from "./components/Tabs";
 import { TitledPanel } from "./components/TitledPanel";
@@ -140,6 +141,42 @@ export function App({ api, projects, identity }: AppProps) {
     [api],
   );
 
+  // Background-hydrate descriptions when the user opens search. ListTodos
+  // omits the description body, so without this the search would only match
+  // titles. We fire one getTodo per row in parallel; the cache merge in
+  // TODO_UPDATED makes the result list reactively pick up matches as bodies
+  // land. `hydrating` flips false once every request settles so SearchView can
+  // show a "loading descriptions…" hint while it's true.
+  const [hydratingSearch, setHydratingSearch] = useState(false);
+  useEffect(() => {
+    if (state.mode !== "search") return;
+    const missing = state.todos.filter((t) => t.description === undefined);
+    if (missing.length === 0) return;
+    setHydratingSearch(true);
+    let cancelled = false;
+    void (async () => {
+      await Promise.all(
+        missing.map(async (t) => {
+          try {
+            const full = await api.getTodo(t.id);
+            if (!cancelled) dispatch({ type: "TODO_UPDATED", todo: full });
+          } catch {
+            // Silently skip — a failed hydrate just means that one row stays
+            // title-only for matching, not a fatal error.
+          }
+        }),
+      );
+      if (!cancelled) setHydratingSearch(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only depend on mode + api: re-running on every todos
+    // mutation would re-fetch rows we just updated. New rows created while in
+    // search mode will be hydrated next time the user re-enters search.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.mode, api]);
+
   const visible = useMemo(() => visibleTodos(state), [state]);
   const createdSeries = useMemo(
     () => activityByDay(state.todos, ACTIVITY_DAYS, "created"),
@@ -171,6 +208,10 @@ export function App({ api, projects, identity }: AppProps) {
       }
       if (input === "s") {
         dispatch({ type: "OPEN_SETTINGS" });
+        return;
+      }
+      if (input === "/") {
+        dispatch({ type: "OPEN_SEARCH" });
         return;
       }
       if (state.error) dispatch({ type: "CLEAR_ERROR" });
@@ -391,6 +432,78 @@ export function App({ api, projects, identity }: AppProps) {
           })();
         }}
         onCancel={() => dispatch({ type: "EXIT_MODE" })}
+      />
+    );
+  }
+
+  if (state.mode === "search") {
+    return (
+      <SearchView
+        todos={state.todos}
+        projects={state.projects}
+        query={state.searchQuery}
+        cursor={state.searchCursor}
+        hydrating={hydratingSearch}
+        nowMs={nowMs}
+        onQueryChange={(q) => dispatch({ type: "SEARCH_SET_QUERY", query: q })}
+        onCursorUp={() => dispatch({ type: "SEARCH_CURSOR_UP" })}
+        onCursorDown={() => dispatch({ type: "SEARCH_CURSOR_DOWN" })}
+        onResultCount={(count) =>
+          dispatch({ type: "SEARCH_RESULT_COUNT", count })
+        }
+        onOpen={(id) => {
+          dispatch({ type: "SEARCH_OPEN_DETAIL", id });
+          // Description is most likely already cached at this point (the
+          // search-mode hydration covers it), but call hydrate anyway so a
+          // late-arriving body or a stale cache still gets refreshed before
+          // the detail page reads it.
+          void hydrateTodoDescription(id);
+        }}
+        onClose={() => dispatch({ type: "CLOSE_SEARCH" })}
+      />
+    );
+  }
+
+  if (state.mode === "searchDetail") {
+    const current = state.searchDetailTodoId
+      ? state.todos.find((t) => t.id === state.searchDetailTodoId) ?? null
+      : null;
+    if (!current) {
+      // Row vanished (deleted from another client, or cleared by a filter);
+      // bounce back to the search list rather than rendering an empty page.
+      dispatch({ type: "SEARCH_CLOSE_DETAIL" });
+      return null;
+    }
+    const proj = current.projectId ? projectById.get(current.projectId) ?? null : null;
+    return (
+      <TodoDetailView
+        todo={current}
+        project={proj}
+        ownerName={identity?.userName}
+        nowMs={nowMs}
+        onClose={() => dispatch({ type: "SEARCH_CLOSE_DETAIL" })}
+        onToggleDone={() => {
+          void (async () => {
+            try {
+              const updated = await api.updateTodo(current.id, { done: !current.done });
+              dispatch({ type: "TODO_UPDATED", todo: updated });
+            } catch (err) {
+              dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
+            }
+          })();
+        }}
+        onEdit={() => void enterEditWithFullTodo(current.id, current.title, current.description)}
+        onDelete={() => {
+          void (async () => {
+            try {
+              await api.deleteTodo(current.id);
+              dispatch({ type: "TODO_DELETED", id: current.id });
+              dispatch({ type: "SEARCH_CLOSE_DETAIL" });
+            } catch (err) {
+              dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
+            }
+          })();
+        }}
       />
     );
   }
@@ -770,6 +883,7 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
   ["␣", "toggle"],
   ["i", "todo"],
   ["p", "project"],
+  ["/", "search"],
   ["h/l", "tab"],
   ["s", "settings"],
   ["?", "help"],

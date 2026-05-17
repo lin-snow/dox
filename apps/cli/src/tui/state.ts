@@ -10,7 +10,9 @@ export type Mode =
   | "settings"
   | "projectAdd"
   | "projectConfirmDelete"
-  | "todoDetail";
+  | "todoDetail"
+  | "search"
+  | "searchDetail";
 export type Focus = "list" | "sidebar";
 
 export interface State {
@@ -36,6 +38,13 @@ export interface State {
   settingsCursor: number;
   // Project pending y/n confirmation. Cleared whenever the prompt is dismissed.
   deletingProjectId: string | null;
+  // Search view sub-state. Persists across enter→detail→back so the user lands
+  // back on the same query + cursor row when they bounce out of a result.
+  searchQuery: string;
+  searchCursor: number;
+  // Todo opened via the search result list. Lets `todoDetail`/`searchDetail`
+  // look up the row by id rather than relying on the list-page cursor.
+  searchDetailTodoId: string | null;
 }
 
 export type Action =
@@ -67,6 +76,15 @@ export type Action =
   | { type: "SETTINGS_CURSOR"; index: number }
   | { type: "OPEN_TODO_DETAIL" }
   | { type: "CLOSE_TODO_DETAIL" }
+  | { type: "OPEN_SEARCH" }
+  | { type: "CLOSE_SEARCH" }
+  | { type: "SEARCH_SET_QUERY"; query: string }
+  | { type: "SEARCH_CURSOR_UP" }
+  | { type: "SEARCH_CURSOR_DOWN" }
+  | { type: "SEARCH_CURSOR_SET"; index: number }
+  | { type: "SEARCH_RESULT_COUNT"; count: number }
+  | { type: "SEARCH_OPEN_DETAIL"; id: string }
+  | { type: "SEARCH_CLOSE_DETAIL" }
   | { type: "TODO_ADDED"; todo: Todo }
   | { type: "TODO_UPDATED"; todo: Todo }
   | { type: "TODO_DELETED"; id: string };
@@ -89,6 +107,9 @@ export const initialState: State = {
   settingsTab: 0,
   settingsCursor: 0,
   deletingProjectId: null,
+  searchQuery: "",
+  searchCursor: 0,
+  searchDetailTodoId: null,
 };
 
 // Private (filter key "inbox") = todos with no project; project filter = todos
@@ -257,6 +278,46 @@ export function reducer(state: State, action: Action): State {
       return { ...state, mode: "todoDetail", helpOpen: false };
     case "CLOSE_TODO_DETAIL":
       return { ...state, mode: "list" };
+    case "OPEN_SEARCH":
+      return {
+        ...state,
+        mode: "search",
+        searchQuery: "",
+        searchCursor: 0,
+        helpOpen: false,
+        error: null,
+      };
+    case "CLOSE_SEARCH":
+      return { ...state, mode: "list", searchDetailTodoId: null };
+    case "SEARCH_SET_QUERY":
+      // Reset cursor whenever the query changes: the result list re-derives, so
+      // any prior index is meaningless.
+      return { ...state, searchQuery: action.query, searchCursor: 0 };
+    case "SEARCH_CURSOR_UP":
+      return { ...state, searchCursor: Math.max(0, state.searchCursor - 1) };
+    case "SEARCH_CURSOR_DOWN":
+      // Cap is enforced by the view: it dispatches SEARCH_CURSOR_SET when the
+      // result list shrinks under the cursor. Here we just bump by one.
+      return { ...state, searchCursor: state.searchCursor + 1 };
+    case "SEARCH_CURSOR_SET":
+      return { ...state, searchCursor: Math.max(0, action.index) };
+    case "SEARCH_RESULT_COUNT": {
+      // Clamp the cursor any time the visible result count changes (typing
+      // narrows the list). Keeps the highlight on a real row.
+      const max = Math.max(0, action.count - 1);
+      if (state.searchCursor <= max) return state;
+      return { ...state, searchCursor: max };
+    }
+    case "SEARCH_OPEN_DETAIL":
+      return {
+        ...state,
+        mode: "searchDetail",
+        searchDetailTodoId: action.id,
+        helpOpen: false,
+      };
+    case "SEARCH_CLOSE_DETAIL":
+      // Returns to the search page with prior query + cursor intact.
+      return { ...state, mode: "search", searchDetailTodoId: null };
     case "TODO_ADDED": {
       const next = {
         ...state,

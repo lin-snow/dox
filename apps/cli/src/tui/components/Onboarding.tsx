@@ -162,23 +162,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     { isActive: stage === "choose-branch" },
   );
 
-  // Skip key for the optional first-user server-name / description stages.
-  useInput(
-    (input) => {
-      if (input === "s") {
-        setError(null);
-        if (stage === "enter-server-name") {
-          setServerName("");
-          setStage("enter-server-description");
-        } else if (stage === "enter-server-description") {
-          setServerDesc("");
-          setStage("submitting");
-        }
-      }
-    },
-    { isActive: stage === "enter-server-name" || stage === "enter-server-description" },
-  );
-
   const submitServer = (raw: string) => {
     const url = raw.trim() || DEFAULT_SERVER;
     setError(null);
@@ -267,7 +250,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
       <ContextStrip
         server={stage !== "server" ? server : undefined}
         info={stage !== "server" && stage !== "probing" ? info : null}
-        intent={stage !== "server" && stage !== "probing" && stage !== "choose-branch" ? intent : undefined}
         inviteCode={intent === "register" && inviteCode ? inviteCode : undefined}
         userName={
           (stage === "enter-password" || stage === "confirm-password" || stage === "enter-server-name" || stage === "enter-server-description" || stage === "submitting")
@@ -360,7 +342,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-server-name" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                give this server a display name <Text dimColor>(or press [s] to skip)</Text>
+                give this server a display name <Text dimColor>(leave blank to skip)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -372,7 +354,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-server-description" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                one-line description <Text dimColor>(or press [s] to skip)</Text>
+                one-line description <Text dimColor>(leave blank to skip)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -446,12 +428,11 @@ function stepIndexFor(stage: Stage): number {
 interface ContextStripProps {
   server?: string;
   info: ServerInfo | null;
-  intent?: Intent;
   inviteCode?: string;
   userName?: string;
 }
 
-function ContextStrip({ server, info, intent, inviteCode, userName }: ContextStripProps) {
+function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps) {
   const chips: { label: string; value: string; tone?: string }[] = [];
   if (server) chips.push({ label: "server", value: server });
   if (info) {
@@ -466,9 +447,6 @@ function ContextStrip({ server, info, intent, inviteCode, userName }: ContextStr
       chips.push({ label: "joining", value: identity, tone: color.accent2 });
       chips.push({ label: "registration", value: info.registrationOpen ? "open" : "invite-only" });
     }
-  }
-  if (intent) {
-    chips.push({ label: "intent", value: intent === "login" ? "log in" : intent === "register" ? "register" : "first user" });
   }
   if (inviteCode) chips.push({ label: "invite", value: inviteCode });
   if (userName) chips.push({ label: "user", value: userName });

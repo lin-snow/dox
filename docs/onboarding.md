@@ -96,11 +96,11 @@ Source: `apps/server/internal/handler/user.go` (`ServerInfo`),
         │            │                     │
         │            │                     ▼
         │            │          ┌──────────────────────┐
-        │            │          │  enter-server-name   │  (press [s] to skip)
+        │            │          │  enter-server-name   │  (Enter on empty to skip)
         │            │          └──────────┬───────────┘
         │            │                     ▼
         │            │          ┌────────────────────────┐
-        │            │          │ enter-server-description│ (press [s] to skip)
+        │            │          │ enter-server-description│ (Enter on empty to skip)
         │            │          └──────────┬─────────────┘
         │            │                     │
         └────────────┴─────────────────────┘
@@ -124,8 +124,8 @@ The server has no users. The caller will be the **owner**.
 - No branch picker — there's nothing to log in to.
 - Username + password collected.
 - After password confirmation, optional `server_name` / `server_description`
-  are prompted (press `s` to skip; both can be set later via
-  `dox server set-name` / `set-description`).
+  are prompted; submit an empty value (just press Enter) to skip either.
+  Both can be set later via `dox server set-name` / `set-description`.
 - `Register` request: server runs in a single best-effort sequence —
   inserts the user with `role=owner`, upserts `settings.server_owner_id`,
   upserts the optional identity fields, seeds three onboarding example
@@ -183,7 +183,6 @@ Above the active panel, every confirmed value so far is shown as a chip:
 - `joining: <serverName> · by <ownerName>` — after probe, if `hasUsers`
 - `mode: first user → owner` — after probe, if `!hasUsers`
 - `registration: open | invite-only` — after probe, if `hasUsers`
-- `intent: log in | register | first user` — after branch is picked
 - `invite: <code>` — after invite is entered
 - `user: <username>` — after username is entered
 

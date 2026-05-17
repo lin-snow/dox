@@ -210,6 +210,54 @@ describe("App", () => {
     expect(frame).not.toMatch(/\bAll\b\s*\d/);
   });
 
+  // `/` jumps from the main list to the dedicated SearchView. The view shows
+  // the matched-count meta strip and filters live as the user types.
+  test("/ opens search and narrows results by query", async () => {
+    const { api } = makeFakeApi([
+      makeTodo({ title: "buy milk" }),
+      makeTodo({ title: "write code" }),
+      makeTodo({ title: "design search" }),
+    ]);
+    const { stdin, lastFrame } = mountApp(api);
+    await flush();
+    stdin.write("/");
+    await flush();
+    // SearchView header + "3 todos total" meta line render on empty query.
+    const opened = lastFrame() ?? "";
+    expect(opened).toContain("Search");
+    expect(opened).toContain("3 todos total");
+    stdin.write("milk");
+    await flush();
+    const filtered = lastFrame() ?? "";
+    expect(filtered).toContain("1 match");
+    expect(filtered).toContain("buy milk");
+    expect(filtered).not.toContain("write code");
+  });
+
+  // Pressing Enter on the search result opens the detail page for that row,
+  // not for whatever the main-list cursor happens to be on.
+  test("enter on a search result opens its todo detail", async () => {
+    const { api } = makeFakeApi([
+      makeTodo({ title: "alpha task" }),
+      makeTodo({ title: "beta task" }),
+    ]);
+    const { stdin, lastFrame } = mountApp(api);
+    await flush();
+    stdin.write("/");
+    await flush();
+    stdin.write("beta");
+    await flush();
+    stdin.write("\r");
+    await flush();
+    const frame = lastFrame() ?? "";
+    // TodoDetailView puts the title under a bold accent header inside the
+    // "Todo" panel — match the panel chrome so we don't false-match against
+    // the SearchView still rendering "beta" in a row.
+    expect(frame).toContain("Todo");
+    expect(frame).toContain("beta task");
+    expect(frame).toContain("DESCRIPTION");
+  });
+
   // With more todos than the viewport allows, the list slices to a window and
   // shows a "↓ more" hint. Cursor starts at 0, so a high-index title must not
   // be visible.
