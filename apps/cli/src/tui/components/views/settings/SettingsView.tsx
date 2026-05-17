@@ -3,6 +3,7 @@ import { Box, Text, useInput, useStdout } from "ink";
 import type { SettingsTabSpec, SettingsRow } from "../../../settings";
 import type { SettingsTabKey } from "../../../state";
 import { color } from "../../../theme";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
@@ -114,7 +115,7 @@ export function SettingsView({
       </TitledPanel>
       <Footer
         mode="settings"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={tab?.hints ?? [["esc", "close"]]}
       />

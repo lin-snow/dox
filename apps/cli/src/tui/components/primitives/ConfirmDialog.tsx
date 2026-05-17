@@ -2,6 +2,7 @@ import { Box, Text, useStdout } from "ink";
 import type { ReactNode } from "react";
 
 import { color, icon } from "../../theme";
+import { VERSION } from "../../../version";
 import { Footer } from "../layout/Footer";
 import { TitledPanel } from "./TitledPanel";
 
@@ -76,7 +77,7 @@ export function ConfirmDialog({
       </Box>
       <Footer
         mode={footerMode}
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           [confirmKey, confirmLabel.toLowerCase()],

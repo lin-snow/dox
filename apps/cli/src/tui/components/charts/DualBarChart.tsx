@@ -1,4 +1,5 @@
 import { Box, Text } from "ink";
+import { Fragment } from "react";
 
 import { color } from "../../theme";
 
@@ -38,23 +39,28 @@ export function DualBarChart({
     buildColumn(v, peak, rows, FULL_SECONDARY, EIGHTHS_SECONDARY),
   );
   const len = Math.max(pCols.length, sCols.length);
+  const chartW = len * 2;
   return (
-    <Box>
+    <Box flexShrink={0}>
       {ySteps > 0 && <YAxis rows={rows} peak={peak} step={ySteps} />}
-      <Box flexDirection="column">
+      <Box flexDirection="column" width={chartW} flexShrink={0}>
         {Array.from({ length: rows }).map((_, rowIdx) => (
-          <Box key={rowIdx}>
+          // One Text per row (not one per column) so Yoga can't treat each
+          // bar as a shrinkable flex item — when it did, narrow panels caused
+          // the trailing column to wrap onto a second visual line, doubling
+          // chart height and squishing the bars into a clump.
+          <Text key={rowIdx} wrap="truncate-end">
             {Array.from({ length: len }).map((_, colIdx) => (
-              <Text key={colIdx}>
+              <Fragment key={colIdx}>
                 <Text color={color.muted} dimColor>
                   {sCols[colIdx]?.[rowIdx] ?? " "}
                 </Text>
                 <Text color={color.accent}>
                   {pCols[colIdx]?.[rowIdx] ?? " "}
                 </Text>
-              </Text>
+              </Fragment>
             ))}
-          </Box>
+          </Text>
         ))}
       </Box>
     </Box>

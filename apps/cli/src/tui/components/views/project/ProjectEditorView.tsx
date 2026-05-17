@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { color, icon } from "../../../theme";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
@@ -139,7 +140,7 @@ export function ProjectEditorView({
       </Box>
       <Footer
         mode="new project"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           ["⇥", "field"],

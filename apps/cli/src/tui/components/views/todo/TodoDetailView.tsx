@@ -4,6 +4,7 @@ import type { Project, Todo } from "@dox/core";
 
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { Markdown, MarkdownEmpty } from "../../primitives/Markdown";
 import { TitledPanel } from "../../primitives/TitledPanel";
@@ -134,7 +135,7 @@ export function TodoDetailView({
 
       <Footer
         mode="detail"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           ["␣", "toggle"],

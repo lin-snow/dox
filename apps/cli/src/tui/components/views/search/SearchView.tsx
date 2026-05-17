@@ -6,6 +6,7 @@ import type { Project, Todo } from "@dox/core";
 
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
@@ -169,7 +170,7 @@ export function SearchView({
 
       <Footer
         mode="search"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           ["↑↓", "navigate"],

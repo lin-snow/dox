@@ -13,7 +13,7 @@ import type {
   TodoApi,
   UserClient,
 } from "@dox/core";
-import { fetchServerInfo, loadConfig, saveConfig } from "@dox/core";
+import { fetchServerInfo } from "@dox/core";
 
 import { AboutView } from "./components/views/about/AboutView";
 import { ActivityFeed } from "./components/views/todo/ActivityFeed";
@@ -37,15 +37,16 @@ import { useTerminalSize } from "./hooks";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
-import { filterList, initialState, reducer, visibleTodos } from "./state";
+import { initialState, reducer, visibleTodos } from "./state";
 import type { Filter } from "./components/layout/Sidebar";
 import { filterKey } from "./components/layout/Sidebar";
+
+import { VERSION } from "../version";
 
 const POLL_INTERVAL_MS = 30_000;
 // Activity feed updates passively; a slower cadence keeps the events query
 // load proportional to its UX value (a glance, not the working surface).
 const EVENTS_POLL_INTERVAL_MS = 60_000;
-const VERSION = "v0.0.0";
 const ACTIVITY_DAYS = 14;
 
 interface ProjectsApi {
@@ -537,12 +538,14 @@ export function App({
   const usable = Math.max(60, totalCols - 2);
   const colGap = 2;
   const leftColW = Math.max(40, Math.floor(usable * 0.6));
-  const rightColW = Math.max(30, usable - leftColW - colGap);
+  // Min width = 4 (y-axis gutter) + ACTIVITY_DAYS*2 (bar pairs) + 4 (panel
+  // border + paddingX) so the Activity chart never truncates at narrow widths.
+  const rightColW = Math.max(36, usable - leftColW - colGap);
   const topGap = 2;
   const topCombined = leftColW - topGap;
-  // Server panel needs to fit the 23-cell-wide logo + 1-cell padding either
-  // side + 1-cell border either side → minimum width 27.
-  const serverW = Math.max(27, Math.floor(topCombined * 0.46));
+  // Server panel needs to fit the 19-cell-wide logo + 1-cell padding either
+  // side + 1-cell border either side → minimum width 23.
+  const serverW = Math.max(23, Math.floor(topCombined * 0.46));
   const statusW = Math.max(26, topCombined - serverW);
 
   // ── layout heights ────────────────────────────────────────────────────────
@@ -1313,30 +1316,6 @@ function sliceWindow<T>(
     moreAbove: start,
     moreBelow: items.length - start - slice.length,
   };
-}
-
-function deriveTotals(todos: Todo[]) {
-  const done = todos.filter((t) => t.done).length;
-  const open = todos.length - done;
-  // Crude "Top" = max same-day creation count; renders as a single eye-grabby
-  // accent number, even when it's small.
-  const perDay = bucketByDay(todos);
-  const maxDaily = Math.max(0, ...Object.values(perDay));
-  return { total: todos.length, done, open, maxDaily };
-}
-
-function bucketByDay(todos: Todo[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const t of todos) {
-    const ms =
-      typeof t.createdAt === "string"
-        ? Number(t.createdAt)
-        : Number(t.createdAt ?? 0);
-    if (!Number.isFinite(ms) || ms <= 0) continue;
-    const day = new Date(ms).toISOString().slice(0, 10);
-    out[day] = (out[day] ?? 0) + 1;
-  }
-  return out;
 }
 
 function sum(xs: number[]): number {

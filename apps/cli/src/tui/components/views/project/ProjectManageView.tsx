@@ -5,6 +5,7 @@ import type { Project, ProjectMember } from "@dox/core";
 import type { ManageEditing } from "../../../state";
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
@@ -87,7 +88,7 @@ export function ProjectManageView({
         </Box>
         <Footer
           mode="manage"
-          version="v0.0.0"
+          version={VERSION}
           outerPadX={1}
           hints={[["esc", "back"]]}
         />
@@ -96,9 +97,7 @@ export function ProjectManageView({
   }
 
   if (editing?.kind === "invitePicker") {
-    return (
-      <InvitePickerModal busy={busy} error={error} onCancel={onDismissModal} />
-    );
+    return <InvitePickerModal busy={busy} error={error} />;
   }
   if (editing?.kind === "codeReveal") {
     return (
@@ -108,7 +107,6 @@ export function ProjectManageView({
         expiresAt={editing.expiresAt}
         projectName={project.name}
         nowMs={nowMs}
-        onClose={onDismissModal}
       />
     );
   }
@@ -169,7 +167,7 @@ export function ProjectManageView({
       </Box>
       <Footer
         mode="manage"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={
           isOwner
@@ -241,11 +239,9 @@ function MemberRow({ m, nowMs }: { m: ProjectMember; nowMs: number }) {
 function InvitePickerModal({
   busy,
   error,
-  onCancel,
 }: {
   busy: boolean;
   error: string | null;
-  onCancel: () => void;
 }) {
   const { stdout } = useStdout();
   const cols = Math.max(60, stdout?.columns ?? 100);
@@ -295,7 +291,7 @@ function InvitePickerModal({
       </Box>
       <Footer
         mode="invite"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           ["e", "editor"],
@@ -313,14 +309,12 @@ function CodeRevealModal({
   expiresAt,
   projectName,
   nowMs,
-  onClose,
 }: {
   code: string;
   role: string;
   expiresAt: string;
   projectName: string;
   nowMs: number;
-  onClose: () => void;
 }) {
   const { stdout } = useStdout();
   const cols = Math.max(60, stdout?.columns ?? 100);
@@ -366,7 +360,7 @@ function CodeRevealModal({
       </Box>
       <Footer
         mode="invite"
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[["any", "close"]]}
       />

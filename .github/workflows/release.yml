@@ -1,12 +1,18 @@
 name: release
 
-# Cut a release: cross-compile dox-server binaries, attach them as tarballs
-# to a draft GitHub Release, and push a multi-arch image to Docker Hub.
+# Cut a release for both the server and the CLI in one tag.
+#
+# Server: cross-compile dox-server binaries, attach them as tarballs to a draft
+# GitHub Release, and push a multi-arch image to Docker Hub.
+# CLI:    bundle apps/cli into a single-file Node binary and publish it to npm
+# as @sn0wl1n/dox at the same version (tag minus the leading "v").
+#
 # Fires on push of a `v*` tag, or manually via workflow_dispatch.
 #
 # Required repo config:
 #   variables: DOCKERHUB_USERNAME
 #   secrets:   DOCKERHUB_TOKEN  (Docker Hub access token, read+write)
+#              NPM_TOKEN        (npm automation token with publish on @sn0wl1n)
 #
 # To cut a release:
 #   just release v0.1.0          (preferred)
@@ -58,7 +64,7 @@ jobs:
             -o bin/dox-server-${GOOS}-${GOARCH} \
             ./cmd/dox-server
 
-      - uses: actions/upload-artifact@v8
+      - uses: actions/upload-artifact@v7
         with:
           name: dox-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: apps/server/bin/dox-server-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -140,3 +146,44 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  publish-npm:
+    name: Publish CLI to npm
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # buf generate runs remote plugins on buf.build, no local plugin install
+      # needed. Produces packages/proto-gen/src/dox/* which the CLI bundle
+      # imports through @dox/core.
+      - name: Generate proto TypeScript
+        run: buf generate
+
+      - name: Install workspace deps
+        run: bun install --frozen-lockfile
+
+      - name: Build CLI bundle
+        env:
+          DOX_CLI_VERSION: ${{ github.ref_name }}
+          DOX_CLI_COMMIT: ${{ github.sha }}
+        run: bun run scripts/build-cli.ts
+
+      - name: Publish to npm
+        working-directory: apps/cli/dist
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

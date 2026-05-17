@@ -6,6 +6,12 @@ A single Go binary on your server, a thin TUI client on your laptop. The
 server holds every byte of truth; the client never caches. Whoever registers
 first becomes the owner and decides who else gets in.
 
+![screenshot](./docs/imgs/screenshot.png)
+
+> **Heads up:** dox is in early, active development — things will move and
+> occasionally break between versions. Issues and pull requests warmly
+> welcome at [github.com/lin-snow/dox](https://github.com/lin-snow/dox).
+
 ## Deploy
 
 The server is one container. One command, one persistent volume:

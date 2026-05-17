@@ -3,6 +3,7 @@ import { TextInput } from "@inkjs/ui";
 import { useState } from "react";
 
 import { color, icon } from "../../../theme";
+import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
@@ -122,7 +123,7 @@ export function TodoEditorView({
       </Box>
       <Footer
         mode={mode === "add" ? "insert" : "edit"}
-        version="v0.0.0"
+        version={VERSION}
         outerPadX={1}
         hints={[
           ["tab", "next field"],

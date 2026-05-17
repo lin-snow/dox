@@ -5,6 +5,7 @@ import * as auth from "./cli/auth";
 import * as project from "./cli/project";
 import * as server from "./cli/server";
 import * as todo from "./cli/todo";
+import { VERSION } from "./version";
 
 const args = process.argv.slice(2);
 
@@ -19,7 +20,7 @@ const program = new Command();
 program
   .name("dox")
   .description("Self-hosted personal todo — thin client")
-  .version("0.0.0")
+  .version(VERSION)
   .option("--json", "output JSON for machine consumption");
 
 // ── auth ───────────────────────────────────────────────────────────────────

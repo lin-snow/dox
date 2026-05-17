@@ -83,6 +83,13 @@ cli *ARGS:
 cli-test:
     bun test
 
+# Build the publishable npm bundle into apps/cli/dist/ (single-file, deps
+# inlined). Use `DOX_CLI_VERSION=v0.1.0 just cli-build` to bake in a real
+# version; without it the bundle reports "dev". CI runs the same script with
+# DOX_CLI_VERSION = the pushed tag.
+cli-build:
+    bun run scripts/build-cli.ts
+
 # === Docker ===
 
 # Build the runtime Docker image locally end-to-end — mirrors what CI does
