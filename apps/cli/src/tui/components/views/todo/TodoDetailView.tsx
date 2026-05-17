@@ -2,11 +2,11 @@ import { Box, Text, useInput, useStdout } from "ink";
 
 import type { Project, Todo } from "@dox/core";
 
-import { color, icon } from "../theme";
-import { relativeTime, swatchColor } from "../util";
-import { Footer } from "./Footer";
-import { Markdown, MarkdownEmpty } from "./Markdown";
-import { TitledPanel } from "./TitledPanel";
+import { color, icon } from "../../../theme";
+import { relativeTime, swatchColor } from "../../../util";
+import { Footer } from "../../layout/Footer";
+import { Markdown, MarkdownEmpty } from "../../primitives/Markdown";
+import { TitledPanel } from "../../primitives/TitledPanel";
 
 interface TodoDetailViewProps {
   todo: Todo;

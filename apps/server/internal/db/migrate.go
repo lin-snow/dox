@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -52,6 +53,10 @@ func Open(path string) (*sql.DB, error) {
 
 func migrate(db *sql.DB) error {
 	goose.SetBaseFS(migrationFS)
+	// Route goose's stdlib-log chatter ("OK 0001.sql", "no migrations to run", ...)
+	// into slog at debug level so it stays out of normal startup output but is
+	// still available with DOX_LOG_LEVEL=debug. Real errors propagate via goose.Up.
+	goose.SetLogger(slogGooseLogger{})
 	// goose dialect is "sqlite3" even though the modernc driver registers as "sqlite".
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("goose set dialect: %w", err)
@@ -60,4 +65,17 @@ func migrate(db *sql.DB) error {
 		return fmt.Errorf("goose up: %w", err)
 	}
 	return nil
+}
+
+type slogGooseLogger struct{}
+
+func (slogGooseLogger) Printf(format string, v ...any) {
+	slog.Debug(fmt.Sprintf(format, v...), "source", "goose")
+}
+
+// Fatalf is part of goose.Logger; the embedded library only calls Printf, but
+// implement Fatalf defensively so an unexpected fatal still surfaces and exits.
+func (slogGooseLogger) Fatalf(format string, v ...any) {
+	slog.Error(fmt.Sprintf(format, v...), "source", "goose")
+	os.Exit(1)
 }

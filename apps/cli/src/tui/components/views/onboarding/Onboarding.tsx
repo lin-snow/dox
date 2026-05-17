@@ -12,11 +12,11 @@ import {
   saveConfig,
 } from "@dox/core";
 
-import { color, icon } from "../theme";
-import { ErrorAlert } from "./ErrorAlert";
-import { Panel } from "./Panel";
-import { SectionHeader } from "./SectionHeader";
-import { Stepper } from "./Stepper";
+import { color, icon } from "../../../theme";
+import { ErrorAlert } from "../../primitives/ErrorAlert";
+import { Panel } from "../../primitives/Panel";
+import { SectionHeader } from "../../primitives/SectionHeader";
+import { Stepper } from "../../primitives/Stepper";
 
 // Onboarding routes a brand-new client onto a dox server. The flow has
 // exactly three terminal intents:

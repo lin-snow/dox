@@ -87,3 +87,87 @@ func (q *Queries) DeleteExpiredInvites(ctx context.Context, expiresAt int64) (in
 	}
 	return result.RowsAffected()
 }
+
+const listOutgoingInvitesByUser = `-- name: ListOutgoingInvitesByUser :many
+SELECT i.code_hash,
+       i.project_id,
+       i.role,
+       i.created_at,
+       i.expires_at,
+       p.name AS project_name
+FROM invites i
+LEFT JOIN projects p ON p.id = i.project_id
+WHERE i.issued_by = ?1
+  AND i.used_at IS NULL
+  AND i.expires_at >= ?2
+ORDER BY i.created_at DESC
+`
+
+type ListOutgoingInvitesByUserParams struct {
+	IssuedBy string
+	Now      int64
+}
+
+type ListOutgoingInvitesByUserRow struct {
+	CodeHash    string
+	ProjectID   sql.NullString
+	Role        sql.NullString
+	CreatedAt   int64
+	ExpiresAt   int64
+	ProjectName sql.NullString
+}
+
+// Caller's still-redeemable invites. project_name is resolved via LEFT JOIN so
+// server-level invites (project_id NULL) and stranded invites (project deleted)
+// come back with NULL/empty project_name.
+func (q *Queries) ListOutgoingInvitesByUser(ctx context.Context, arg ListOutgoingInvitesByUserParams) ([]ListOutgoingInvitesByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listOutgoingInvitesByUser, arg.IssuedBy, arg.Now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOutgoingInvitesByUserRow{}
+	for rows.Next() {
+		var i ListOutgoingInvitesByUserRow
+		if err := rows.Scan(
+			&i.CodeHash,
+			&i.ProjectID,
+			&i.Role,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.ProjectName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeInviteByIssuer = `-- name: RevokeInviteByIssuer :execrows
+DELETE FROM invites
+WHERE code_hash = ?1
+  AND issued_by = ?2
+`
+
+type RevokeInviteByIssuerParams struct {
+	CodeHash string
+	IssuedBy string
+}
+
+// Hard-deletes one invite scoped to the issuer so a non-owner can only revoke
+// invites they personally issued. Returns rows affected so the handler can
+// distinguish "not found / not yours" from "deleted".
+func (q *Queries) RevokeInviteByIssuer(ctx context.Context, arg RevokeInviteByIssuerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, revokeInviteByIssuer, arg.CodeHash, arg.IssuedBy)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}

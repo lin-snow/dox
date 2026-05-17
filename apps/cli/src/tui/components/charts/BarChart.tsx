@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 
-import { color } from "../theme";
+import { color } from "../../theme";
 
 interface BarChartProps {
   // One value per column. Positive numbers only; negatives are clamped to 0.

@@ -144,18 +144,22 @@ func (q *Queries) GetProjectMembership(ctx context.Context, arg GetProjectMember
 }
 
 const listProjectMembers = `-- name: ListProjectMembers :many
-SELECT user_id, role, added_at
-FROM project_members
-WHERE project_id = ?
-ORDER BY added_at ASC
+SELECT pm.user_id, u.name AS user_name, pm.role, pm.added_at
+FROM project_members pm
+JOIN users u ON u.id = pm.user_id
+WHERE pm.project_id = ?
+ORDER BY pm.added_at ASC
 `
 
 type ListProjectMembersRow struct {
-	UserID  string
-	Role    string
-	AddedAt int64
+	UserID   string
+	UserName string
+	Role     string
+	AddedAt  int64
 }
 
+// Joins on users so the client can render names without an extra round-trip
+// (and without needing the owner-only /v1/users list).
 func (q *Queries) ListProjectMembers(ctx context.Context, projectID string) ([]ListProjectMembersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProjectMembers, projectID)
 	if err != nil {
@@ -165,7 +169,12 @@ func (q *Queries) ListProjectMembers(ctx context.Context, projectID string) ([]L
 	items := []ListProjectMembersRow{}
 	for rows.Next() {
 		var i ListProjectMembersRow
-		if err := rows.Scan(&i.UserID, &i.Role, &i.AddedAt); err != nil {
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserName,
+			&i.Role,
+			&i.AddedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

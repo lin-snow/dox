@@ -13,6 +13,7 @@ import (
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
+	"github.com/lin-snow/dox/apps/server/internal/bus"
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
@@ -34,20 +35,22 @@ const (
 //   - Project todo is visible to project owner + members.
 //   - Mutations require owner or editor; viewers are read-only.
 //
-// Holds the *sql.DB alongside *queries.Queries so mutations that also emit
-// activity events (CreateTodo on a project, UpdateTodo flipping done) can
-// wrap both writes in a single transaction via runInTx.
+// Holds the *sql.DB alongside *queries.Queries so mutations that publish
+// bus messages (CreateTodo, UpdateTodo flipping done) can wrap the write
+// and the bus.Publish in a single transaction via runInTx.
 type Todo struct {
 	doxv1.UnimplementedTodoServiceServer
 	db  *sql.DB
 	q   *queries.Queries
+	bus *bus.Bus
 	now func() int64
 }
 
-func NewTodo(db *sql.DB, q *queries.Queries) *Todo {
+func NewTodo(db *sql.DB, q *queries.Queries, b *bus.Bus) *Todo {
 	return &Todo{
 		db:  db,
 		q:   q,
+		bus: b,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
@@ -153,17 +156,15 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 		if err != nil {
 			return err
 		}
-		if !projectID.Valid {
-			return nil
-		}
-		return emitEvent(ctx, q, eventEmission{
-			Verb:        verbTodoCreated,
-			ActorID:     c.UserID,
-			ProjectID:   projectID.String,
-			TargetType:  targetTypeTodo,
-			TargetID:    id,
-			TargetLabel: title,
-			At:          now,
+		// Publish for both private (projectID invalid → personal-scope event,
+		// visible only to actor) and project-scope todos. Private events keep
+		// the activity feed populated for solo users with no collaborators.
+		return s.bus.Publish(ctx, q, bus.TodoCreated{
+			ActorID:   c.UserID,
+			TodoID:    id,
+			Title:     title,
+			ProjectID: projectID,
+			At:        now,
 		})
 	})
 	if err != nil {
@@ -211,10 +212,11 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 	}
 
 	now := s.now()
-	// Emit a todo_completed event only on the false→true transition for a
-	// project-scoped todo. Re-marking an already-done todo or toggling back to
-	// open should be silent in the feed.
-	emitCompleted := !existing.Done && done && existing.ProjectID.Valid
+	// Emit a todo_completed event only on the false→true transition.
+	// Re-marking an already-done todo or toggling back to open is silent.
+	// Both private and project-scoped todos emit — the project_id on the
+	// underlying todo is passed through and decides the visibility scope.
+	emitCompleted := !existing.Done && done
 
 	var row queries.UpdateTodoRow
 	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
@@ -232,14 +234,12 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		if !emitCompleted {
 			return nil
 		}
-		return emitEvent(ctx, q, eventEmission{
-			Verb:        verbTodoCompleted,
-			ActorID:     c.UserID,
-			ProjectID:   existing.ProjectID.String,
-			TargetType:  targetTypeTodo,
-			TargetID:    id,
-			TargetLabel: title,
-			At:          now,
+		return s.bus.Publish(ctx, q, bus.TodoCompleted{
+			ActorID:   c.UserID,
+			TodoID:    id,
+			Title:     title,
+			ProjectID: existing.ProjectID,
+			At:        now,
 		})
 	})
 	if err != nil {

@@ -2,9 +2,9 @@ import { Box, Text, useFocus, useFocusManager, useInput, useStdout } from "ink";
 import { TextInput } from "@inkjs/ui";
 import { useState } from "react";
 
-import { color, icon } from "../theme";
-import { Footer } from "./Footer";
-import { TitledPanel } from "./TitledPanel";
+import { color, icon } from "../../../theme";
+import { Footer } from "../../layout/Footer";
+import { TitledPanel } from "../../primitives/TitledPanel";
 
 export interface TodoEditorPayload {
   title: string;

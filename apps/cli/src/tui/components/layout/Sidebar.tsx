@@ -1,7 +1,7 @@
 import { Box, Text } from "ink";
 import type { Project } from "@dox/core";
 
-import { color, icon } from "../theme";
+import { color, icon } from "../../theme";
 
 // "inbox" = private todos with no project (project_id IS NULL on the server).
 // Surfaced to users as "Private" — see App.tsx tabs. Key stays "inbox" for

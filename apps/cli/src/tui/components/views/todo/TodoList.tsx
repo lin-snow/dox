@@ -1,7 +1,7 @@
 import { Box, Text } from "ink";
 import type { Todo } from "@dox/core";
 
-import { color, icon } from "../theme";
+import { color, icon } from "../../../theme";
 
 interface Props {
   todos: Todo[];

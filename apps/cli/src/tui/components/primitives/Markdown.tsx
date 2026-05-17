@@ -6,7 +6,7 @@ import { Marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 import { useMemo } from "react";
 
-import { color } from "../theme";
+import { color } from "../../theme";
 
 interface MarkdownProps {
   source: string;

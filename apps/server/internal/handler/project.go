@@ -194,9 +194,10 @@ func (s *Project) ListProjectMembers(ctx context.Context, req *doxv1.ListProject
 	out := make([]*doxv1.ProjectMember, 0, len(rows))
 	for _, m := range rows {
 		out = append(out, &doxv1.ProjectMember{
-			UserId:  m.UserID,
-			Role:    m.Role,
-			AddedAt: m.AddedAt,
+			UserId:   m.UserID,
+			UserName: m.UserName,
+			Role:     m.Role,
+			AddedAt:  m.AddedAt,
 		})
 	}
 	return &doxv1.ListProjectMembersResponse{Members: out}, nil

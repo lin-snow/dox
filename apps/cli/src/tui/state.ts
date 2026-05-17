@@ -1,7 +1,7 @@
-import type { ActivityEvent, Project, Todo } from "@dox/core";
+import type { ActivityEvent, OutgoingInvite, Project, ProjectMember, ServerSettings, Todo } from "@dox/core";
 
-import type { Filter } from "./components/Sidebar";
-import { filterKey } from "./components/Sidebar";
+import type { Filter } from "./components/layout/Sidebar";
+import { filterKey } from "./components/layout/Sidebar";
 
 export type Mode =
   | "list"
@@ -9,11 +9,31 @@ export type Mode =
   | "edit"
   | "settings"
   | "projectAdd"
+  | "projectManage"
   | "projectConfirmDelete"
   | "todoDetail"
   | "search"
   | "searchDetail";
+
+// Sub-state for the project manage screen. Mutually exclusive with the main
+// member-list view of that screen — exactly one is up at a time.
+export type ManageEditing =
+  | { kind: "invitePicker" }
+  | { kind: "codeReveal"; code: string; expiresAt: string; role: string };
 export type Focus = "list" | "sidebar";
+
+export type SettingsTabKey = "server" | "account" | "invites";
+
+// Exactly one modal is up at a time on the settings screen. The discriminator
+// drives which modal renders + which keys are handled.
+export type SettingsEditing =
+  | { kind: "changePassword" }
+  | { kind: "serverName" }
+  | { kind: "serverDescription" }
+  | { kind: "registrationToggle"; next: boolean }
+  | { kind: "signOut" }
+  | { kind: "redeemCode" }
+  | { kind: "revokeInvite"; codeHash: string };
 
 export interface State {
   mode: Mode;
@@ -35,8 +55,31 @@ export interface State {
   syncing: boolean;
   // Settings view sub-state. Persists across open/close so the user lands back
   // on the same tab + row when they reopen the screen mid-session.
-  settingsTab: number;
+  settingsTab: SettingsTabKey;
   settingsCursor: number;
+  // Settings data caches. null/empty = not yet fetched OR not visible to this
+  // user (e.g., a non-owner won't have settingsServer). The *Loaded flags
+  // distinguish "still loading" from "intentionally empty."
+  settingsServer: ServerSettings | null;
+  settingsServerLoaded: boolean;
+  settingsOutgoing: OutgoingInvite[];
+  settingsOutgoingLoaded: boolean;
+  // Active modal on the settings screen, or null. Mutually exclusive — only
+  // one can be open at a time.
+  settingsEditing: SettingsEditing | null;
+  // True while an async settings action (save / revoke / sign-out) is in
+  // flight. Modals read this to disable submit while waiting.
+  settingsBusy: boolean;
+  // Last error message produced by a settings action. Rendered inline in the
+  // active modal. Cleared on dispatch of SETTINGS_EDIT.
+  settingsError: string | null;
+  // Project manage view sub-state. Active only when mode === "projectManage".
+  manageProjectId: string | null;
+  manageMembers: ProjectMember[];
+  manageMembersLoaded: boolean;
+  manageEditing: ManageEditing | null;
+  manageBusy: boolean;
+  manageError: string | null;
   // Project pending y/n confirmation. Cleared whenever the prompt is dismissed.
   deletingProjectId: string | null;
   // Search view sub-state. Persists across enter→detail→back so the user lands
@@ -74,8 +117,19 @@ export type Action =
   | { type: "CLOSE_HELP" }
   | { type: "OPEN_SETTINGS" }
   | { type: "CLOSE_SETTINGS" }
-  | { type: "SETTINGS_TAB"; index: number }
+  | { type: "SETTINGS_TAB"; tab: SettingsTabKey }
   | { type: "SETTINGS_CURSOR"; index: number }
+  | { type: "SETTINGS_SERVER_SET"; settings: ServerSettings | null }
+  | { type: "SETTINGS_OUTGOING_SET"; invites: OutgoingInvite[] }
+  | { type: "SETTINGS_EDIT"; editing: SettingsEditing | null }
+  | { type: "SETTINGS_BUSY"; busy: boolean }
+  | { type: "SETTINGS_ERROR"; error: string | null }
+  | { type: "ENTER_PROJECT_MANAGE"; projectId: string }
+  | { type: "EXIT_PROJECT_MANAGE" }
+  | { type: "MANAGE_MEMBERS_SET"; members: ProjectMember[] }
+  | { type: "MANAGE_EDIT"; editing: ManageEditing | null }
+  | { type: "MANAGE_BUSY"; busy: boolean }
+  | { type: "MANAGE_ERROR"; error: string | null }
   | { type: "OPEN_TODO_DETAIL" }
   | { type: "CLOSE_TODO_DETAIL" }
   | { type: "OPEN_SEARCH" }
@@ -107,8 +161,21 @@ export const initialState: State = {
   error: null,
   helpOpen: false,
   syncing: false,
-  settingsTab: 0,
+  settingsTab: "server",
   settingsCursor: 0,
+  settingsServer: null,
+  settingsServerLoaded: false,
+  settingsOutgoing: [],
+  settingsOutgoingLoaded: false,
+  settingsEditing: null,
+  settingsBusy: false,
+  settingsError: null,
+  manageProjectId: null,
+  manageMembers: [],
+  manageMembersLoaded: false,
+  manageEditing: null,
+  manageBusy: false,
+  manageError: null,
   deletingProjectId: null,
   searchQuery: "",
   searchCursor: 0,
@@ -270,15 +337,65 @@ export function reducer(state: State, action: Action): State {
     case "CLOSE_HELP":
       return { ...state, helpOpen: false };
     case "OPEN_SETTINGS":
-      return { ...state, mode: "settings", helpOpen: false };
+      return {
+        ...state,
+        mode: "settings",
+        helpOpen: false,
+        // Force a fresh fetch on every open so edits made elsewhere (a second
+        // client, an API call) are reflected. App.tsx kicks the fetch off when
+        // it sees these flags flip back to false.
+        settingsServerLoaded: false,
+        settingsOutgoingLoaded: false,
+        settingsEditing: null,
+        settingsError: null,
+        settingsBusy: false,
+      };
     case "CLOSE_SETTINGS":
-      return { ...state, mode: "list" };
+      return { ...state, mode: "list", settingsEditing: null, settingsError: null };
     case "SETTINGS_TAB":
       // Resetting the cursor on tab change matches the image: the new tab's
       // first item is always pre-selected.
-      return { ...state, settingsTab: action.index, settingsCursor: 0 };
+      return { ...state, settingsTab: action.tab, settingsCursor: 0, settingsError: null };
     case "SETTINGS_CURSOR":
       return { ...state, settingsCursor: action.index };
+    case "SETTINGS_SERVER_SET":
+      return { ...state, settingsServer: action.settings, settingsServerLoaded: true };
+    case "SETTINGS_OUTGOING_SET":
+      return { ...state, settingsOutgoing: action.invites, settingsOutgoingLoaded: true };
+    case "SETTINGS_EDIT":
+      return { ...state, settingsEditing: action.editing, settingsError: null };
+    case "SETTINGS_BUSY":
+      return { ...state, settingsBusy: action.busy };
+    case "SETTINGS_ERROR":
+      return { ...state, settingsError: action.error, settingsBusy: false };
+    case "ENTER_PROJECT_MANAGE":
+      return {
+        ...state,
+        mode: "projectManage",
+        manageProjectId: action.projectId,
+        manageMembers: [],
+        manageMembersLoaded: false,
+        manageEditing: null,
+        manageBusy: false,
+        manageError: null,
+        helpOpen: false,
+      };
+    case "EXIT_PROJECT_MANAGE":
+      return {
+        ...state,
+        mode: "list",
+        manageProjectId: null,
+        manageEditing: null,
+        manageError: null,
+      };
+    case "MANAGE_MEMBERS_SET":
+      return { ...state, manageMembers: action.members, manageMembersLoaded: true };
+    case "MANAGE_EDIT":
+      return { ...state, manageEditing: action.editing, manageError: null };
+    case "MANAGE_BUSY":
+      return { ...state, manageBusy: action.busy };
+    case "MANAGE_ERROR":
+      return { ...state, manageError: action.error, manageBusy: false };
     case "OPEN_TODO_DETAIL":
       return { ...state, mode: "todoDetail", helpOpen: false };
     case "CLOSE_TODO_DETAIL":

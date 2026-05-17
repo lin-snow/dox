@@ -12,6 +12,7 @@ import (
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/authn"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
+	"github.com/lin-snow/dox/apps/server/internal/bus"
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
@@ -27,13 +28,15 @@ type Invite struct {
 	doxv1.UnimplementedInviteServiceServer
 	db  *sql.DB
 	q   *queries.Queries
+	bus *bus.Bus
 	now func() int64
 }
 
-func NewInvite(db *sql.DB, q *queries.Queries) *Invite {
+func NewInvite(db *sql.DB, q *queries.Queries, b *bus.Bus) *Invite {
 	return &Invite{
 		db:  db,
 		q:   q,
+		bus: b,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
@@ -133,13 +136,10 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		if err != nil {
 			return err
 		}
-		return emitEvent(ctx, q, eventEmission{
-			Verb:        verbMemberJoined,
+		return s.bus.Publish(ctx, q, bus.MemberJoined{
 			ActorID:     c.UserID,
 			ProjectID:   projectID,
-			TargetType:  targetTypeProject,
-			TargetID:    projectID,
-			TargetLabel: proj.Name,
+			ProjectName: proj.Name,
 			At:          now,
 		})
 	}); err != nil {
@@ -149,4 +149,47 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		ProjectId: projectID,
 		Role:      row.Role.String,
 	}, nil
+}
+
+func (s *Invite) ListOutgoingInvites(ctx context.Context, _ *doxv1.ListOutgoingInvitesRequest) (*doxv1.ListOutgoingInvitesResponse, error) {
+	c := caller.MustFrom(ctx)
+	rows, err := s.q.ListOutgoingInvitesByUser(ctx, queries.ListOutgoingInvitesByUserParams{
+		IssuedBy: c.UserID,
+		Now:      s.now(),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list invites: %v", err)
+	}
+	out := make([]*doxv1.OutgoingInvite, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, &doxv1.OutgoingInvite{
+			CodeHash:    r.CodeHash,
+			ProjectId:   r.ProjectID.String,
+			ProjectName: r.ProjectName.String,
+			Role:        r.Role.String,
+			CreatedAt:   r.CreatedAt,
+			ExpiresAt:   r.ExpiresAt,
+		})
+	}
+	return &doxv1.ListOutgoingInvitesResponse{Invites: out}, nil
+}
+
+func (s *Invite) RevokeInvite(ctx context.Context, req *doxv1.RevokeInviteRequest) (*doxv1.RevokeInviteResponse, error) {
+	c := caller.MustFrom(ctx)
+	if req.GetCodeHash() == "" {
+		return nil, status.Error(codes.InvalidArgument, "code_hash is required")
+	}
+	n, err := s.q.RevokeInviteByIssuer(ctx, queries.RevokeInviteByIssuerParams{
+		CodeHash: req.GetCodeHash(),
+		IssuedBy: c.UserID,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "revoke invite: %v", err)
+	}
+	if n == 0 {
+		// Either the row doesn't exist or it isn't ours. Don't distinguish, to
+		// avoid leaking the existence of other users' invites.
+		return nil, status.Error(codes.NotFound, "invite not found")
+	}
+	return &doxv1.RevokeInviteResponse{}, nil
 }

@@ -148,6 +148,56 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/invites/outgoing:
+        get:
+            tags:
+                - InviteService
+            description: |-
+                Lists the caller's own still-redeemable invites. Owner sees both server
+                 and project invites they issued; non-owner project owners see only their
+                 project invites.
+            operationId: InviteService_ListOutgoingInvites
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListOutgoingInvitesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/invites/{codeHash}:
+        delete:
+            tags:
+                - InviteService
+            description: |-
+                Hard-deletes one of the caller's own outgoing invites. Code becomes
+                 invalid immediately.
+            operationId: InviteService_RevokeInvite
+            parameters:
+                - name: codeHash
+                  in: path
+                  description: The opaque server-internal identifier returned by ListOutgoingInvites.
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RevokeInviteResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/me:
         get:
             tags:
@@ -751,6 +801,13 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Event'
+        ListOutgoingInvitesResponse:
+            type: object
+            properties:
+                invites:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/OutgoingInvite'
         ListProjectMembersResponse:
             type: object
             properties:
@@ -797,6 +854,32 @@ components:
                     type: string
                 role:
                     type: string
+        OutgoingInvite:
+            type: object
+            properties:
+                codeHash:
+                    type: string
+                    description: Server-internal identifier (sha256 hex). Pass back via RevokeInvite.
+                projectId:
+                    type: string
+                    description: Empty for server-level invites.
+                projectName:
+                    type: string
+                    description: |-
+                        Resolved by the server; empty for server-level invites or if the project
+                         was deleted out from under the invite.
+                role:
+                    type: string
+                    description: Empty for server-level invites; otherwise "editor" or "viewer".
+                createdAt:
+                    type: string
+                expiresAt:
+                    type: string
+            description: |-
+                OutgoingInvite is a still-redeemable invite the caller issued. Used by the
+                 Settings → Invites list. The plaintext `code` is unrecoverable after creation
+                 (only the hash is stored), so listings carry `code_hash` as the opaque
+                 identifier the client uses to revoke a row.
         Project:
             type: object
             properties:
@@ -829,6 +912,11 @@ components:
                     description: '"editor" or "viewer".'
                 addedAt:
                     type: string
+                userName:
+                    type: string
+                    description: |-
+                        Resolved by the server. Lets clients render names without hitting the
+                         owner-only /v1/users endpoint.
         RegisterRequest:
             type: object
             properties:
@@ -876,6 +964,9 @@ components:
                     description: |-
                         Plaintext one-time temp password. Owner must relay to the user; the
                          user should ChangePassword on first login.
+        RevokeInviteResponse:
+            type: object
+            properties: {}
         ServerInfoResponse:
             type: object
             properties:

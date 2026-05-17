@@ -2,7 +2,7 @@ import { Box, Text } from "ink";
 
 import type { Todo } from "@dox/core";
 
-import { color } from "../theme";
+import { color } from "../../../theme";
 
 interface ActivityLogProps {
   todos: Todo[];

@@ -3,9 +3,9 @@ import { TextInput } from "@inkjs/ui";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
-import { color, icon } from "../theme";
-import { Footer } from "./Footer";
-import { TitledPanel } from "./TitledPanel";
+import { color, icon } from "../../../theme";
+import { Footer } from "../../layout/Footer";
+import { TitledPanel } from "../../primitives/TitledPanel";
 
 export interface ProjectInput {
   name: string;

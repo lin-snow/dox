@@ -3,24 +3,35 @@ import { Spinner } from "@inkjs/ui";
 import { homedir } from "node:os";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
-import type { EventsApi, Project, ServerInfo, Todo, TodoApi } from "@dox/core";
-import { fetchServerInfo } from "@dox/core";
+import type {
+  EventsApi,
+  InviteClient,
+  Project,
+  ProjectMember,
+  ServerInfo,
+  Todo,
+  TodoApi,
+  UserClient,
+} from "@dox/core";
+import { fetchServerInfo, loadConfig, saveConfig } from "@dox/core";
 
-import { ActivityFeed } from "./components/ActivityFeed";
-import { DualBarChart } from "./components/DualBarChart";
-import { ErrorAlert } from "./components/ErrorAlert";
-import { Footer } from "./components/Footer";
-import { HelpOverlay } from "./components/HelpOverlay";
-import { Logo } from "./components/Logo";
-import { SearchView } from "./components/SearchView";
-import { SettingsView } from "./components/SettingsView";
-import { Tabs } from "./components/Tabs";
-import { TitledPanel } from "./components/TitledPanel";
-import { ConfirmDialog } from "./components/ConfirmDialog";
-import { ProjectEditorView } from "./components/ProjectEditorView";
-import { TodoDetailView } from "./components/TodoDetailView";
-import { TodoEditorView } from "./components/TodoEditorView";
-import { TodoInfo } from "./components/TodoInfo";
+import { ActivityFeed } from "./components/views/todo/ActivityFeed";
+import { DualBarChart } from "./components/charts/DualBarChart";
+import { ErrorAlert } from "./components/primitives/ErrorAlert";
+import { Footer } from "./components/layout/Footer";
+import { HelpOverlay } from "./components/primitives/HelpOverlay";
+import { Logo } from "./components/layout/Logo";
+import { SearchView } from "./components/views/search/SearchView";
+import { SettingsView } from "./components/views/settings/SettingsView";
+import { Tabs } from "./components/layout/Tabs";
+import { TitledPanel } from "./components/primitives/TitledPanel";
+import { ConfirmDialog } from "./components/primitives/ConfirmDialog";
+import { ProjectEditorView } from "./components/views/project/ProjectEditorView";
+import { ProjectManageView } from "./components/views/project/ProjectManageView";
+import { TodoDetailView } from "./components/views/todo/TodoDetailView";
+import { TodoEditorView } from "./components/views/todo/TodoEditorView";
+import { TodoInfo } from "./components/views/todo/TodoInfo";
+import { SettingsModal } from "./components/views/settings/SettingsModal";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
@@ -30,8 +41,8 @@ import {
   reducer,
   visibleTodos,
 } from "./state";
-import type { Filter } from "./components/Sidebar";
-import { filterKey } from "./components/Sidebar";
+import type { Filter } from "./components/layout/Sidebar";
+import { filterKey } from "./components/layout/Sidebar";
 
 const POLL_INTERVAL_MS = 30_000;
 // Activity feed updates passively; a slower cadence keeps the events query
@@ -44,16 +55,24 @@ interface ProjectsApi {
   list(): Promise<Project[]>;
   create(args: { name: string; description?: string; color?: string }): Promise<Project>;
   remove(id: string): Promise<void>;
+  // Optional so the test harness can keep its slim fake; the real ProjectClient
+  // implements it.
+  listMembers?: (projectId: string) => Promise<ProjectMember[]>;
 }
 
 interface AppProps {
   api: TodoApi;
   projects?: ProjectsApi;
   events?: EventsApi;
-  identity?: { userName?: string; server?: string; configPath?: string };
+  users?: UserClient;
+  invites?: InviteClient;
+  identity?: { userId?: string; userName?: string; role?: string; server?: string; configPath?: string };
+  // Called after sign-out clears local credentials. Parent routes back to the
+  // onboarding flow on the same process — no exit needed.
+  onSignedOut?: () => void;
 }
 
-export function App({ api, projects, events, identity }: AppProps) {
+export function App({ api, projects, events, users, invites, identity, onSignedOut }: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const { exit } = useApp();
@@ -102,6 +121,80 @@ export function App({ api, projects, events, identity }: AppProps) {
     const timer = setInterval(() => void refreshEvents(), EVENTS_POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [events, refreshEvents]);
+
+  // Project manage hydration. Fires on enter; the *Loaded flag keeps the
+  // fetch one-shot for the session of that screen.
+  useEffect(() => {
+    if (state.mode !== "projectManage") return;
+    if (state.manageMembersLoaded) return;
+    const pid = state.manageProjectId;
+    if (!pid || !projects?.listMembers) {
+      // Without a listMembers fn we can't populate the panel; mark loaded so
+      // the view stops showing "loading…" and renders an empty list instead.
+      dispatch({ type: "MANAGE_MEMBERS_SET", members: [] });
+      return;
+    }
+    void (async () => {
+      try {
+        const members = await projects.listMembers!(pid);
+        dispatch({ type: "MANAGE_MEMBERS_SET", members });
+      } catch (err) {
+        dispatch({ type: "MANAGE_ERROR", error: (err as Error).message });
+        dispatch({ type: "MANAGE_MEMBERS_SET", members: [] });
+      }
+    })();
+  }, [state.mode, state.manageProjectId, state.manageMembersLoaded, projects]);
+
+  // Settings data hydration. Fires whenever the settings screen opens (OPEN_SETTINGS
+  // resets *Loaded back to false). Owner-only `settingsServer` fetch is gated on
+  // the cached role; the server still enforces, this just skips a guaranteed 403.
+  useEffect(() => {
+    if (state.mode !== "settings") return;
+    if (!state.settingsServerLoaded && users && identity?.role === "owner") {
+      void (async () => {
+        try {
+          const s = await users.getSettings();
+          dispatch({ type: "SETTINGS_SERVER_SET", settings: s });
+        } catch (err) {
+          dispatch({ type: "SETTINGS_ERROR", error: (err as Error).message });
+          dispatch({ type: "SETTINGS_SERVER_SET", settings: null });
+        }
+      })();
+    } else if (!state.settingsServerLoaded && identity?.role !== "owner") {
+      // Non-owners can't read /v1/settings; backfill from the public
+      // ServerInfo so the Server tab can render real values + mark loaded so
+      // the tab stops showing "loading…".
+      dispatch({
+        type: "SETTINGS_SERVER_SET",
+        settings: serverInfo
+          ? {
+              registrationOpen: serverInfo.registrationOpen,
+              serverName: serverInfo.serverName,
+              serverDescription: serverInfo.serverDescription,
+            }
+          : null,
+      });
+    }
+    if (!state.settingsOutgoingLoaded && invites) {
+      void (async () => {
+        try {
+          const list = await invites.listOutgoing();
+          dispatch({ type: "SETTINGS_OUTGOING_SET", invites: list });
+        } catch (err) {
+          dispatch({ type: "SETTINGS_ERROR", error: (err as Error).message });
+          dispatch({ type: "SETTINGS_OUTGOING_SET", invites: [] });
+        }
+      })();
+    }
+  }, [
+    state.mode,
+    state.settingsServerLoaded,
+    state.settingsOutgoingLoaded,
+    users,
+    invites,
+    identity?.role,
+    serverInfo,
+  ]);
 
   // One-shot fetch: server build identity doesn't change at runtime, so we
   // don't poll. Failures stay silent — the Status panel just shows "—" until a
@@ -204,6 +297,30 @@ export function App({ api, projects, events, identity }: AppProps) {
   }, [state.mode, api]);
 
   const visible = useMemo(() => visibleTodos(state), [state]);
+
+  // Hydrate the cursored todo's description so the TodoInfo preview can show
+  // the body inline. Fires only when the cursor lands on a todo whose body
+  // hasn't been fetched yet — cached rows short-circuit. Silent on error: the
+  // preview just stays empty and the "press ⏎ for details" hint covers it.
+  const cursoredTodo = visible[state.cursor];
+  const cursoredId = cursoredTodo?.id;
+  const cursoredDescriptionLoaded = cursoredTodo?.description !== undefined;
+  useEffect(() => {
+    if (state.mode !== "list") return;
+    if (!cursoredId || cursoredDescriptionLoaded) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const full = await api.getTodo(cursoredId);
+        if (!cancelled) dispatch({ type: "TODO_UPDATED", todo: full });
+      } catch {
+        // Intentional: preview is optional, error is handled by leaving it blank.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.mode, cursoredId, cursoredDescriptionLoaded, api]);
   const createdSeries = useMemo(
     () => activityByDay(state.todos, ACTIVITY_DAYS, "created"),
     [state.todos],
@@ -260,6 +377,14 @@ export function App({ api, projects, events, identity }: AppProps) {
         state.filter.type === "project"
       ) {
         return dispatch({ type: "ENTER_PROJECT_DELETE_CONFIRM", id: state.filter.id });
+      }
+      if (
+        input === "m" &&
+        projects &&
+        typeof state.filter !== "string" &&
+        state.filter.type === "project"
+      ) {
+        return dispatch({ type: "ENTER_PROJECT_MANAGE", projectId: state.filter.id });
       }
 
       const current = visible[state.cursor];
@@ -386,11 +511,11 @@ export function App({ api, projects, events, identity }: AppProps) {
   const topRowH = 14;
   const rowGap = 1;
   const todosH = Math.max(18, innerH - topRowH - rowGap);
-  // Right column splits into Activity (top, taller than topRowH but capped so
-  // it doesn't dominate) and TodoInfo (bottom, absorbs the rest). Sums to
-  // innerH so both columns end on the same row.
-  const todoInfoH = Math.max(11, Math.min(18, Math.floor(innerH * 0.38)));
-  const activityH = Math.max(15, innerH - todoInfoH - rowGap);
+  // Right column splits into Activity (top — chart + a short Recent strip,
+  // kept tight) and TodoInfo (bottom, absorbs the rest). Sums to innerH so
+  // both columns end on the same row.
+  const activityH = Math.max(17, Math.min(22, Math.floor(innerH * 0.46)));
+  const todoInfoH = Math.max(11, innerH - activityH - rowGap);
 
   const activeTab = filterToTabKey(state.filter);
   const projectById = useMemo(
@@ -415,17 +540,45 @@ export function App({ api, projects, events, identity }: AppProps) {
   // Full-screen settings view replaces the main grid when active. Kept as an
   // early return so we don't have to gate every grid sub-render below.
   if (state.mode === "settings") {
-    const tabs = buildSettingsTabs({
-      server: identity?.server,
-      userName: identity?.userName,
-      pollIntervalMs: POLL_INTERVAL_MS,
+    const settingsTabs = buildSettingsTabs({
+      identity: { userName: identity?.userName, server: identity?.server, role: identity?.role },
+      server: state.settingsServer,
+      serverLoaded: state.settingsServerLoaded,
+      outgoing: state.settingsOutgoing,
+      outgoingLoaded: state.settingsOutgoingLoaded,
+      on: {
+        editServerName: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "serverName" } }),
+        editServerDescription: () =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "serverDescription" } }),
+        toggleRegistration: (next) =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "registrationToggle", next } }),
+        changePassword: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "changePassword" } }),
+        signOut: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "signOut" } }),
+        redeemCode: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "redeemCode" } }),
+        revokeInvite: (codeHash) =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "revokeInvite", codeHash } }),
+      },
     });
+
+    const editing = state.settingsEditing;
+    if (editing) {
+      return (
+        <SettingsModal
+          editing={editing}
+          state={state}
+          dispatch={dispatch}
+          users={users}
+          invites={invites}
+          onSignedOut={onSignedOut}
+        />
+      );
+    }
     return (
       <SettingsView
-        tabs={tabs}
-        activeTabIndex={Math.min(state.settingsTab, tabs.length - 1)}
+        tabs={settingsTabs}
+        activeTab={state.settingsTab}
         cursor={state.settingsCursor}
-        onTabChange={(i) => dispatch({ type: "SETTINGS_TAB", index: i })}
+        onTabChange={(tab) => dispatch({ type: "SETTINGS_TAB", tab })}
         onCursorChange={(i) => dispatch({ type: "SETTINGS_CURSOR", index: i })}
         onClose={() => dispatch({ type: "CLOSE_SETTINGS" })}
       />
@@ -470,6 +623,47 @@ export function App({ api, projects, events, identity }: AppProps) {
           })();
         }}
         onCancel={() => dispatch({ type: "EXIT_MODE" })}
+      />
+    );
+  }
+
+  if (state.mode === "projectManage") {
+    const proj = state.manageProjectId ? projectById.get(state.manageProjectId) ?? null : null;
+    const isOwner = !!(proj && identity?.userId && proj.ownerId === identity.userId);
+    return (
+      <ProjectManageView
+        project={proj}
+        members={state.manageMembers}
+        membersLoaded={state.manageMembersLoaded}
+        editing={state.manageEditing}
+        busy={state.manageBusy}
+        error={state.manageError}
+        nowMs={nowMs}
+        isOwner={isOwner}
+        onClose={() => dispatch({ type: "EXIT_PROJECT_MANAGE" })}
+        onOpenInvitePicker={() => dispatch({ type: "MANAGE_EDIT", editing: { kind: "invitePicker" } })}
+        onPickInviteRole={(role) => {
+          if (!invites || !proj) return;
+          dispatch({ type: "MANAGE_BUSY", busy: true });
+          void (async () => {
+            try {
+              const inv = await invites.create({ projectId: proj.id, role });
+              dispatch({ type: "MANAGE_BUSY", busy: false });
+              dispatch({
+                type: "MANAGE_EDIT",
+                editing: {
+                  kind: "codeReveal",
+                  code: inv.code,
+                  role: inv.role,
+                  expiresAt: inv.expiresAt,
+                },
+              });
+            } catch (err) {
+              dispatch({ type: "MANAGE_ERROR", error: (err as Error).message });
+            }
+          })();
+        }}
+        onDismissModal={() => dispatch({ type: "MANAGE_EDIT", editing: null })}
       />
     );
   }
@@ -795,6 +989,8 @@ export function App({ api, projects, events, identity }: AppProps) {
               }
               ownerName={identity?.userName}
               nowMs={nowMs}
+              panelWidth={rightColW}
+              panelHeight={todoInfoH}
             />
           </TitledPanel>
         </Box>

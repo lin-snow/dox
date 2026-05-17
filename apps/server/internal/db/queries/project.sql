@@ -39,10 +39,13 @@ DELETE FROM project_members
 WHERE project_id = ? AND user_id = ?;
 
 -- name: ListProjectMembers :many
-SELECT user_id, role, added_at
-FROM project_members
-WHERE project_id = ?
-ORDER BY added_at ASC;
+-- Joins on users so the client can render names without an extra round-trip
+-- (and without needing the owner-only /v1/users list).
+SELECT pm.user_id, u.name AS user_name, pm.role, pm.added_at
+FROM project_members pm
+JOIN users u ON u.id = pm.user_id
+WHERE pm.project_id = ?
+ORDER BY pm.added_at ASC;
 
 -- name: GetProjectMembership :one
 -- Returns the caller's role for the project, or no row if not a member.

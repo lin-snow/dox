@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
+	"github.com/lin-snow/dox/apps/server/internal/bus"
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
@@ -34,7 +35,13 @@ func newTodoFixture(t *testing.T) (*handler.Todo, *queries.Queries, context.Cont
 	ctx := caller.With(context.Background(), caller.Caller{
 		UserID: user.ID, UserName: user.Name, Role: user.Role,
 	})
-	return handler.NewTodo(conn, q), q, ctx
+	return handler.NewTodo(conn, q, testBus()), q, ctx
+}
+
+// testBus wires up the same default subscriber set as production. Tests assert
+// on the activity feed via ListEvents, so they need the recorder attached.
+func testBus() *bus.Bus {
+	return bus.New(bus.NewActivityRecorder())
 }
 
 func seedUser(t *testing.T, q *queries.Queries, name, role string) queries.User {

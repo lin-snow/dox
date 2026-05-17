@@ -109,6 +109,99 @@ func (x *Invite) GetExpiresAt() int64 {
 	return 0
 }
 
+// OutgoingInvite is a still-redeemable invite the caller issued. Used by the
+// Settings → Invites list. The plaintext `code` is unrecoverable after creation
+// (only the hash is stored), so listings carry `code_hash` as the opaque
+// identifier the client uses to revoke a row.
+type OutgoingInvite struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Server-internal identifier (sha256 hex). Pass back via RevokeInvite.
+	CodeHash string `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+	// Empty for server-level invites.
+	ProjectId string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Resolved by the server; empty for server-level invites or if the project
+	// was deleted out from under the invite.
+	ProjectName string `protobuf:"bytes,3,opt,name=project_name,json=projectName,proto3" json:"project_name,omitempty"`
+	// Empty for server-level invites; otherwise "editor" or "viewer".
+	Role          string `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
+	CreatedAt     int64  `protobuf:"varint,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ExpiresAt     int64  `protobuf:"varint,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OutgoingInvite) Reset() {
+	*x = OutgoingInvite{}
+	mi := &file_dox_v1_invite_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutgoingInvite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutgoingInvite) ProtoMessage() {}
+
+func (x *OutgoingInvite) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_invite_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutgoingInvite.ProtoReflect.Descriptor instead.
+func (*OutgoingInvite) Descriptor() ([]byte, []int) {
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OutgoingInvite) GetCodeHash() string {
+	if x != nil {
+		return x.CodeHash
+	}
+	return ""
+}
+
+func (x *OutgoingInvite) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *OutgoingInvite) GetProjectName() string {
+	if x != nil {
+		return x.ProjectName
+	}
+	return ""
+}
+
+func (x *OutgoingInvite) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *OutgoingInvite) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *OutgoingInvite) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
 type CreateInviteRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Unset = server-level invite (owner only). Set = project invite.
@@ -123,7 +216,7 @@ type CreateInviteRequest struct {
 
 func (x *CreateInviteRequest) Reset() {
 	*x = CreateInviteRequest{}
-	mi := &file_dox_v1_invite_proto_msgTypes[1]
+	mi := &file_dox_v1_invite_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -135,7 +228,7 @@ func (x *CreateInviteRequest) String() string {
 func (*CreateInviteRequest) ProtoMessage() {}
 
 func (x *CreateInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_invite_proto_msgTypes[1]
+	mi := &file_dox_v1_invite_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -148,7 +241,7 @@ func (x *CreateInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateInviteRequest.ProtoReflect.Descriptor instead.
 func (*CreateInviteRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_invite_proto_rawDescGZIP(), []int{1}
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateInviteRequest) GetProjectId() string {
@@ -181,7 +274,7 @@ type AcceptInviteRequest struct {
 
 func (x *AcceptInviteRequest) Reset() {
 	*x = AcceptInviteRequest{}
-	mi := &file_dox_v1_invite_proto_msgTypes[2]
+	mi := &file_dox_v1_invite_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -193,7 +286,7 @@ func (x *AcceptInviteRequest) String() string {
 func (*AcceptInviteRequest) ProtoMessage() {}
 
 func (x *AcceptInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_invite_proto_msgTypes[2]
+	mi := &file_dox_v1_invite_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -206,7 +299,7 @@ func (x *AcceptInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptInviteRequest.ProtoReflect.Descriptor instead.
 func (*AcceptInviteRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_invite_proto_rawDescGZIP(), []int{2}
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AcceptInviteRequest) GetCode() string {
@@ -228,7 +321,7 @@ type AcceptInviteResponse struct {
 
 func (x *AcceptInviteResponse) Reset() {
 	*x = AcceptInviteResponse{}
-	mi := &file_dox_v1_invite_proto_msgTypes[3]
+	mi := &file_dox_v1_invite_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -240,7 +333,7 @@ func (x *AcceptInviteResponse) String() string {
 func (*AcceptInviteResponse) ProtoMessage() {}
 
 func (x *AcceptInviteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_invite_proto_msgTypes[3]
+	mi := &file_dox_v1_invite_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -253,7 +346,7 @@ func (x *AcceptInviteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptInviteResponse.ProtoReflect.Descriptor instead.
 func (*AcceptInviteResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_invite_proto_rawDescGZIP(), []int{3}
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AcceptInviteResponse) GetProjectId() string {
@@ -270,6 +363,167 @@ func (x *AcceptInviteResponse) GetRole() string {
 	return ""
 }
 
+type ListOutgoingInvitesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOutgoingInvitesRequest) Reset() {
+	*x = ListOutgoingInvitesRequest{}
+	mi := &file_dox_v1_invite_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOutgoingInvitesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOutgoingInvitesRequest) ProtoMessage() {}
+
+func (x *ListOutgoingInvitesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_invite_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOutgoingInvitesRequest.ProtoReflect.Descriptor instead.
+func (*ListOutgoingInvitesRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{5}
+}
+
+type ListOutgoingInvitesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invites       []*OutgoingInvite      `protobuf:"bytes,1,rep,name=invites,proto3" json:"invites,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOutgoingInvitesResponse) Reset() {
+	*x = ListOutgoingInvitesResponse{}
+	mi := &file_dox_v1_invite_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOutgoingInvitesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOutgoingInvitesResponse) ProtoMessage() {}
+
+func (x *ListOutgoingInvitesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_invite_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOutgoingInvitesResponse.ProtoReflect.Descriptor instead.
+func (*ListOutgoingInvitesResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListOutgoingInvitesResponse) GetInvites() []*OutgoingInvite {
+	if x != nil {
+		return x.Invites
+	}
+	return nil
+}
+
+type RevokeInviteRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The opaque server-internal identifier returned by ListOutgoingInvites.
+	CodeHash      string `protobuf:"bytes,1,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeInviteRequest) Reset() {
+	*x = RevokeInviteRequest{}
+	mi := &file_dox_v1_invite_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeInviteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeInviteRequest) ProtoMessage() {}
+
+func (x *RevokeInviteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_invite_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeInviteRequest.ProtoReflect.Descriptor instead.
+func (*RevokeInviteRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RevokeInviteRequest) GetCodeHash() string {
+	if x != nil {
+		return x.CodeHash
+	}
+	return ""
+}
+
+type RevokeInviteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeInviteResponse) Reset() {
+	*x = RevokeInviteResponse{}
+	mi := &file_dox_v1_invite_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeInviteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeInviteResponse) ProtoMessage() {}
+
+func (x *RevokeInviteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_invite_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeInviteResponse.ProtoReflect.Descriptor instead.
+func (*RevokeInviteResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_invite_proto_rawDescGZIP(), []int{8}
+}
+
 var File_dox_v1_invite_proto protoreflect.FileDescriptor
 
 const file_dox_v1_invite_proto_rawDesc = "" +
@@ -280,6 +534,16 @@ const file_dox_v1_invite_proto_rawDesc = "" +
 	"\tissued_by\x18\x02 \x01(\tR\bissuedBy\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\x03R\texpiresAt\"\xc1\x01\n" +
+	"\x0eOutgoingInvite\x12\x1b\n" +
+	"\tcode_hash\x18\x01 \x01(\tR\bcodeHash\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12!\n" +
+	"\fproject_name\x18\x03 \x01(\tR\vprojectName\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x1d\n" +
@@ -297,10 +561,18 @@ const file_dox_v1_invite_proto_rawDesc = "" +
 	"\x14AcceptInviteResponse\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
-	"\x04role\x18\x02 \x01(\tR\x04role2\xce\x01\n" +
+	"\x04role\x18\x02 \x01(\tR\x04role\"\x1c\n" +
+	"\x1aListOutgoingInvitesRequest\"O\n" +
+	"\x1bListOutgoingInvitesResponse\x120\n" +
+	"\ainvites\x18\x01 \x03(\v2\x16.dox.v1.OutgoingInviteR\ainvites\"2\n" +
+	"\x13RevokeInviteRequest\x12\x1b\n" +
+	"\tcode_hash\x18\x01 \x01(\tR\bcodeHash\"\x16\n" +
+	"\x14RevokeInviteResponse2\xb8\x03\n" +
 	"\rInviteService\x12S\n" +
 	"\fCreateInvite\x12\x1b.dox.v1.CreateInviteRequest\x1a\x0e.dox.v1.Invite\"\x16\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/v1/invites\x12h\n" +
-	"\fAcceptInvite\x12\x1b.dox.v1.AcceptInviteRequest\x1a\x1c.dox.v1.AcceptInviteResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/invites/acceptB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
+	"\fAcceptInvite\x12\x1b.dox.v1.AcceptInviteRequest\x1a\x1c.dox.v1.AcceptInviteResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/invites/accept\x12|\n" +
+	"\x13ListOutgoingInvites\x12\".dox.v1.ListOutgoingInvitesRequest\x1a#.dox.v1.ListOutgoingInvitesResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/invites/outgoing\x12j\n" +
+	"\fRevokeInvite\x12\x1b.dox.v1.RevokeInviteRequest\x1a\x1c.dox.v1.RevokeInviteResponse\"\x1f\x82\xd3\xe4\x93\x02\x19*\x17/v1/invites/{code_hash}B6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
 var (
 	file_dox_v1_invite_proto_rawDescOnce sync.Once
@@ -314,23 +586,33 @@ func file_dox_v1_invite_proto_rawDescGZIP() []byte {
 	return file_dox_v1_invite_proto_rawDescData
 }
 
-var file_dox_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_dox_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_dox_v1_invite_proto_goTypes = []any{
-	(*Invite)(nil),               // 0: dox.v1.Invite
-	(*CreateInviteRequest)(nil),  // 1: dox.v1.CreateInviteRequest
-	(*AcceptInviteRequest)(nil),  // 2: dox.v1.AcceptInviteRequest
-	(*AcceptInviteResponse)(nil), // 3: dox.v1.AcceptInviteResponse
+	(*Invite)(nil),                      // 0: dox.v1.Invite
+	(*OutgoingInvite)(nil),              // 1: dox.v1.OutgoingInvite
+	(*CreateInviteRequest)(nil),         // 2: dox.v1.CreateInviteRequest
+	(*AcceptInviteRequest)(nil),         // 3: dox.v1.AcceptInviteRequest
+	(*AcceptInviteResponse)(nil),        // 4: dox.v1.AcceptInviteResponse
+	(*ListOutgoingInvitesRequest)(nil),  // 5: dox.v1.ListOutgoingInvitesRequest
+	(*ListOutgoingInvitesResponse)(nil), // 6: dox.v1.ListOutgoingInvitesResponse
+	(*RevokeInviteRequest)(nil),         // 7: dox.v1.RevokeInviteRequest
+	(*RevokeInviteResponse)(nil),        // 8: dox.v1.RevokeInviteResponse
 }
 var file_dox_v1_invite_proto_depIdxs = []int32{
-	1, // 0: dox.v1.InviteService.CreateInvite:input_type -> dox.v1.CreateInviteRequest
-	2, // 1: dox.v1.InviteService.AcceptInvite:input_type -> dox.v1.AcceptInviteRequest
-	0, // 2: dox.v1.InviteService.CreateInvite:output_type -> dox.v1.Invite
-	3, // 3: dox.v1.InviteService.AcceptInvite:output_type -> dox.v1.AcceptInviteResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: dox.v1.ListOutgoingInvitesResponse.invites:type_name -> dox.v1.OutgoingInvite
+	2, // 1: dox.v1.InviteService.CreateInvite:input_type -> dox.v1.CreateInviteRequest
+	3, // 2: dox.v1.InviteService.AcceptInvite:input_type -> dox.v1.AcceptInviteRequest
+	5, // 3: dox.v1.InviteService.ListOutgoingInvites:input_type -> dox.v1.ListOutgoingInvitesRequest
+	7, // 4: dox.v1.InviteService.RevokeInvite:input_type -> dox.v1.RevokeInviteRequest
+	0, // 5: dox.v1.InviteService.CreateInvite:output_type -> dox.v1.Invite
+	4, // 6: dox.v1.InviteService.AcceptInvite:output_type -> dox.v1.AcceptInviteResponse
+	6, // 7: dox.v1.InviteService.ListOutgoingInvites:output_type -> dox.v1.ListOutgoingInvitesResponse
+	8, // 8: dox.v1.InviteService.RevokeInvite:output_type -> dox.v1.RevokeInviteResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_dox_v1_invite_proto_init() }
@@ -338,14 +620,14 @@ func file_dox_v1_invite_proto_init() {
 	if File_dox_v1_invite_proto != nil {
 		return
 	}
-	file_dox_v1_invite_proto_msgTypes[1].OneofWrappers = []any{}
+	file_dox_v1_invite_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dox_v1_invite_proto_rawDesc), len(file_dox_v1_invite_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

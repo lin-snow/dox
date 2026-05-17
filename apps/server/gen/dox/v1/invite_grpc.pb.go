@@ -19,8 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InviteService_CreateInvite_FullMethodName = "/dox.v1.InviteService/CreateInvite"
-	InviteService_AcceptInvite_FullMethodName = "/dox.v1.InviteService/AcceptInvite"
+	InviteService_CreateInvite_FullMethodName        = "/dox.v1.InviteService/CreateInvite"
+	InviteService_AcceptInvite_FullMethodName        = "/dox.v1.InviteService/AcceptInvite"
+	InviteService_ListOutgoingInvites_FullMethodName = "/dox.v1.InviteService/ListOutgoingInvites"
+	InviteService_RevokeInvite_FullMethodName        = "/dox.v1.InviteService/RevokeInvite"
 )
 
 // InviteServiceClient is the client API for InviteService service.
@@ -35,6 +37,13 @@ const (
 type InviteServiceClient interface {
 	CreateInvite(ctx context.Context, in *CreateInviteRequest, opts ...grpc.CallOption) (*Invite, error)
 	AcceptInvite(ctx context.Context, in *AcceptInviteRequest, opts ...grpc.CallOption) (*AcceptInviteResponse, error)
+	// Lists the caller's own still-redeemable invites. Owner sees both server
+	// and project invites they issued; non-owner project owners see only their
+	// project invites.
+	ListOutgoingInvites(ctx context.Context, in *ListOutgoingInvitesRequest, opts ...grpc.CallOption) (*ListOutgoingInvitesResponse, error)
+	// Hard-deletes one of the caller's own outgoing invites. Code becomes
+	// invalid immediately.
+	RevokeInvite(ctx context.Context, in *RevokeInviteRequest, opts ...grpc.CallOption) (*RevokeInviteResponse, error)
 }
 
 type inviteServiceClient struct {
@@ -65,6 +74,26 @@ func (c *inviteServiceClient) AcceptInvite(ctx context.Context, in *AcceptInvite
 	return out, nil
 }
 
+func (c *inviteServiceClient) ListOutgoingInvites(ctx context.Context, in *ListOutgoingInvitesRequest, opts ...grpc.CallOption) (*ListOutgoingInvitesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOutgoingInvitesResponse)
+	err := c.cc.Invoke(ctx, InviteService_ListOutgoingInvites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inviteServiceClient) RevokeInvite(ctx context.Context, in *RevokeInviteRequest, opts ...grpc.CallOption) (*RevokeInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeInviteResponse)
+	err := c.cc.Invoke(ctx, InviteService_RevokeInvite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InviteServiceServer is the server API for InviteService service.
 // All implementations must embed UnimplementedInviteServiceServer
 // for forward compatibility.
@@ -77,6 +106,13 @@ func (c *inviteServiceClient) AcceptInvite(ctx context.Context, in *AcceptInvite
 type InviteServiceServer interface {
 	CreateInvite(context.Context, *CreateInviteRequest) (*Invite, error)
 	AcceptInvite(context.Context, *AcceptInviteRequest) (*AcceptInviteResponse, error)
+	// Lists the caller's own still-redeemable invites. Owner sees both server
+	// and project invites they issued; non-owner project owners see only their
+	// project invites.
+	ListOutgoingInvites(context.Context, *ListOutgoingInvitesRequest) (*ListOutgoingInvitesResponse, error)
+	// Hard-deletes one of the caller's own outgoing invites. Code becomes
+	// invalid immediately.
+	RevokeInvite(context.Context, *RevokeInviteRequest) (*RevokeInviteResponse, error)
 	mustEmbedUnimplementedInviteServiceServer()
 }
 
@@ -92,6 +128,12 @@ func (UnimplementedInviteServiceServer) CreateInvite(context.Context, *CreateInv
 }
 func (UnimplementedInviteServiceServer) AcceptInvite(context.Context, *AcceptInviteRequest) (*AcceptInviteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AcceptInvite not implemented")
+}
+func (UnimplementedInviteServiceServer) ListOutgoingInvites(context.Context, *ListOutgoingInvitesRequest) (*ListOutgoingInvitesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOutgoingInvites not implemented")
+}
+func (UnimplementedInviteServiceServer) RevokeInvite(context.Context, *RevokeInviteRequest) (*RevokeInviteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeInvite not implemented")
 }
 func (UnimplementedInviteServiceServer) mustEmbedUnimplementedInviteServiceServer() {}
 func (UnimplementedInviteServiceServer) testEmbeddedByValue()                       {}
@@ -150,6 +192,42 @@ func _InviteService_AcceptInvite_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InviteService_ListOutgoingInvites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOutgoingInvitesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).ListOutgoingInvites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_ListOutgoingInvites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).ListOutgoingInvites(ctx, req.(*ListOutgoingInvitesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InviteService_RevokeInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).RevokeInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_RevokeInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).RevokeInvite(ctx, req.(*RevokeInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InviteService_ServiceDesc is the grpc.ServiceDesc for InviteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -164,6 +242,14 @@ var InviteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcceptInvite",
 			Handler:    _InviteService_AcceptInvite_Handler,
+		},
+		{
+			MethodName: "ListOutgoingInvites",
+			Handler:    _InviteService_ListOutgoingInvites_Handler,
+		},
+		{
+			MethodName: "RevokeInvite",
+			Handler:    _InviteService_RevokeInvite_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

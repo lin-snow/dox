@@ -15,6 +15,7 @@ import (
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/authn"
+	"github.com/lin-snow/dox/apps/server/internal/bus"
 	"github.com/lin-snow/dox/apps/server/internal/config"
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
@@ -40,8 +41,11 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	user := handler.NewUser(q, secret)
 	proj := handler.NewProject(q)
-	inv := handler.NewInvite(dbConn, q)
-	td := handler.NewTodo(dbConn, q)
+	// Bus owns mutation→side-effect fanout. ActivityRecorder is the only
+	// subscriber today; webhooks/audit/notifications plug in here later.
+	b := bus.New(bus.NewActivityRecorder())
+	inv := handler.NewInvite(dbConn, q, b)
+	td := handler.NewTodo(dbConn, q, b)
 	ev := handler.NewEvent(q)
 
 	mux := runtime.NewServeMux()

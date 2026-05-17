@@ -134,8 +134,11 @@ type ProjectMember struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// "editor" or "viewer".
-	Role          string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
-	AddedAt       int64  `protobuf:"varint,3,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	Role    string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	AddedAt int64  `protobuf:"varint,3,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	// Resolved by the server. Lets clients render names without hitting the
+	// owner-only /v1/users endpoint.
+	UserName      string `protobuf:"bytes,4,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,6 +192,13 @@ func (x *ProjectMember) GetAddedAt() int64 {
 		return x.AddedAt
 	}
 	return 0
+}
+
+func (x *ProjectMember) GetUserName() string {
+	if x != nil {
+		return x.UserName
+	}
+	return ""
 }
 
 type ListProjectsRequest struct {
@@ -732,11 +742,12 @@ const file_dox_v1_project_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\x03R\tupdatedAt\"W\n" +
+	"updated_at\x18\t \x01(\x03R\tupdatedAt\"t\n" +
 	"\rProjectMember\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x19\n" +
-	"\badded_at\x18\x03 \x01(\x03R\aaddedAt\"\x15\n" +
+	"\badded_at\x18\x03 \x01(\x03R\aaddedAt\x12\x1b\n" +
+	"\tuser_name\x18\x04 \x01(\tR\buserName\"\x15\n" +
 	"\x13ListProjectsRequest\"C\n" +
 	"\x14ListProjectsResponse\x12+\n" +
 	"\bprojects\x18\x01 \x03(\v2\x0f.dox.v1.ProjectR\bprojects\"#\n" +

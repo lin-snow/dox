@@ -23,6 +23,9 @@ message ProjectMember {
   // "editor" or "viewer".
   string role = 2;
   int64 added_at = 3;
+  // Resolved by the server. Lets clients render names without hitting the
+  // owner-only /v1/users endpoint.
+  string user_name = 4;
 }
 
 // ProjectService manages projects. All mutations are owner-only; members can

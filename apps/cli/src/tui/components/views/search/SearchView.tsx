@@ -4,10 +4,10 @@ import { useEffect, useMemo } from "react";
 
 import type { Project, Todo } from "@dox/core";
 
-import { color, icon } from "../theme";
-import { relativeTime, swatchColor } from "../util";
-import { Footer } from "./Footer";
-import { TitledPanel } from "./TitledPanel";
+import { color, icon } from "../../../theme";
+import { relativeTime, swatchColor } from "../../../util";
+import { Footer } from "../../layout/Footer";
+import { TitledPanel } from "../../primitives/TitledPanel";
 
 interface SearchViewProps {
   todos: Todo[];

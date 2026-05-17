@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/invite.proto.
  */
 export const file_dox_v1_invite: GenFile = /*@__PURE__*/
-  fileDesc("ChNkb3gvdjEvaW52aXRlLnByb3RvEgZkb3gudjEicwoGSW52aXRlEgwKBGNvZGUYASABKAkSEQoJaXNzdWVkX2J5GAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSDAoEcm9sZRgEIAEoCRISCgpjcmVhdGVkX2F0GAUgASgDEhIKCmV4cGlyZXNfYXQYBiABKAMiaQoTQ3JlYXRlSW52aXRlUmVxdWVzdBIXCgpwcm9qZWN0X2lkGAEgASgJSACIAQESEQoEcm9sZRgCIAEoCUgBiAEBEg4KBnR0bF9tcxgDIAEoA0INCgtfcHJvamVjdF9pZEIHCgVfcm9sZSIjChNBY2NlcHRJbnZpdGVSZXF1ZXN0EgwKBGNvZGUYASABKAkiOAoUQWNjZXB0SW52aXRlUmVzcG9uc2USEgoKcHJvamVjdF9pZBgBIAEoCRIMCgRyb2xlGAIgASgJMs4BCg1JbnZpdGVTZXJ2aWNlElMKDENyZWF0ZUludml0ZRIbLmRveC52MS5DcmVhdGVJbnZpdGVSZXF1ZXN0Gg4uZG94LnYxLkludml0ZSIWgtPkkwIQOgEqIgsvdjEvaW52aXRlcxJoCgxBY2NlcHRJbnZpdGUSGy5kb3gudjEuQWNjZXB0SW52aXRlUmVxdWVzdBocLmRveC52MS5BY2NlcHRJbnZpdGVSZXNwb25zZSIdgtPkkwIXOgEqIhIvdjEvaW52aXRlcy9hY2NlcHRCNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChNkb3gvdjEvaW52aXRlLnByb3RvEgZkb3gudjEicwoGSW52aXRlEgwKBGNvZGUYASABKAkSEQoJaXNzdWVkX2J5GAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSDAoEcm9sZRgEIAEoCRISCgpjcmVhdGVkX2F0GAUgASgDEhIKCmV4cGlyZXNfYXQYBiABKAMigwEKDk91dGdvaW5nSW52aXRlEhEKCWNvZGVfaGFzaBgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJEhQKDHByb2plY3RfbmFtZRgDIAEoCRIMCgRyb2xlGAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAMSEgoKZXhwaXJlc19hdBgGIAEoAyJpChNDcmVhdGVJbnZpdGVSZXF1ZXN0EhcKCnByb2plY3RfaWQYASABKAlIAIgBARIRCgRyb2xlGAIgASgJSAGIAQESDgoGdHRsX21zGAMgASgDQg0KC19wcm9qZWN0X2lkQgcKBV9yb2xlIiMKE0FjY2VwdEludml0ZVJlcXVlc3QSDAoEY29kZRgBIAEoCSI4ChRBY2NlcHRJbnZpdGVSZXNwb25zZRISCgpwcm9qZWN0X2lkGAEgASgJEgwKBHJvbGUYAiABKAkiHAoaTGlzdE91dGdvaW5nSW52aXRlc1JlcXVlc3QiRgobTGlzdE91dGdvaW5nSW52aXRlc1Jlc3BvbnNlEicKB2ludml0ZXMYASADKAsyFi5kb3gudjEuT3V0Z29pbmdJbnZpdGUiKAoTUmV2b2tlSW52aXRlUmVxdWVzdBIRCgljb2RlX2hhc2gYASABKAkiFgoUUmV2b2tlSW52aXRlUmVzcG9uc2UyuAMKDUludml0ZVNlcnZpY2USUwoMQ3JlYXRlSW52aXRlEhsuZG94LnYxLkNyZWF0ZUludml0ZVJlcXVlc3QaDi5kb3gudjEuSW52aXRlIhaC0+STAhA6ASoiCy92MS9pbnZpdGVzEmgKDEFjY2VwdEludml0ZRIbLmRveC52MS5BY2NlcHRJbnZpdGVSZXF1ZXN0GhwuZG94LnYxLkFjY2VwdEludml0ZVJlc3BvbnNlIh2C0+STAhc6ASoiEi92MS9pbnZpdGVzL2FjY2VwdBJ8ChNMaXN0T3V0Z29pbmdJbnZpdGVzEiIuZG94LnYxLkxpc3RPdXRnb2luZ0ludml0ZXNSZXF1ZXN0GiMuZG94LnYxLkxpc3RPdXRnb2luZ0ludml0ZXNSZXNwb25zZSIcgtPkkwIWEhQvdjEvaW52aXRlcy9vdXRnb2luZxJqCgxSZXZva2VJbnZpdGUSGy5kb3gudjEuUmV2b2tlSW52aXRlUmVxdWVzdBocLmRveC52MS5SZXZva2VJbnZpdGVSZXNwb25zZSIfgtPkkwIZKhcvdjEvaW52aXRlcy97Y29kZV9oYXNofUI2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
 
 /**
  * @generated from message dox.v1.Invite
@@ -62,6 +62,62 @@ export const InviteSchema: GenMessage<Invite> = /*@__PURE__*/
   messageDesc(file_dox_v1_invite, 0);
 
 /**
+ * OutgoingInvite is a still-redeemable invite the caller issued. Used by the
+ * Settings → Invites list. The plaintext `code` is unrecoverable after creation
+ * (only the hash is stored), so listings carry `code_hash` as the opaque
+ * identifier the client uses to revoke a row.
+ *
+ * @generated from message dox.v1.OutgoingInvite
+ */
+export type OutgoingInvite = Message<"dox.v1.OutgoingInvite"> & {
+  /**
+   * Server-internal identifier (sha256 hex). Pass back via RevokeInvite.
+   *
+   * @generated from field: string code_hash = 1;
+   */
+  codeHash: string;
+
+  /**
+   * Empty for server-level invites.
+   *
+   * @generated from field: string project_id = 2;
+   */
+  projectId: string;
+
+  /**
+   * Resolved by the server; empty for server-level invites or if the project
+   * was deleted out from under the invite.
+   *
+   * @generated from field: string project_name = 3;
+   */
+  projectName: string;
+
+  /**
+   * Empty for server-level invites; otherwise "editor" or "viewer".
+   *
+   * @generated from field: string role = 4;
+   */
+  role: string;
+
+  /**
+   * @generated from field: int64 created_at = 5;
+   */
+  createdAt: bigint;
+
+  /**
+   * @generated from field: int64 expires_at = 6;
+   */
+  expiresAt: bigint;
+};
+
+/**
+ * Describes the message dox.v1.OutgoingInvite.
+ * Use `create(OutgoingInviteSchema)` to create a new message.
+ */
+export const OutgoingInviteSchema: GenMessage<OutgoingInvite> = /*@__PURE__*/
+  messageDesc(file_dox_v1_invite, 1);
+
+/**
  * @generated from message dox.v1.CreateInviteRequest
  */
 export type CreateInviteRequest = Message<"dox.v1.CreateInviteRequest"> & {
@@ -92,7 +148,7 @@ export type CreateInviteRequest = Message<"dox.v1.CreateInviteRequest"> & {
  * Use `create(CreateInviteRequestSchema)` to create a new message.
  */
 export const CreateInviteRequestSchema: GenMessage<CreateInviteRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_invite, 1);
+  messageDesc(file_dox_v1_invite, 2);
 
 /**
  * @generated from message dox.v1.AcceptInviteRequest
@@ -109,7 +165,7 @@ export type AcceptInviteRequest = Message<"dox.v1.AcceptInviteRequest"> & {
  * Use `create(AcceptInviteRequestSchema)` to create a new message.
  */
 export const AcceptInviteRequestSchema: GenMessage<AcceptInviteRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_invite, 2);
+  messageDesc(file_dox_v1_invite, 3);
 
 /**
  * @generated from message dox.v1.AcceptInviteResponse
@@ -134,7 +190,69 @@ export type AcceptInviteResponse = Message<"dox.v1.AcceptInviteResponse"> & {
  * Use `create(AcceptInviteResponseSchema)` to create a new message.
  */
 export const AcceptInviteResponseSchema: GenMessage<AcceptInviteResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_invite, 3);
+  messageDesc(file_dox_v1_invite, 4);
+
+/**
+ * @generated from message dox.v1.ListOutgoingInvitesRequest
+ */
+export type ListOutgoingInvitesRequest = Message<"dox.v1.ListOutgoingInvitesRequest"> & {
+};
+
+/**
+ * Describes the message dox.v1.ListOutgoingInvitesRequest.
+ * Use `create(ListOutgoingInvitesRequestSchema)` to create a new message.
+ */
+export const ListOutgoingInvitesRequestSchema: GenMessage<ListOutgoingInvitesRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_invite, 5);
+
+/**
+ * @generated from message dox.v1.ListOutgoingInvitesResponse
+ */
+export type ListOutgoingInvitesResponse = Message<"dox.v1.ListOutgoingInvitesResponse"> & {
+  /**
+   * @generated from field: repeated dox.v1.OutgoingInvite invites = 1;
+   */
+  invites: OutgoingInvite[];
+};
+
+/**
+ * Describes the message dox.v1.ListOutgoingInvitesResponse.
+ * Use `create(ListOutgoingInvitesResponseSchema)` to create a new message.
+ */
+export const ListOutgoingInvitesResponseSchema: GenMessage<ListOutgoingInvitesResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_invite, 6);
+
+/**
+ * @generated from message dox.v1.RevokeInviteRequest
+ */
+export type RevokeInviteRequest = Message<"dox.v1.RevokeInviteRequest"> & {
+  /**
+   * The opaque server-internal identifier returned by ListOutgoingInvites.
+   *
+   * @generated from field: string code_hash = 1;
+   */
+  codeHash: string;
+};
+
+/**
+ * Describes the message dox.v1.RevokeInviteRequest.
+ * Use `create(RevokeInviteRequestSchema)` to create a new message.
+ */
+export const RevokeInviteRequestSchema: GenMessage<RevokeInviteRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_invite, 7);
+
+/**
+ * @generated from message dox.v1.RevokeInviteResponse
+ */
+export type RevokeInviteResponse = Message<"dox.v1.RevokeInviteResponse"> & {
+};
+
+/**
+ * Describes the message dox.v1.RevokeInviteResponse.
+ * Use `create(RevokeInviteResponseSchema)` to create a new message.
+ */
+export const RevokeInviteResponseSchema: GenMessage<RevokeInviteResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_invite, 8);
 
 /**
  * InviteService issues and accepts invitation codes. A server invite
@@ -161,6 +279,29 @@ export const InviteService: GenService<{
     methodKind: "unary";
     input: typeof AcceptInviteRequestSchema;
     output: typeof AcceptInviteResponseSchema;
+  },
+  /**
+   * Lists the caller's own still-redeemable invites. Owner sees both server
+   * and project invites they issued; non-owner project owners see only their
+   * project invites.
+   *
+   * @generated from rpc dox.v1.InviteService.ListOutgoingInvites
+   */
+  listOutgoingInvites: {
+    methodKind: "unary";
+    input: typeof ListOutgoingInvitesRequestSchema;
+    output: typeof ListOutgoingInvitesResponseSchema;
+  },
+  /**
+   * Hard-deletes one of the caller's own outgoing invites. Code becomes
+   * invalid immediately.
+   *
+   * @generated from rpc dox.v1.InviteService.RevokeInvite
+   */
+  revokeInvite: {
+    methodKind: "unary";
+    input: typeof RevokeInviteRequestSchema;
+    output: typeof RevokeInviteResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_invite, 0);

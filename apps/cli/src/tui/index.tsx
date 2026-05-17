@@ -4,8 +4,10 @@ import { render } from "ink";
 import {
   type Config,
   EventClient,
+  InviteClient,
   ProjectClient,
   TodoClient,
+  UserClient,
   buildFetcher,
   checkToken,
   getConfigPath,
@@ -14,7 +16,7 @@ import {
 } from "@dox/core";
 
 import { App } from "./App";
-import { Onboarding, type OnboardingReason } from "./components/Onboarding";
+import { Onboarding, type OnboardingReason } from "./components/views/onboarding/Onboarding";
 
 interface RootProps {
   initialConfig: Config | null;
@@ -32,16 +34,23 @@ function Root({ initialConfig, initialReason }: RootProps) {
   const api = new TodoClient(fetcher, config.server);
   const projects = new ProjectClient(fetcher, config.server);
   const events = new EventClient(fetcher, config.server);
+  const users = new UserClient(fetcher, config.server);
+  const invites = new InviteClient(fetcher, config.server);
   return (
     <App
       api={api}
       projects={projects}
       events={events}
+      users={users}
+      invites={invites}
       identity={{
+        userId: config.userId,
         userName: config.userName,
+        role: config.role,
         server: config.server,
         configPath: getConfigPath(),
       }}
+      onSignedOut={() => setConfig(null)}
     />
   );
 }

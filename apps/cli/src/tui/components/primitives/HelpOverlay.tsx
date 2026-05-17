@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 
-import { color, icon } from "../theme";
+import { color, icon } from "../../theme";
 
 const sections: { title: string; rows: ReadonlyArray<readonly [string, string]> }[] = [
   {
@@ -21,6 +21,7 @@ const sections: { title: string; rows: ReadonlyArray<readonly [string, string]> 
       ["e", "edit todo"],
       ["d", "delete todo"],
       ["p", "new project"],
+      ["m", "manage project / invite"],
       ["D", "delete project"],
       ["/", "search todos"],
       ["r", "refresh"],

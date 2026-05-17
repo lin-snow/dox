@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 
-import { color } from "../theme";
+import { color } from "../../theme";
 
 // 7-row "dox" figlet (slant font). Single brand color — gradients between rows
 // read as "broken letter" in practice, not "neon".

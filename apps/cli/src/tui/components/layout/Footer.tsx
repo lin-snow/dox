@@ -1,6 +1,6 @@
 import { Box, Text, useStdout } from "ink";
 
-import { color, icon } from "../theme";
+import { color, icon } from "../../theme";
 
 interface FooterProps {
   mode: string;

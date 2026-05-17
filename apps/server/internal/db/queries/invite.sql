@@ -18,3 +18,28 @@ RETURNING project_id, role, issued_by;
 -- name: DeleteExpiredInvites :execrows
 DELETE FROM invites
 WHERE expires_at < ? OR used_at IS NOT NULL;
+
+-- name: ListOutgoingInvitesByUser :many
+-- Caller's still-redeemable invites. project_name is resolved via LEFT JOIN so
+-- server-level invites (project_id NULL) and stranded invites (project deleted)
+-- come back with NULL/empty project_name.
+SELECT i.code_hash,
+       i.project_id,
+       i.role,
+       i.created_at,
+       i.expires_at,
+       p.name AS project_name
+FROM invites i
+LEFT JOIN projects p ON p.id = i.project_id
+WHERE i.issued_by = sqlc.arg('issued_by')
+  AND i.used_at IS NULL
+  AND i.expires_at >= sqlc.arg('now')
+ORDER BY i.created_at DESC;
+
+-- name: RevokeInviteByIssuer :execrows
+-- Hard-deletes one invite scoped to the issuer so a non-owner can only revoke
+-- invites they personally issued. Returns rows affected so the handler can
+-- distinguish "not found / not yours" from "deleted".
+DELETE FROM invites
+WHERE code_hash = sqlc.arg('code_hash')
+  AND issued_by = sqlc.arg('issued_by');

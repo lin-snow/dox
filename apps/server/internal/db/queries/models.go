@@ -12,7 +12,7 @@ type Event struct {
 	ID          string
 	Verb        string
 	ActorID     string
-	ProjectID   string
+	ProjectID   sql.NullString
 	TargetType  string
 	TargetID    string
 	TargetLabel string

@@ -1,7 +1,7 @@
 import { Box } from "ink";
 import type { ReactNode } from "react";
 
-import { color } from "../theme";
+import { color } from "../../theme";
 
 interface PanelProps {
   focused?: boolean;

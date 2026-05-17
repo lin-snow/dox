@@ -2,8 +2,8 @@ import { Box, Text } from "ink";
 
 import type { ActivityEvent, ActivityVerb } from "@dox/core";
 
-import { color, icon } from "../theme";
-import { relativeTime, swatchColor } from "../util";
+import { color, icon } from "../../../theme";
+import { relativeTime, swatchColor } from "../../../util";
 
 interface ActivityFeedProps {
   events: ReadonlyArray<ActivityEvent>;

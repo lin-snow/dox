@@ -41,9 +41,10 @@ func newEventFixture(t *testing.T) *eventFixture {
 	ctx := caller.With(context.Background(), caller.Caller{
 		UserID: owner.ID, UserName: owner.Name, Role: owner.Role,
 	})
+	b := testBus()
 	return &eventFixture{
-		todo:  handler.NewTodo(conn, q),
-		inv:   handler.NewInvite(conn, q),
+		todo:  handler.NewTodo(conn, q, b),
+		inv:   handler.NewInvite(conn, q, b),
 		ev:    handler.NewEvent(q),
 		proj:  handler.NewProject(q),
 		q:     q,
@@ -81,7 +82,7 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 
-	// Alice sees the event.
+	// Alice sees the event with project metadata populated.
 	aliceList, err := f.ev.ListEvents(f.ctx, &doxv1.ListEventsRequest{})
 	if err != nil {
 		t.Fatalf("ListEvents(alice): %v", err)
@@ -93,7 +94,9 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 		t.Errorf("joined fields wrong: %+v", aliceList.Events[0])
 	}
 
-	// Bob sees nothing — visibility filter excludes projects he's not in.
+	// Bob sees nothing — project visibility excludes him AND Alice's event
+	// isn't personal-scope, so he can't see it through the actor predicate
+	// either.
 	bobCtx := f.withUser(t, bob)
 	bobList, err := f.ev.ListEvents(bobCtx, &doxv1.ListEventsRequest{})
 	if err != nil {
@@ -101,6 +104,90 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 	}
 	if len(bobList.Events) != 0 {
 		t.Errorf("bob should see 0 events, got %d", len(bobList.Events))
+	}
+}
+
+func TestListEvents_privateActivityVisibleOnlyToActor(t *testing.T) {
+	f := newEventFixture(t)
+	bob := seedUser(t, f.q, "bob", caller.RoleMember)
+
+	// Alice creates a private (Inbox) todo + completes it. Both events should
+	// be personal-scope (project_id NULL) and visible only to Alice.
+	created, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{Title: "buy milk"})
+	if err != nil {
+		t.Fatalf("CreateTodo: %v", err)
+	}
+	done := true
+	if _, err := f.todo.UpdateTodo(f.ctx, &doxv1.UpdateTodoRequest{Id: created.Id, Done: &done}); err != nil {
+		t.Fatalf("UpdateTodo: %v", err)
+	}
+
+	aliceList, err := f.ev.ListEvents(f.ctx, &doxv1.ListEventsRequest{})
+	if err != nil {
+		t.Fatalf("ListEvents(alice): %v", err)
+	}
+	if len(aliceList.Events) != 2 {
+		t.Fatalf("alice want 2 personal events, got %d: %+v", len(aliceList.Events), aliceList.Events)
+	}
+	for _, e := range aliceList.Events {
+		if e.ProjectId != "" || e.ProjectName != "" || e.ProjectColor != "" {
+			t.Errorf("personal event leaked project metadata: %+v", e)
+		}
+		if e.ActorName != "alice" {
+			t.Errorf("actor_name = %q, want alice", e.ActorName)
+		}
+	}
+	// Newest first: completion sits above creation.
+	if aliceList.Events[0].Verb != "todo_completed" || aliceList.Events[1].Verb != "todo_created" {
+		t.Errorf("verbs = [%s %s], want [todo_completed todo_created]",
+			aliceList.Events[0].Verb, aliceList.Events[1].Verb)
+	}
+
+	// Bob can't see Alice's personal events.
+	bobCtx := f.withUser(t, bob)
+	bobList, err := f.ev.ListEvents(bobCtx, &doxv1.ListEventsRequest{})
+	if err != nil {
+		t.Fatalf("ListEvents(bob): %v", err)
+	}
+	if len(bobList.Events) != 0 {
+		t.Errorf("bob should see 0 events, got %d", len(bobList.Events))
+	}
+}
+
+func TestListEvents_mergesPersonalAndProjectScopes(t *testing.T) {
+	f := newEventFixture(t)
+
+	// Alice creates a project + a project todo, then a private todo. Both
+	// should appear in her feed, ordered by created_at desc.
+	proj := f.createProject(t, f.ctx, "work")
+	if _, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{
+		Title:     "ship feature",
+		ProjectId: &proj.Id,
+	}); err != nil {
+		t.Fatalf("CreateTodo(project): %v", err)
+	}
+	if _, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{Title: "buy milk"}); err != nil {
+		t.Fatalf("CreateTodo(private): %v", err)
+	}
+
+	list, err := f.ev.ListEvents(f.ctx, &doxv1.ListEventsRequest{})
+	if err != nil {
+		t.Fatalf("ListEvents: %v", err)
+	}
+	if len(list.Events) != 2 {
+		t.Fatalf("want 2 events, got %d", len(list.Events))
+	}
+	// Both project and personal scopes share one chronological stream. The
+	// private todo created second should sort first; only it lacks project
+	// metadata.
+	if list.Events[0].TargetLabel != "buy milk" {
+		t.Errorf("first event target = %q, want %q", list.Events[0].TargetLabel, "buy milk")
+	}
+	if list.Events[0].ProjectId != "" {
+		t.Errorf("personal event project_id = %q, want empty", list.Events[0].ProjectId)
+	}
+	if list.Events[1].ProjectName != "work" {
+		t.Errorf("project event project_name = %q, want work", list.Events[1].ProjectName)
 	}
 }
 

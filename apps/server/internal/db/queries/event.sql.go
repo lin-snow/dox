@@ -19,7 +19,7 @@ type InsertEventParams struct {
 	ID          string
 	Verb        string
 	ActorID     string
-	ProjectID   string
+	ProjectID   sql.NullString
 	TargetType  string
 	TargetID    string
 	TargetLabel string
@@ -40,7 +40,73 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 	return err
 }
 
-const listEventsForUser = `-- name: ListEventsForUser :many
+const listPersonalEventsForUser = `-- name: ListPersonalEventsForUser :many
+SELECT
+    e.id,
+    e.verb,
+    e.actor_id,
+    u.name      AS actor_name,
+    e.target_type,
+    e.target_id,
+    e.target_label,
+    e.created_at
+FROM events e
+JOIN users u ON u.id = e.actor_id
+WHERE e.project_id IS NULL
+  AND e.actor_id = ?1
+ORDER BY e.created_at DESC, e.id DESC
+LIMIT ?2
+`
+
+type ListPersonalEventsForUserParams struct {
+	UserID string
+	LimitN int64
+}
+
+type ListPersonalEventsForUserRow struct {
+	ID          string
+	Verb        string
+	ActorID     string
+	ActorName   string
+	TargetType  string
+	TargetID    string
+	TargetLabel string
+	CreatedAt   int64
+}
+
+func (q *Queries) ListPersonalEventsForUser(ctx context.Context, arg ListPersonalEventsForUserParams) ([]ListPersonalEventsForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPersonalEventsForUser, arg.UserID, arg.LimitN)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPersonalEventsForUserRow{}
+	for rows.Next() {
+		var i ListPersonalEventsForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Verb,
+			&i.ActorID,
+			&i.ActorName,
+			&i.TargetType,
+			&i.TargetID,
+			&i.TargetLabel,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectEventsForUser = `-- name: ListProjectEventsForUser :many
 SELECT
     e.id,
     e.verb,
@@ -65,17 +131,17 @@ ORDER BY e.created_at DESC, e.id DESC
 LIMIT ?2
 `
 
-type ListEventsForUserParams struct {
+type ListProjectEventsForUserParams struct {
 	UserID string
 	LimitN int64
 }
 
-type ListEventsForUserRow struct {
+type ListProjectEventsForUserRow struct {
 	ID           string
 	Verb         string
 	ActorID      string
 	ActorName    string
-	ProjectID    string
+	ProjectID    sql.NullString
 	ProjectName  string
 	ProjectColor sql.NullString
 	TargetType   string
@@ -84,22 +150,15 @@ type ListEventsForUserRow struct {
 	CreatedAt    int64
 }
 
-// Recent events across the caller's visible projects (owned + member-of).
-// Joins users + projects so the handler returns a fully populated response
-// without follow-up queries. Visibility filter mirrors ListProjectsVisibleTo /
-// ListTodosForUser so authz semantics stay consistent across resources.
-// ULIDs are lexicographically time-ordered, so the id tiebreaker keeps the
-// feed stable when two events land in the same millisecond (common when a
-// mutation handler emits + the caller mutates again immediately).
-func (q *Queries) ListEventsForUser(ctx context.Context, arg ListEventsForUserParams) ([]ListEventsForUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEventsForUser, arg.UserID, arg.LimitN)
+func (q *Queries) ListProjectEventsForUser(ctx context.Context, arg ListProjectEventsForUserParams) ([]ListProjectEventsForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProjectEventsForUser, arg.UserID, arg.LimitN)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListEventsForUserRow{}
+	items := []ListProjectEventsForUserRow{}
 	for rows.Next() {
-		var i ListEventsForUserRow
+		var i ListProjectEventsForUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Verb,

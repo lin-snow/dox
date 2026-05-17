@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 
-import { color, icon } from "../theme";
+import { color, icon } from "../../theme";
 
 interface StatusBarProps {
   mode: string;

@@ -1,8 +1,8 @@
 import { Box, Text, useStdout } from "ink";
 import type { ReactNode } from "react";
 
-import { color, icon } from "../theme";
-import { Footer } from "./Footer";
+import { color, icon } from "../../theme";
+import { Footer } from "../layout/Footer";
 import { TitledPanel } from "./TitledPanel";
 
 interface ConfirmDialogProps {

@@ -18,6 +18,24 @@ message Invite {
   int64 expires_at = 6;
 }
 
+// OutgoingInvite is a still-redeemable invite the caller issued. Used by the
+// Settings → Invites list. The plaintext `code` is unrecoverable after creation
+// (only the hash is stored), so listings carry `code_hash` as the opaque
+// identifier the client uses to revoke a row.
+message OutgoingInvite {
+  // Server-internal identifier (sha256 hex). Pass back via RevokeInvite.
+  string code_hash = 1;
+  // Empty for server-level invites.
+  string project_id = 2;
+  // Resolved by the server; empty for server-level invites or if the project
+  // was deleted out from under the invite.
+  string project_name = 3;
+  // Empty for server-level invites; otherwise "editor" or "viewer".
+  string role = 4;
+  int64 created_at = 5;
+  int64 expires_at = 6;
+}
+
 // InviteService issues and accepts invitation codes. A server invite
 // (project_id unset) is owner-only and brings a new user onto the server via
 // AuthService.Register. A project invite (project_id set) is project-owner-only
@@ -35,6 +53,23 @@ service InviteService {
     option (google.api.http) = {
       post: "/v1/invites/accept"
       body: "*"
+    };
+  }
+
+  // Lists the caller's own still-redeemable invites. Owner sees both server
+  // and project invites they issued; non-owner project owners see only their
+  // project invites.
+  rpc ListOutgoingInvites(ListOutgoingInvitesRequest) returns (ListOutgoingInvitesResponse) {
+    option (google.api.http) = {
+      get: "/v1/invites/outgoing"
+    };
+  }
+
+  // Hard-deletes one of the caller's own outgoing invites. Code becomes
+  // invalid immediately.
+  rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/invites/{code_hash}"
     };
   }
 }
@@ -58,3 +93,16 @@ message AcceptInviteResponse {
   string project_id = 1;
   string role = 2;
 }
+
+message ListOutgoingInvitesRequest {}
+
+message ListOutgoingInvitesResponse {
+  repeated OutgoingInvite invites = 1;
+}
+
+message RevokeInviteRequest {
+  // The opaque server-internal identifier returned by ListOutgoingInvites.
+  string code_hash = 1;
+}
+
+message RevokeInviteResponse {}

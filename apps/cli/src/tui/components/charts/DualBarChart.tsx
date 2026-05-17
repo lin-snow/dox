@@ -1,6 +1,6 @@
 import { Box, Text } from "ink";
 
-import { color } from "../theme";
+import { color } from "../../theme";
 
 interface DualBarChartProps {
   // Two parallel series of equal length. Rendered side-by-side per column:
