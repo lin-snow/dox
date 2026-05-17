@@ -1,5 +1,6 @@
-import { Box, Text, useStdout } from "ink";
+import { Box, Text } from "ink";
 
+import { useTerminalSize } from "../../hooks";
 import { color, icon } from "../../theme";
 
 interface FooterProps {
@@ -17,8 +18,7 @@ interface FooterProps {
 //                            labels in muted            mode       in 2-tone
 //                            `·` separators
 export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
-  const { stdout } = useStdout();
-  const cols = stdout?.columns ?? 80;
+  const { cols } = useTerminalSize();
 
   // Plain-text length used to size the dash run. Mirror the visible cells of
   // the right-side cluster precisely; the renderer below uses the same content.

@@ -1,6 +1,6 @@
 import { Box, Text, useInput, useStdout } from "ink";
 import { TextInput } from "@inkjs/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { color, icon } from "../../../theme";
 import { Footer } from "../../layout/Footer";
@@ -10,8 +10,6 @@ export interface SettingsFormField {
   key: string;
   label: string;
   placeholder?: string;
-  // Hide input chars (passwords).
-  masked?: boolean;
   // Pre-fill, e.g. existing server_name value being edited.
   initial?: string;
 }
@@ -19,22 +17,23 @@ export interface SettingsFormField {
 interface SettingsFormModalProps {
   title: string;
   fields: SettingsFormField[];
-  // Helper text shown above the fields. Keep it under one line so the modal
-  // stays compact.
   help?: string;
   submitLabel?: string;
-  // Disable submit while a request is in flight.
   busy?: boolean;
-  // Rendered red under the fields when present.
   error?: string | null;
   onSubmit: (values: Record<string, string>) => void;
   onCancel: () => void;
 }
 
-// Centered modal that collects one or two text fields and routes them through
-// onSubmit. Tab cycles fields, Enter submits from any field, Esc cancels.
-// Read-only "presentational" component for layout — parent owns the async
-// side-effect after onSubmit.
+// Linear form modal. Mirrors the Onboarding pattern: TextInput is fully
+// uncontrolled (no onChange), values are captured on each field's Enter via
+// onSubmit, and Enter advances focus — last field's Enter calls parent
+// onSubmit with the accumulated values.
+//
+// Why this shape: @inkjs/ui v2.0.0's TextInput has a useEffect with onChange
+// in its deps. Passing a non-stable onChange there causes a "Maximum update
+// depth exceeded" loop as soon as the user types a character. Dropping
+// onChange entirely sidesteps it.
 export function SettingsFormModal({
   title,
   fields,
@@ -50,26 +49,34 @@ export function SettingsFormModal({
   const rows = Math.max(15, stdout?.rows ?? 30);
   const cardWidth = Math.min(72, cols - 8);
 
-  const [values, setValues] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    for (const f of fields) init[f.key] = f.initial ?? "";
-    return init;
-  });
+  // Accumulator for each field's submitted value. Lives in a ref because we
+  // don't need to re-render between fields — only the focused index changes.
+  const valuesRef = useRef<Record<string, string>>(
+    (() => {
+      const init: Record<string, string> = {};
+      for (const f of fields) init[f.key] = f.initial ?? "";
+      return init;
+    })(),
+  );
   const [field, setField] = useState(0);
 
-  const submit = () => {
+  // Per-field Enter handler. Saves the typed value, advances to the next
+  // field, or — if this was the last field — fires the parent's onSubmit.
+  const handleFieldSubmit = (idx: number, value: string) => {
     if (busy) return;
-    onSubmit({ ...values });
+    const f = fields[idx];
+    if (!f) return;
+    valuesRef.current[f.key] = value;
+    if (idx + 1 < fields.length) {
+      setField(idx + 1);
+      return;
+    }
+    onSubmit({ ...valuesRef.current });
   };
 
   useInput((_input, key) => {
     if (key.escape) {
       onCancel();
-      return;
-    }
-    if (key.tab && fields.length > 1) {
-      const delta = key.shift ? -1 : 1;
-      setField((((field + delta) % fields.length) + fields.length) % fields.length);
     }
   });
 
@@ -89,8 +96,7 @@ export function SettingsFormModal({
                 isDisabled={field !== idx}
                 placeholder={f.placeholder ?? ""}
                 defaultValue={f.initial ?? ""}
-                onChange={(next) => setValues((cur) => ({ ...cur, [f.key]: next }))}
-                onSubmit={submit}
+                onSubmit={(value) => handleFieldSubmit(idx, value)}
               />
             </FieldRow>
           ))}
@@ -105,7 +111,9 @@ export function SettingsFormModal({
 
           <Box marginTop={1}>
             <Text color={color.muted}>
-              {fields.length > 1 ? "tab to switch fields · " : ""}⏎ to {submitLabel} · esc to cancel
+              {fields.length > 1 ? "⏎ on each field to advance · " : "⏎ to "}
+              {fields.length > 1 ? "" : submitLabel}
+              {fields.length > 1 ? "last ⏎ submits" : ""} · esc to cancel
               {busy ? "  (saving…)" : ""}
             </Text>
           </Box>
@@ -115,18 +123,10 @@ export function SettingsFormModal({
         mode={title.toLowerCase()}
         version="v0.0.0"
         outerPadX={1}
-        hints={
-          fields.length > 1
-            ? [
-                ["⇥", "field"],
-                ["⏎", submitLabel],
-                ["esc", "cancel"],
-              ]
-            : [
-                ["⏎", submitLabel],
-                ["esc", "cancel"],
-              ]
-        }
+        hints={[
+          ["⏎", fields.length > 1 ? "next / submit" : submitLabel],
+          ["esc", "cancel"],
+        ]}
       />
     </Box>
   );

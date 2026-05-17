@@ -26,6 +26,10 @@ WHERE p.owner_id = sqlc.arg('user_id')
 ORDER BY e.created_at DESC, e.id DESC
 LIMIT sqlc.arg('limit_n');
 
+-- name: DeleteEventsOlderThan :execrows
+DELETE FROM events
+WHERE created_at < sqlc.arg('cutoff');
+
 -- name: ListPersonalEventsForUser :many
 SELECT
     e.id,

@@ -1,4 +1,4 @@
-import { Box, Text, useApp, useInput, useStdout } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import { homedir } from "node:os";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
@@ -32,6 +32,7 @@ import { TodoDetailView } from "./components/views/todo/TodoDetailView";
 import { TodoEditorView } from "./components/views/todo/TodoEditorView";
 import { TodoInfo } from "./components/views/todo/TodoInfo";
 import { SettingsModal } from "./components/views/settings/SettingsModal";
+import { useTerminalSize } from "./hooks";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
@@ -76,9 +77,7 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
   const [state, dispatch] = useReducer(reducer, initialState);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const { exit } = useApp();
-  const { stdout } = useStdout();
-  const totalCols = stdout?.columns ?? 100;
-  const totalRows = stdout?.rows ?? 40;
+  const { cols: totalCols, rows: totalRows } = useTerminalSize();
 
   const refresh = useCallback(async () => {
     dispatch({ type: "SYNC_START" });
@@ -1120,6 +1119,7 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
   ["␣", "toggle"],
   ["i", "todo"],
   ["p", "project"],
+  ["m", "manage"],
   ["/", "search"],
   ["h/l", "tab"],
   ["s", "settings"],

@@ -45,8 +45,9 @@ export function ProjectManageView({
   const { stdout } = useStdout();
   const cols = Math.max(60, stdout?.columns ?? 100);
   const rows = Math.max(20, stdout?.rows ?? 30);
-  const panelWidth = cols - 2;
-  const innerHeight = Math.max(15, rows - 4);
+  // Centered card sized like ProjectEditorView — wide enough for member rows
+  // (~72 cols), with breathing room from the terminal edges.
+  const cardWidth = Math.min(72, cols - 8);
 
   useInput((input, key) => {
     if (editing) {
@@ -66,10 +67,12 @@ export function ProjectManageView({
 
   if (!project) {
     return (
-      <Box flexDirection="column" paddingX={1}>
-        <TitledPanel title="Project" width={panelWidth} paddingY={1} focused height={innerHeight}>
-          <Text color={color.muted}>project not found</Text>
-        </TitledPanel>
+      <Box flexDirection="column" paddingX={1} height={rows - 1}>
+        <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
+          <TitledPanel title="Project" width={cardWidth} paddingX={2} paddingY={1} focused>
+            <Text color={color.muted}>project not found</Text>
+          </TitledPanel>
+        </Box>
         <Footer mode="manage" version="v0.0.0" outerPadX={1} hints={[["esc", "back"]]} />
       </Box>
     );
@@ -92,42 +95,44 @@ export function ProjectManageView({
   }
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <TitledPanel
-        title={`Project · ${project.name}`}
-        width={panelWidth}
-        paddingY={1}
-        focused
-        height={innerHeight}
-        borderTint={swatchColor(project.color)}
-      >
-        <Header project={project} memberCount={members.length} membersLoaded={membersLoaded} />
+    <Box flexDirection="column" paddingX={1} height={rows - 1}>
+      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
+        <TitledPanel
+          title={`Project · ${project.name}`}
+          width={cardWidth}
+          paddingX={2}
+          paddingY={1}
+          focused
+          borderTint={swatchColor(project.color)}
+        >
+          <Header project={project} memberCount={members.length} membersLoaded={membersLoaded} />
 
-        <Box marginTop={1} flexDirection="column">
-          <Text color={color.muted}>Members</Text>
           <Box marginTop={1} flexDirection="column">
-            {!membersLoaded ? (
-              <Text color={color.muted} dimColor>
-                loading…
-              </Text>
-            ) : members.length === 0 ? (
-              <Text color={color.muted} dimColor>
-                (just you)
-              </Text>
-            ) : (
-              members.map((m) => <MemberRow key={m.userId} m={m} nowMs={nowMs} />)
-            )}
+            <Text color={color.muted}>Members</Text>
+            <Box marginTop={1} flexDirection="column">
+              {!membersLoaded ? (
+                <Text color={color.muted} dimColor>
+                  loading…
+                </Text>
+              ) : members.length === 0 ? (
+                <Text color={color.muted} dimColor>
+                  (just you)
+                </Text>
+              ) : (
+                members.map((m) => <MemberRow key={m.userId} m={m} nowMs={nowMs} />)
+              )}
+            </Box>
           </Box>
-        </Box>
 
-        {isOwner && (
-          <Box marginTop={1}>
-            <Text color={color.muted}>
-              Press <Text color={color.accent} bold>i</Text> to invite a new user.
-            </Text>
-          </Box>
-        )}
-      </TitledPanel>
+          {isOwner && (
+            <Box marginTop={1}>
+              <Text color={color.muted}>
+                Press <Text color={color.accent} bold>i</Text> to invite a new user.
+              </Text>
+            </Box>
+          )}
+        </TitledPanel>
+      </Box>
       <Footer
         mode="manage"
         version="v0.0.0"

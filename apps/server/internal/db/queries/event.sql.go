@@ -10,6 +10,19 @@ import (
 	"database/sql"
 )
 
+const deleteEventsOlderThan = `-- name: DeleteEventsOlderThan :execrows
+DELETE FROM events
+WHERE created_at < ?1
+`
+
+func (q *Queries) DeleteEventsOlderThan(ctx context.Context, cutoff int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteEventsOlderThan, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const insertEvent = `-- name: InsertEvent :exec
 INSERT INTO events (id, verb, actor_id, project_id, target_type, target_id, target_label, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)

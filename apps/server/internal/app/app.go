@@ -75,6 +75,16 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	// Bound the retention sweeper's lifetime to Run so Shutdown can wait for it
+	// to return before closing the DB.
+	sweepCtx, stopSweep := context.WithCancel(ctx)
+	defer stopSweep()
+	sweepDone := make(chan struct{})
+	go func() {
+		defer close(sweepDone)
+		runEventRetention(sweepCtx, q, cfg.EventRetention, time.Now)
+	}()
+
 	v := version.Get()
 	errCh := make(chan error, 1)
 	go func() {
@@ -99,5 +109,10 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	err = srv.Shutdown(shutdownCtx)
+	// Stop the sweeper and wait for it before returning, so the DB isn't
+	// closed out from under an in-flight DELETE.
+	stopSweep()
+	<-sweepDone
+	return err
 }
