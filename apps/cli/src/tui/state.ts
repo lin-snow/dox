@@ -268,6 +268,10 @@ export function reducer(state: State, action: Action): State {
       return { ...next, cursor: 0 };
     }
     case "TODO_UPDATED":
+      // Pure data merge — callers control mode transitions. Previously this
+      // forced mode back to "list", which fought with async hydration: pressing
+      // Enter opened the detail view, then the GetTodo response landed and
+      // kicked the user back to the list (visible as a flash).
       return {
         ...state,
         // Merge rather than replace: the next ListTodos refresh strips
@@ -277,10 +281,6 @@ export function reducer(state: State, action: Action): State {
         todos: state.todos.map((t) =>
           t.id === action.todo.id ? { ...t, ...action.todo } : t,
         ),
-        mode: "list",
-        editingTitle: "",
-        editingDescription: "",
-        editingId: null,
       };
     case "TODO_DELETED": {
       const todos = state.todos.filter((t) => t.id !== action.id);

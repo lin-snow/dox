@@ -3,6 +3,7 @@ package handler_test
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -126,5 +127,64 @@ func TestRedeemPairingCode_AcceptsFormattedInput(t *testing.T) {
 	formatted := authn.FormatCode(code)
 	if _, err := s.RedeemPairingCode(context.Background(), &doxv1.RedeemPairingCodeRequest{Code: formatted}); err != nil {
 		t.Fatalf("redeem with %q failed: %v", formatted, err)
+	}
+}
+
+func TestRegister_FirstUserGetsSeedTodos(t *testing.T) {
+	s, q := newUserFixture(t)
+	resp, err := s.Register(context.Background(), &doxv1.RegisterRequest{
+		UserName:   "alice",
+		DeviceName: "laptop",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	todos, err := q.ListInboxTodos(context.Background(), resp.UserId)
+	if err != nil {
+		t.Fatalf("list inbox: %v", err)
+	}
+	if len(todos) != 3 {
+		t.Fatalf("want 3 seed todos in inbox, got %d", len(todos))
+	}
+	// DESC by created_at — "Welcome" is the newest seed and must sort first.
+	if !strings.HasPrefix(todos[0].Title, "Welcome to dox") {
+		t.Errorf("want Welcome todo first, got %q", todos[0].Title)
+	}
+	for _, td := range todos {
+		if !td.Description.Valid || td.Description.String == "" {
+			t.Errorf("seed todo %q has empty description", td.Title)
+		}
+		if td.Done {
+			t.Errorf("seed todo %q should start as open, not done", td.Title)
+		}
+	}
+}
+
+func TestRegister_SecondUserGetsNoSeed(t *testing.T) {
+	s, q := newUserFixture(t)
+	// First user (owner) — gets seeded.
+	if _, err := s.Register(context.Background(), &doxv1.RegisterRequest{
+		UserName: "alice", DeviceName: "laptop",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Open registration so the second register succeeds without an invite.
+	if err := q.UpsertSetting(context.Background(), queries.UpsertSettingParams{
+		Key: "registration_open", Value: "true",
+	}); err != nil {
+		t.Fatalf("open registration: %v", err)
+	}
+	resp, err := s.Register(context.Background(), &doxv1.RegisterRequest{
+		UserName: "bob", DeviceName: "phone",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	todos, err := q.ListInboxTodos(context.Background(), resp.UserId)
+	if err != nil {
+		t.Fatalf("list inbox: %v", err)
+	}
+	if len(todos) != 0 {
+		t.Errorf("non-first user should not be seeded, got %d todos", len(todos))
 	}
 }

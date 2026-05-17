@@ -287,6 +287,7 @@ export function App({ api, projects, identity }: AppProps) {
         try {
           const updated = await api.updateTodo(id, { title, description });
           dispatch({ type: "TODO_UPDATED", todo: updated });
+          dispatch({ type: "EXIT_MODE" });
         } catch (err) {
           dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
         }

@@ -93,6 +93,7 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "count users: %v", err)
 	}
+	isFirstUser := count == 0
 
 	var (
 		role            = caller.RoleMember
@@ -100,7 +101,7 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 		joinProjectRole sql.NullString
 	)
 	switch {
-	case count == 0:
+	case isFirstUser:
 		// First user always wins, regardless of invite/registration policy.
 		role = caller.RoleOwner
 	case req.InviteCode != nil && *req.InviteCode != "":
@@ -149,6 +150,14 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 		}); err != nil {
 			return nil, status.Errorf(codes.Internal, "add project member: %v", err)
 		}
+	}
+
+	// First-time deployment: seed the owner's Inbox with a few onboarding
+	// example todos so the TUI doesn't open to a blank "nothing here" screen.
+	// Only the very first registrant gets this — everyone else (invited
+	// members, open-registration sign-ups) lands on an empty Inbox.
+	if isFirstUser {
+		s.seedExampleTodos(ctx, userID)
 	}
 
 	token, deviceID, err := s.issueDeviceToken(ctx, userID, deviceName)
@@ -355,6 +364,50 @@ func (s *User) UpdateServerSettings(ctx context.Context, req *doxv1.UpdateServer
 // ============================================================
 // helpers
 // ============================================================
+
+// seedExampleTodos populates a fresh owner's Inbox with onboarding examples.
+// Deliberately non-fatal: if a seed insert fails, the user's account is still
+// created and they just see an empty Inbox — a missing example is much less
+// disruptive than a failed signup, so errors are swallowed.
+//
+// The three seeds cover the three things a new user most needs to discover:
+// (1) the [space] toggle, (2) projects + invites, (3) the global help overlay
+// and basic navigation. created_at is staggered by 1ms so the "Welcome" todo
+// sorts to the top of the DESC-ordered list.
+func (s *User) seedExampleTodos(ctx context.Context, userID string) {
+	now := s.now()
+	seeds := []struct {
+		title       string
+		description string
+	}{
+		{
+			title:       "Mark this todo as done with [space]",
+			description: "Pressing **space** toggles a todo between open and done.\nDone todos still appear in the **Done** tab and contribute to the Activity chart at the top of the screen.",
+		},
+		{
+			title:       "Create a project with [p] to share todos",
+			description: "Projects let you collaborate with other people.\n\n- `p` in the TUI to create a project\n- `dox project invite <project-id> --role editor` from the CLI to invite someone\n\nThe person you invite redeems the code with `dox accept <code>` and joins as an editor or viewer.",
+		},
+		{
+			title:       "Welcome to dox — press [?] anytime for keybindings",
+			description: "This is your **Private** tab — todos here are visible only to you.\n\nBasics:\n- `i` to add a new todo\n- `enter` to open this detail view\n- `e` to edit, `d` to delete\n- `h` / `l` or `tab` to switch between Private and your projects\n- `?` to see the full keybinding overlay",
+		},
+	}
+	for i, seed := range seeds {
+		ts := now + int64(i)
+		if _, err := s.q.CreateTodo(ctx, queries.CreateTodoParams{
+			ID:          ulid.Make().String(),
+			Title:       seed.title,
+			Description: sql.NullString{String: seed.description, Valid: true},
+			ProjectID:   sql.NullString{},
+			CreatedBy:   userID,
+			CreatedAt:   ts,
+			UpdatedAt:   ts,
+		}); err != nil {
+			return
+		}
+	}
+}
 
 func (s *User) issueDeviceToken(ctx context.Context, userID, deviceName string) (token, deviceID string, err error) {
 	token, err = authn.GenerateToken()
