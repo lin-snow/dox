@@ -71,6 +71,10 @@ async function flush() {
   }
 }
 
+// Selection marker rendered on the focused row by TodoList — kept here so any
+// future glyph change touches one spot in the tests.
+const SELECT_BAR = "▎";
+
 describe("App", () => {
   let instances: ReturnType<typeof render>[] = [];
 
@@ -92,17 +96,17 @@ describe("App", () => {
     const { api } = makeFakeApi([]);
     const { lastFrame } = mountApp(api);
     await flush();
-    expect(lastFrame()).toContain("(no todos");
+    expect(lastFrame()).toContain("nothing here");
   });
 
-  test("renders todos with cursor on first", async () => {
+  test("renders todos with selection bar on first", async () => {
     const { api } = makeFakeApi([makeTodo({ title: "buy milk" }), makeTodo({ title: "write code" })]);
     const { lastFrame } = mountApp(api);
     await flush();
     const frame = lastFrame() ?? "";
     expect(frame).toContain("buy milk");
     expect(frame).toContain("write code");
-    expect(frame).toContain(">"); // cursor pointer
+    expect(frame).toContain(SELECT_BAR);
   });
 
   test("j moves cursor down", async () => {
@@ -113,12 +117,14 @@ describe("App", () => {
     await flush();
     stdin.write("j");
     await flush();
-    // After j, cursor is on second row; ensure the rendering reflects it.
+    // Match the list-row pattern explicitly: `▎ ○ <title>` or `  ○ <title>`.
+    // Title also appears in the Todo Details pane as "Title: <title>", which
+    // would otherwise shadow the row we care about.
     const lines = (lastFrame() ?? "").split("\n");
-    const alphaLine = lines.find((l) => l.includes("alpha")) ?? "";
-    const betaLine = lines.find((l) => l.includes("beta")) ?? "";
-    expect(betaLine.startsWith(">") || betaLine.includes("> ")).toBe(true);
-    expect(alphaLine.startsWith(">") || alphaLine.includes("> ")).toBe(false);
+    const alphaRow = lines.find((l) => /[▎ ]\s*[○✓]\s+alpha/.test(l)) ?? "";
+    const betaRow = lines.find((l) => /[▎ ]\s*[○✓]\s+beta/.test(l)) ?? "";
+    expect(betaRow.includes(SELECT_BAR)).toBe(true);
+    expect(alphaRow.includes(SELECT_BAR)).toBe(false);
   });
 
   test("space toggles done on the cursored todo", async () => {
@@ -141,7 +147,7 @@ describe("App", () => {
     stdin.write("d");
     await flush();
     expect(deleteMock).toHaveBeenCalledWith(a.id);
-    expect(lastFrame() ?? "").toContain("(no todos");
+    expect(lastFrame() ?? "").toContain("nothing here");
   });
 
   test("i + enter creates a new todo", async () => {
@@ -150,26 +156,43 @@ describe("App", () => {
     await flush();
     stdin.write("i");
     await flush();
-    expect(lastFrame() ?? "").toContain("new todo title");
-    // Send text and Enter separately so TextInput observes each event.
+    expect(lastFrame() ?? "").toContain("New todo");
+    // Editor has 2 fields (title + description). Enter on title advances
+    // focus to description; a second Enter on description submits both.
     stdin.write("buy milk");
     await flush();
-    stdin.write("\r");
+    stdin.write("\r"); // advance to description field
+    await flush();
+    stdin.write("\r"); // submit
     await flush();
     expect(createMock).toHaveBeenCalledTimes(1);
     expect(createMock.mock.calls[0]?.[0]).toBe("buy milk");
   });
 
-  test("empty input + enter cancels add mode", async () => {
+  test("blank title cancels add mode", async () => {
     const { api, createMock } = makeFakeApi([]);
     const { stdin, lastFrame } = mountApp(api);
     await flush();
     stdin.write("i");
     await flush();
-    stdin.write("\r"); // empty submit
+    stdin.write("\r");
+    await flush();
+    stdin.write("\r");
     await flush();
     expect(createMock).not.toHaveBeenCalled();
-    // Back in list mode (help bar shows list keys).
-    expect(lastFrame() ?? "").toContain("j/k nav");
+    // Back in list mode — StatusBar's mode pill shows NORMAL.
+    expect(lastFrame() ?? "").toContain("NORMAL");
+  });
+
+  test("? toggles the help overlay", async () => {
+    const { api } = makeFakeApi([]);
+    const { stdin, lastFrame } = mountApp(api);
+    await flush();
+    stdin.write("?");
+    await flush();
+    expect(lastFrame() ?? "").toContain("keybindings");
+    stdin.write("?");
+    await flush();
+    expect(lastFrame() ?? "").not.toContain("keybindings");
   });
 });

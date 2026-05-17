@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/lin-snow/dox/apps/server/internal/app"
 	"github.com/lin-snow/dox/apps/server/internal/config"
+	"github.com/lin-snow/dox/apps/server/internal/version"
 )
 
 func main() {
@@ -24,6 +26,9 @@ func run() error {
 		return err
 	}
 	slog.SetDefault(cfg.Logger())
+
+	// Logo on stderr keeps it out of any structured-log pipeline on stdout.
+	fmt.Fprint(os.Stderr, version.Get().Banner())
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

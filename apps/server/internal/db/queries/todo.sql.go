@@ -11,34 +11,48 @@ import (
 )
 
 const createTodo = `-- name: CreateTodo :one
-INSERT INTO todos (id, title, done, project_id, created_by, created_at, updated_at)
-VALUES (?, ?, 0, ?, ?, ?, ?)
-RETURNING id, title, done, project_id, created_by, created_at, updated_at
+INSERT INTO todos (id, title, done, description, project_id, created_by, created_at, updated_at)
+VALUES (?, ?, 0, ?, ?, ?, ?, ?)
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
 `
 
 type CreateTodoParams struct {
-	ID        string
-	Title     string
-	ProjectID sql.NullString
-	CreatedBy string
-	CreatedAt int64
-	UpdatedAt int64
+	ID          string
+	Title       string
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
 }
 
-func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, error) {
+type CreateTodoRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (CreateTodoRow, error) {
 	row := q.db.QueryRowContext(ctx, createTodo,
 		arg.ID,
 		arg.Title,
+		arg.Description,
 		arg.ProjectID,
 		arg.CreatedBy,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
-	var i Todo
+	var i CreateTodoRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.Description,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -101,19 +115,31 @@ func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, arg FindTodoIDsByPref
 }
 
 const getTodo = `-- name: GetTodo :one
-SELECT id, title, done, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE id = ?
 LIMIT 1
 `
 
-func (q *Queries) GetTodo(ctx context.Context, id string) (Todo, error) {
+type GetTodoRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) GetTodo(ctx context.Context, id string) (GetTodoRow, error) {
 	row := q.db.QueryRowContext(ctx, getTodo, id)
-	var i Todo
+	var i GetTodoRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.Description,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -123,25 +149,37 @@ func (q *Queries) GetTodo(ctx context.Context, id string) (Todo, error) {
 }
 
 const listInboxTodos = `-- name: ListInboxTodos :many
-SELECT id, title, done, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE project_id IS NULL AND created_by = ?1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]Todo, error) {
+type ListInboxTodosRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]ListInboxTodosRow, error) {
 	rows, err := q.db.QueryContext(ctx, listInboxTodos, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Todo{}
+	items := []ListInboxTodosRow{}
 	for rows.Next() {
-		var i Todo
+		var i ListInboxTodosRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
 			&i.Done,
+			&i.Description,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -161,7 +199,7 @@ func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]Todo, er
 }
 
 const listTodosForUser = `-- name: ListTodosForUser :many
-SELECT t.id, t.title, t.done, t.project_id, t.created_by, t.created_at, t.updated_at
+SELECT t.id, t.title, t.done, t.description, t.project_id, t.created_by, t.created_at, t.updated_at
 FROM todos t
 WHERE (t.project_id IS NULL AND t.created_by = ?1)
    OR EXISTS (
@@ -175,20 +213,32 @@ WHERE (t.project_id IS NULL AND t.created_by = ?1)
 ORDER BY t.created_at DESC
 `
 
+type ListTodosForUserRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
 // Everything visible to the caller: their Inbox + todos in projects they own or are a member of.
-func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]Todo, error) {
+func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]ListTodosForUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTodosForUser, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Todo{}
+	items := []ListTodosForUserRow{}
 	for rows.Next() {
-		var i Todo
+		var i ListTodosForUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
 			&i.Done,
+			&i.Description,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -208,26 +258,38 @@ func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]Todo, 
 }
 
 const listTodosInProject = `-- name: ListTodosInProject :many
-SELECT id, title, done, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE project_id = ?1
 ORDER BY created_at DESC
 `
 
+type ListTodosInProjectRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
 // Caller must have already verified project visibility via authz.
-func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullString) ([]Todo, error) {
+func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullString) ([]ListTodosInProjectRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTodosInProject, projectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Todo{}
+	items := []ListTodosInProjectRow{}
 	for rows.Next() {
-		var i Todo
+		var i ListTodosInProjectRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
 			&i.Done,
+			&i.Description,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -248,30 +310,44 @@ func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullStri
 
 const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos
-SET title = ?, done = ?, updated_at = ?
+SET title = ?, done = ?, description = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, title, done, project_id, created_by, created_at, updated_at
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
 `
 
 type UpdateTodoParams struct {
-	Title     string
-	Done      bool
-	UpdatedAt int64
-	ID        string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	UpdatedAt   int64
+	ID          string
 }
 
-func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
+type UpdateTodoRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (UpdateTodoRow, error) {
 	row := q.db.QueryRowContext(ctx, updateTodo,
 		arg.Title,
 		arg.Done,
+		arg.Description,
 		arg.UpdatedAt,
 		arg.ID,
 	)
-	var i Todo
+	var i UpdateTodoRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.Description,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,

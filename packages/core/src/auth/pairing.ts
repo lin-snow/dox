@@ -26,20 +26,32 @@ export interface ServerInfo {
   // the next Register call promotes the caller to owner.
   hasUsers: boolean;
   registrationOpen: boolean;
+  // Build identity from the server. Both empty for `go run`-style builds where
+  // ldflags weren't injected and ReadBuildInfo had nothing to fall back on.
+  version: string;
+  commit: string;
 }
 
 // fetchServerInfo probes a server before login so the onboarding flow can pick
 // the right branch (first-user / open / invite-required) without asking the
 // user to understand those concepts. Public endpoint, no auth header.
 export async function fetchServerInfo(serverUrl: string): Promise<ServerInfo> {
-  const res = await fetch(`${serverUrl}/v1/auth/server-info`);
+  const base = serverUrl.replace(/\/+$/, "");
+  const res = await fetch(`${base}/v1/auth/server-info`);
   if (!res.ok) {
     throw new ApiError(res.status, await res.text());
   }
-  const body = (await res.json()) as { hasUsers?: boolean; registrationOpen?: boolean };
+  const body = (await res.json()) as {
+    hasUsers?: boolean;
+    registrationOpen?: boolean;
+    version?: string;
+    commit?: string;
+  };
   return {
     hasUsers: Boolean(body.hasUsers),
     registrationOpen: Boolean(body.registrationOpen),
+    version: body.version ?? "",
+    commit: body.commit ?? "",
   };
 }
 

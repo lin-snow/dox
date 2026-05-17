@@ -38,7 +38,11 @@ type Todo struct {
 	// Project the todo belongs to. Unset = Inbox (private to created_by).
 	ProjectId *string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	// User who created the todo.
-	CreatedBy     string `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedBy string `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// Optional long-form body, rendered as markdown by clients. Populated only
+	// by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
+	// payloads small.
+	Description   *string `protobuf:"bytes,8,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -118,6 +122,13 @@ func (x *Todo) GetProjectId() string {
 func (x *Todo) GetCreatedBy() string {
 	if x != nil {
 		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *Todo) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
 	}
 	return ""
 }
@@ -260,7 +271,9 @@ type CreateTodoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Title string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
 	// Unset = create in Inbox (private to caller).
-	ProjectId     *string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
+	ProjectId *string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
+	// Optional markdown description. Empty string is treated as unset.
+	Description   *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -309,11 +322,20 @@ func (x *CreateTodoRequest) GetProjectId() string {
 	return ""
 }
 
+func (x *CreateTodoRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
 type UpdateTodoRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
-	Done          *bool                  `protobuf:"varint,3,opt,name=done,proto3,oneof" json:"done,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
+	Done  *bool                  `protobuf:"varint,3,opt,name=done,proto3,oneof" json:"done,omitempty"`
+	// Patch the markdown description. Empty string clears it.
+	Description   *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -367,6 +389,13 @@ func (x *UpdateTodoRequest) GetDone() bool {
 		return *x.Done
 	}
 	return false
+}
+
+func (x *UpdateTodoRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
 }
 
 type DeleteTodoRequest struct {
@@ -453,7 +482,7 @@ var File_dox_v1_todo_proto protoreflect.FileDescriptor
 
 const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\xd0\x01\n" +
+	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x87\x02\n" +
 	"\x04Todo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -465,8 +494,10 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\x06 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\a \x01(\tR\tcreatedByB\r\n" +
-	"\v_project_id\"E\n" +
+	"created_by\x18\a \x01(\tR\tcreatedBy\x12%\n" +
+	"\vdescription\x18\b \x01(\tH\x01R\vdescription\x88\x01\x01B\r\n" +
+	"\v_project_idB\x0e\n" +
+	"\f_description\"E\n" +
 	"\x10ListTodosRequest\x12\"\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
@@ -474,18 +505,22 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\x11ListTodosResponse\x12\"\n" +
 	"\x05todos\x18\x01 \x03(\v2\f.dox.v1.TodoR\x05todos\" \n" +
 	"\x0eGetTodoRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\\\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x93\x01\n" +
 	"\x11CreateTodoRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\"\n" +
 	"\n" +
-	"project_id\x18\x02 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
-	"\v_project_id\"j\n" +
+	"project_id\x18\x02 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01B\r\n" +
+	"\v_project_idB\x0e\n" +
+	"\f_description\"\xa1\x01\n" +
 	"\x11UpdateTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x17\n" +
-	"\x04done\x18\x03 \x01(\bH\x01R\x04done\x88\x01\x01B\b\n" +
+	"\x04done\x18\x03 \x01(\bH\x01R\x04done\x88\x01\x01\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tH\x02R\vdescription\x88\x01\x01B\b\n" +
 	"\x06_titleB\a\n" +
-	"\x05_done\"#\n" +
+	"\x05_doneB\x0e\n" +
+	"\f_description\"#\n" +
 	"\x11DeleteTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
 	"\x12DeleteTodoResponse2\xa7\x03\n" +

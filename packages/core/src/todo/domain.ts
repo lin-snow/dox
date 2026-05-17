@@ -14,11 +14,16 @@ export interface Todo {
   // the proto `optional` when unset) means the Inbox.
   projectId?: string;
   createdBy: string;
+  // Optional markdown body. Server omits this on ListTodos to keep payloads
+  // small; populated by GetTodo / CreateTodo / UpdateTodo when set.
+  description?: string;
 }
 
 export interface TodoPatch {
   title?: string;
   done?: boolean;
+  // Pass an empty string to clear the description; omit to leave unchanged.
+  description?: string;
 }
 
 export type TodoFilter = string | "inbox" | undefined;

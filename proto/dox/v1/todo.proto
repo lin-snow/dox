@@ -22,6 +22,10 @@ message Todo {
   optional string project_id = 6;
   // User who created the todo.
   string created_by = 7;
+  // Optional long-form body, rendered as markdown by clients. Populated only
+  // by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
+  // payloads small.
+  optional string description = 8;
 }
 
 // TodoService manages todos for the authenticated user.
@@ -74,12 +78,16 @@ message CreateTodoRequest {
   string title = 1;
   // Unset = create in Inbox (private to caller).
   optional string project_id = 2;
+  // Optional markdown description. Empty string is treated as unset.
+  optional string description = 3;
 }
 
 message UpdateTodoRequest {
   string id = 1;
   optional string title = 2;
   optional bool done = 3;
+  // Patch the markdown description. Empty string clears it.
+  optional string description = 4;
 }
 
 message DeleteTodoRequest {

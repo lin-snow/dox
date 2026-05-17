@@ -647,6 +647,9 @@ components:
                 projectId:
                     type: string
                     description: Unset = create in Inbox (private to caller).
+                description:
+                    type: string
+                    description: Optional markdown description. Empty string is treated as unset.
         DeleteProjectResponse:
             type: object
             properties: {}
@@ -827,6 +830,16 @@ components:
                     description: |-
                         Mirrors the registration_open server setting. When true, Register works
                          without an invite code (only meaningful once has_users is true).
+                version:
+                    type: string
+                    description: |-
+                        Server build identity, surfaced unauthenticated so a CLI can warn on
+                         CLI/server version skew before login.
+                commit:
+                    type: string
+                    description: |-
+                        Short commit sha for the running server build. May carry a "-dirty"
+                         suffix for local builds.
         ServerSettings:
             type: object
             properties:
@@ -872,6 +885,12 @@ components:
                 createdBy:
                     type: string
                     description: User who created the todo.
+                description:
+                    type: string
+                    description: |-
+                        Optional long-form body, rendered as markdown by clients. Populated only
+                         by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
+                         payloads small.
             description: Todo is a single todo item, owned by a user and optionally scoped to a project.
         UpdateProjectRequest:
             type: object
@@ -903,6 +922,9 @@ components:
                     type: string
                 done:
                     type: boolean
+                description:
+                    type: string
+                    description: Patch the markdown description. Empty string clears it.
         User:
             type: object
             properties:

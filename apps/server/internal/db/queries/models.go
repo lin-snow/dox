@@ -61,13 +61,14 @@ type Setting struct {
 }
 
 type Todo struct {
-	ID        string
-	Title     string
-	Done      bool
-	ProjectID sql.NullString
-	CreatedBy string
-	CreatedAt int64
-	UpdatedAt int64
+	ID          string
+	Title       string
+	Done        bool
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+	Description sql.NullString
 }
 
 type User struct {

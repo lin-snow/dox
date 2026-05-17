@@ -1,5 +1,5 @@
 import { Box, Text, useInput } from "ink";
-import { Alert, Spinner, TextInput } from "@inkjs/ui";
+import { Spinner, TextInput } from "@inkjs/ui";
 import { useEffect, useState } from "react";
 import os from "node:os";
 
@@ -11,6 +11,12 @@ import {
   register,
   saveConfig,
 } from "@dox/core";
+
+import { color, icon } from "../theme";
+import { ErrorAlert } from "./ErrorAlert";
+import { Panel } from "./Panel";
+import { SectionHeader } from "./SectionHeader";
+import { Stepper } from "./Stepper";
 
 type Stage =
   | "server"
@@ -30,6 +36,7 @@ type Intent = "register" | "pair";
 export type OnboardingReason = "fresh" | "reauth";
 
 const DEFAULT_SERVER = "http://localhost:8080";
+const STEPS = ["Server", "Method", "You", "Device"] as const;
 
 interface OnboardingProps {
   reason?: OnboardingReason;
@@ -173,130 +180,212 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     setStage("submitting");
   };
 
-  const showServerContext = stage !== "server";
-  const showRegistrationContext = info && stage !== "server" && stage !== "probing";
-  const showUserNameContext =
-    intent === "register" && (stage === "enter-device" || stage === "submitting");
-  const showInviteContext =
-    intent === "register" &&
-    inviteCode &&
-    (stage === "enter-username" || stage === "enter-device" || stage === "submitting");
+  const stepIndex = stepIndexFor(stage, intent);
 
   return (
     <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        dox
-      </Text>
-      <Text dimColor>
-        {reason === "reauth"
-          ? "Your saved login was rejected — let's reconnect."
-          : "Welcome — let's get you connected."}
-      </Text>
-
-      {/* Confirmed-so-far context */}
-      <Box flexDirection="column" marginTop={1}>
-        {showServerContext && (
-          <Text dimColor>
-            Server <Text color="green">✓</Text> {server}
-          </Text>
-        )}
-        {showRegistrationContext && info && (
-          <Text dimColor>
-            {!info.hasUsers
-              ? "✨ Empty server — you'll become the owner."
-              : info.registrationOpen
-                ? "Open registration is enabled."
-                : "Invite required (server is private)."}
-          </Text>
-        )}
-        {showInviteContext && (
-          <Text dimColor>
-            Invite <Text color="green">✓</Text> {inviteCode}
-          </Text>
-        )}
-        {showUserNameContext && (
-          <Text dimColor>
-            Username <Text color="green">✓</Text> {userName}
-          </Text>
-        )}
+      <Box>
+        <Text bold color={color.brand}>
+          {icon.brand} dox
+        </Text>
+        <Text color={color.muted}>
+          {"   "}
+          {reason === "reauth"
+            ? "your saved login was rejected — let's reconnect."
+            : "welcome — let's get you connected."}
+        </Text>
       </Box>
 
-      <Box marginTop={1} flexDirection="column">
-        {stage === "server" && (
-          <Box flexDirection="column">
-            <Text>Server URL</Text>
-            <TextInput
-              defaultValue={server}
-              placeholder={DEFAULT_SERVER}
-              onSubmit={submitServer}
-            />
-          </Box>
-        )}
-
-        {stage === "probing" && <Spinner label={`Connecting to ${server}…`} />}
-
-        {stage === "choose-branch" && (
-          <Box flexDirection="column">
-            <Text>How would you like to connect?</Text>
-            <Box flexDirection="column" marginTop={1}>
-              <Text>
-                <Text color="cyan">1</Text> Create a new account (you have an invite code)
-              </Text>
-              <Text>
-                <Text color="cyan">2</Text> Add this device to my existing account (pairing code)
-              </Text>
-            </Box>
-            <Box marginTop={1}>
-              <Text dimColor>press 1 or 2</Text>
-            </Box>
-          </Box>
-        )}
-
-        {stage === "enter-invite" && (
-          <Box flexDirection="column">
-            <Text>Invite code</Text>
-            <TextInput placeholder="ABCD-EFGH" onSubmit={submitInvite} />
-          </Box>
-        )}
-
-        {stage === "enter-username" && (
-          <Box flexDirection="column">
-            <Text>Pick a username</Text>
-            <TextInput defaultValue={userName} onSubmit={submitUserName} />
-          </Box>
-        )}
-
-        {stage === "enter-device" && (
-          <Box flexDirection="column">
-            <Text>Name this device</Text>
-            <TextInput defaultValue={deviceName} onSubmit={submitDeviceName} />
-          </Box>
-        )}
-
-        {stage === "pair-code" && (
-          <Box flexDirection="column">
-            <Text>Pairing code</Text>
-            <Text dimColor>
-              run <Text color="cyan">dox device pair --name &lt;name&gt;</Text> on a logged-in device
-            </Text>
-            <TextInput placeholder="ABCD-EFGH" onSubmit={submitPairCode} />
-          </Box>
-        )}
-
-        {stage === "submitting" && (
-          <Spinner label={intent === "register" ? "Creating account…" : "Pairing device…"} />
-        )}
+      <Box marginTop={1} marginBottom={1}>
+        <Stepper steps={STEPS as unknown as string[]} activeIndex={stepIndex} />
       </Box>
 
-      {error && (
-        <Box marginTop={1}>
-          <Alert variant="error">{error}</Alert>
+      {/* Confirmed-so-far context, rendered as compact chips */}
+      <ContextStrip
+        server={stage !== "server" ? server : undefined}
+        info={stage !== "server" && stage !== "probing" ? info : null}
+        inviteCode={intent === "register" && inviteCode ? inviteCode : undefined}
+        userName={
+          intent === "register" && (stage === "enter-device" || stage === "submitting")
+            ? userName
+            : undefined
+        }
+      />
+
+      <Box flexDirection="column" marginTop={1} width={64}>
+        <SectionHeader title={panelTitle(stage, intent)} />
+        <Panel focused paddingY={1} width={64}>
+          {stage === "server" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>where does your dox server live?</Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput
+                  defaultValue={server}
+                  placeholder={DEFAULT_SERVER}
+                  onSubmit={submitServer}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "probing" && (
+            <Spinner label={`connecting to ${server}…`} />
+          )}
+
+          {stage === "choose-branch" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>how would you like to connect?</Text>
+              <Box flexDirection="column" marginTop={1}>
+                <Box>
+                  <Text color={color.accent} bold>
+                    {"  1  "}
+                  </Text>
+                  <Text>create a new account </Text>
+                  <Text color={color.muted}>(you have an invite code)</Text>
+                </Box>
+                <Box>
+                  <Text color={color.accent} bold>
+                    {"  2  "}
+                  </Text>
+                  <Text>add this device to my account </Text>
+                  <Text color={color.muted}>(pairing code)</Text>
+                </Box>
+              </Box>
+              <Box marginTop={1}>
+                <Text color={color.muted}>press 1 or 2</Text>
+              </Box>
+            </Box>
+          )}
+
+          {stage === "enter-invite" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>paste your invite code</Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput placeholder="ABCD-EFGH" onSubmit={submitInvite} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "enter-username" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>pick a username</Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput defaultValue={userName} onSubmit={submitUserName} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "enter-device" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>name this device</Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput defaultValue={deviceName} onSubmit={submitDeviceName} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "pair-code" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>
+                run{" "}
+                <Text color={color.accent}>dox device pair --name &lt;name&gt;</Text>{" "}
+                on a logged-in device, then paste the code:
+              </Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput placeholder="ABCD-EFGH" onSubmit={submitPairCode} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "submitting" && (
+            <Spinner label={intent === "register" ? "creating account…" : "pairing device…"} />
+          )}
+        </Panel>
+      </Box>
+
+      {error && <ErrorAlert message={error} />}
+
+      <Box marginTop={1} paddingX={1}>
+        <Text color={color.muted}>
+          <Text color={color.accent}>Ctrl+C</Text> cancel
+        </Text>
+      </Box>
+    </Box>
+  );
+}
+
+function panelTitle(stage: Stage, intent: Intent): string {
+  switch (stage) {
+    case "server":
+    case "probing":
+      return "Connect to server";
+    case "choose-branch":
+      return "Choose your path";
+    case "enter-invite":
+      return "Invite code";
+    case "enter-username":
+      return "Username";
+    case "enter-device":
+      return "Device name";
+    case "pair-code":
+      return "Pairing code";
+    case "submitting":
+      return intent === "register" ? "Creating account" : "Pairing device";
+  }
+}
+
+function stepIndexFor(stage: Stage, intent: Intent): number {
+  // Maps internal stages onto the 4-dot stepper. Method step collapses for the
+  // bootstrap / open-registration path where it's auto-selected.
+  switch (stage) {
+    case "server":
+    case "probing":
+      return 0;
+    case "choose-branch":
+    case "enter-invite":
+    case "pair-code":
+      return 1;
+    case "enter-username":
+      return 2;
+    case "enter-device":
+      return 3;
+    case "submitting":
+      return intent === "register" ? 3 : 1;
+  }
+}
+
+interface ContextStripProps {
+  server?: string;
+  info: ServerInfo | null;
+  inviteCode?: string;
+  userName?: string;
+}
+
+function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps) {
+  const chips: { label: string; value: string; tone?: string }[] = [];
+  if (server) chips.push({ label: "server", value: server });
+  if (info) {
+    if (!info.hasUsers) chips.push({ label: "mode", value: "first user → owner", tone: color.accent2 });
+    else if (info.registrationOpen) chips.push({ label: "mode", value: "open" });
+    else chips.push({ label: "mode", value: "invite-only" });
+  }
+  if (inviteCode) chips.push({ label: "invite", value: inviteCode });
+  if (userName) chips.push({ label: "user", value: userName });
+  if (chips.length === 0) return null;
+  return (
+    <Box flexDirection="column">
+      {chips.map((c) => (
+        <Box key={c.label}>
+          <Text color={color.success}>  {icon.done} </Text>
+          <Text color={color.muted}>{c.label}: </Text>
+          <Text color={c.tone ?? undefined}>{c.value}</Text>
         </Box>
-      )}
-
-      <Box marginTop={1}>
-        <Text dimColor>Ctrl+C to cancel</Text>
-      </Box>
+      ))}
     </Box>
   );
 }

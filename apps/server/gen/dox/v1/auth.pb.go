@@ -67,8 +67,14 @@ type ServerInfoResponse struct {
 	// Mirrors the registration_open server setting. When true, Register works
 	// without an invite code (only meaningful once has_users is true).
 	RegistrationOpen bool `protobuf:"varint,2,opt,name=registration_open,json=registrationOpen,proto3" json:"registration_open,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Server build identity, surfaced unauthenticated so a CLI can warn on
+	// CLI/server version skew before login.
+	Version string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	// Short commit sha for the running server build. May carry a "-dirty"
+	// suffix for local builds.
+	Commit        string `protobuf:"bytes,4,opt,name=commit,proto3" json:"commit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ServerInfoResponse) Reset() {
@@ -113,6 +119,20 @@ func (x *ServerInfoResponse) GetRegistrationOpen() bool {
 		return x.RegistrationOpen
 	}
 	return false
+}
+
+func (x *ServerInfoResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ServerInfoResponse) GetCommit() string {
+	if x != nil {
+		return x.Commit
+	}
+	return ""
 }
 
 type RegisterRequest struct {
@@ -387,10 +407,12 @@ var File_dox_v1_auth_proto protoreflect.FileDescriptor
 const file_dox_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x11dox/v1/auth.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x13\n" +
-	"\x11ServerInfoRequest\"^\n" +
+	"\x11ServerInfoRequest\"\x90\x01\n" +
 	"\x12ServerInfoResponse\x12\x1b\n" +
 	"\thas_users\x18\x01 \x01(\bR\bhasUsers\x12+\n" +
-	"\x11registration_open\x18\x02 \x01(\bR\x10registrationOpen\"\x85\x01\n" +
+	"\x11registration_open\x18\x02 \x01(\bR\x10registrationOpen\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\x12\x16\n" +
+	"\x06commit\x18\x04 \x01(\tR\x06commit\"\x85\x01\n" +
 	"\x0fRegisterRequest\x12\x1b\n" +
 	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1f\n" +
 	"\vdevice_name\x18\x02 \x01(\tR\n" +

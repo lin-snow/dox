@@ -19,6 +19,7 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 	"github.com/lin-snow/dox/apps/server/internal/handler"
+	"github.com/lin-snow/dox/apps/server/internal/version"
 )
 
 const shutdownTimeout = 5 * time.Second
@@ -61,9 +62,15 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	v := version.Get()
 	errCh := make(chan error, 1)
 	go func() {
-		slog.Info("server listening", "addr", cfg.ListenAddr, "db", cfg.DBPath)
+		slog.Info("server listening",
+			"addr", cfg.ListenAddr,
+			"db", cfg.DBPath,
+			"version", v.Version,
+			"commit", v.Commit,
+		)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}

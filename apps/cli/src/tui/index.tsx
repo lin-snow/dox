@@ -3,9 +3,11 @@ import { render } from "ink";
 
 import {
   type Config,
+  ProjectClient,
   TodoClient,
   buildFetcher,
   checkToken,
+  getConfigPath,
   loadConfig,
   realIO,
 } from "@dox/core";
@@ -27,7 +29,18 @@ function Root({ initialConfig, initialReason }: RootProps) {
   }
   const fetcher = buildFetcher(config, realIO());
   const api = new TodoClient(fetcher, config.server);
-  return <App api={api} />;
+  const projects = new ProjectClient(fetcher, config.server);
+  return (
+    <App
+      api={api}
+      projects={projects}
+      identity={{
+        userName: config.userName,
+        server: config.server,
+        configPath: getConfigPath(),
+      }}
+    />
+  );
 }
 
 export async function runTui(): Promise<void> {

@@ -4,7 +4,10 @@ import type { Todo, TodoFilter, TodoPatch } from "./domain";
 export interface TodoApi {
   listTodos(filter?: TodoFilter): Promise<Todo[]>;
   getTodo(id: string): Promise<Todo>;
-  createTodo(title: string, opts?: { projectId?: string }): Promise<Todo>;
+  createTodo(
+    title: string,
+    opts?: { projectId?: string; description?: string },
+  ): Promise<Todo>;
   updateTodo(id: string, patch: TodoPatch): Promise<Todo>;
   deleteTodo(id: string): Promise<void>;
 }
@@ -29,16 +32,27 @@ export class TodoClient implements TodoApi {
     return (await res.json()) as Todo;
   }
 
-  async createTodo(title: string, opts?: { projectId?: string }): Promise<Todo> {
+  async createTodo(
+    title: string,
+    opts?: { projectId?: string; description?: string },
+  ): Promise<Todo> {
     const body: Record<string, unknown> = { title };
     if (opts?.projectId) body.project_id = opts.projectId;
+    if (opts?.description !== undefined) body.description = opts.description;
     const res = await this.fetcher(this.json("POST", "/v1/todos", body));
     return (await res.json()) as Todo;
   }
 
   async updateTodo(id: string, patch: TodoPatch): Promise<Todo> {
+    // grpc-gateway maps proto field names to snake_case JSON. Forward the
+    // patch as-is for title/done, and translate description so an explicit
+    // empty string round-trips as "clear this field".
+    const body: Record<string, unknown> = {};
+    if (patch.title !== undefined) body.title = patch.title;
+    if (patch.done !== undefined) body.done = patch.done;
+    if (patch.description !== undefined) body.description = patch.description;
     const res = await this.fetcher(
-      this.json("PATCH", `/v1/todos/${encodeURIComponent(id)}`, patch),
+      this.json("PATCH", `/v1/todos/${encodeURIComponent(id)}`, body),
     );
     return (await res.json()) as Todo;
   }

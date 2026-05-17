@@ -69,12 +69,6 @@ dox server me | users | invite [--ttl-ms N] | set-registration <true|false>
 - Pairing codes are **same-user only** ("add another device" flow), with
   `user_id` stamped on the row.
 
-## Upgrading (pre-1.0)
-
-There is no schema-migration story across the 2026-05 multi-tenant rewrite.
-If you have a pre-multi-tenant `dev.db`, remove it before starting the
-upgraded server: `rm dev.db`.
-
 ## Layout
 
 ```

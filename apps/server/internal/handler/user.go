@@ -18,6 +18,7 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/authn"
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
+	"github.com/lin-snow/dox/apps/server/internal/version"
 )
 
 const (
@@ -60,9 +61,12 @@ func (s *User) ServerInfo(ctx context.Context, _ *doxv1.ServerInfoRequest) (*dox
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load settings: %v", err)
 	}
+	v := version.Get()
 	return &doxv1.ServerInfoResponse{
 		HasUsers:         count > 0,
 		RegistrationOpen: open,
+		Version:          v.Version,
+		Commit:           v.Commit,
 	}, nil
 }
 

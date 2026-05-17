@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/todo.proto.
  */
 export const file_dox_v1_todo: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIpMBCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJQg0KC19wcm9qZWN0X2lkIjoKEExpc3RUb2Rvc1JlcXVlc3QSFwoKcHJvamVjdF9pZBgBIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAkiSgoRQ3JlYXRlVG9kb1JlcXVlc3QSDQoFdGl0bGUYASABKAkSFwoKcHJvamVjdF9pZBgCIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIlkKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBQggKBl90aXRsZUIHCgVfZG9uZSIfChFEZWxldGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUb2RvUmVzcG9uc2UypwMKC1RvZG9TZXJ2aWNlElMKCUxpc3RUb2RvcxIYLmRveC52MS5MaXN0VG9kb3NSZXF1ZXN0GhkuZG94LnYxLkxpc3RUb2Rvc1Jlc3BvbnNlIhGC0+STAgsSCS92MS90b2RvcxJHCgdHZXRUb2RvEhYuZG94LnYxLkdldFRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFoLT5JMCEBIOL3YxL3RvZG9zL3tpZH0SSwoKQ3JlYXRlVG9kbxIZLmRveC52MS5DcmVhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhSC0+STAg46ASoiCS92MS90b2RvcxJQCgpVcGRhdGVUb2RvEhkuZG94LnYxLlVwZGF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iGYLT5JMCEzoBKjIOL3YxL3RvZG9zL3tpZH0SWwoKRGVsZXRlVG9kbxIZLmRveC52MS5EZWxldGVUb2RvUmVxdWVzdBoaLmRveC52MS5EZWxldGVUb2RvUmVzcG9uc2UiFoLT5JMCECoOL3YxL3RvZG9zL3tpZH1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIr0BCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJEhgKC2Rlc2NyaXB0aW9uGAggASgJSAGIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uIjoKEExpc3RUb2Rvc1JlcXVlc3QSFwoKcHJvamVjdF9pZBgBIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAkidAoRQ3JlYXRlVG9kb1JlcXVlc3QSDQoFdGl0bGUYASABKAkSFwoKcHJvamVjdF9pZBgCIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAMgASgJSAGIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uIoMBChFVcGRhdGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEhEKBGRvbmUYAyABKAhIAYgBARIYCgtkZXNjcmlwdGlvbhgEIAEoCUgCiAEBQggKBl90aXRsZUIHCgVfZG9uZUIOCgxfZGVzY3JpcHRpb24iHwoRRGVsZXRlVG9kb1JlcXVlc3QSCgoCaWQYASABKAkiFAoSRGVsZXRlVG9kb1Jlc3BvbnNlMqcDCgtUb2RvU2VydmljZRJTCglMaXN0VG9kb3MSGC5kb3gudjEuTGlzdFRvZG9zUmVxdWVzdBoZLmRveC52MS5MaXN0VG9kb3NSZXNwb25zZSIRgtPkkwILEgkvdjEvdG9kb3MSRwoHR2V0VG9kbxIWLmRveC52MS5HZXRUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhaC0+STAhASDi92MS90b2Rvcy97aWR9EksKCkNyZWF0ZVRvZG8SGS5kb3gudjEuQ3JlYXRlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIUgtPkkwIOOgEqIgkvdjEvdG9kb3MSUAoKVXBkYXRlVG9kbxIZLmRveC52MS5VcGRhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhmC0+STAhM6ASoyDi92MS90b2Rvcy97aWR9ElsKCkRlbGV0ZVRvZG8SGS5kb3gudjEuRGVsZXRlVG9kb1JlcXVlc3QaGi5kb3gudjEuRGVsZXRlVG9kb1Jlc3BvbnNlIhaC0+STAhAqDi92MS90b2Rvcy97aWR9QjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
 
 /**
  * Todo is a single todo item, owned by a user and optionally scoped to a project.
@@ -67,6 +67,15 @@ export type Todo = Message<"dox.v1.Todo"> & {
    * @generated from field: string created_by = 7;
    */
   createdBy: string;
+
+  /**
+   * Optional long-form body, rendered as markdown by clients. Populated only
+   * by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
+   * payloads small.
+   *
+   * @generated from field: optional string description = 8;
+   */
+  description?: string | undefined;
 };
 
 /**
@@ -145,6 +154,13 @@ export type CreateTodoRequest = Message<"dox.v1.CreateTodoRequest"> & {
    * @generated from field: optional string project_id = 2;
    */
   projectId?: string | undefined;
+
+  /**
+   * Optional markdown description. Empty string is treated as unset.
+   *
+   * @generated from field: optional string description = 3;
+   */
+  description?: string | undefined;
 };
 
 /**
@@ -172,6 +188,13 @@ export type UpdateTodoRequest = Message<"dox.v1.UpdateTodoRequest"> & {
    * @generated from field: optional bool done = 3;
    */
   done?: boolean | undefined;
+
+  /**
+   * Patch the markdown description. Empty string clears it.
+   *
+   * @generated from field: optional string description = 4;
+   */
+  description?: string | undefined;
 };
 
 /**

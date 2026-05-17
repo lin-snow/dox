@@ -44,6 +44,12 @@ message ServerInfoResponse {
   // Mirrors the registration_open server setting. When true, Register works
   // without an invite code (only meaningful once has_users is true).
   bool registration_open = 2;
+  // Server build identity, surfaced unauthenticated so a CLI can warn on
+  // CLI/server version skew before login.
+  string version = 3;
+  // Short commit sha for the running server build. May carry a "-dirty"
+  // suffix for local builds.
+  string commit = 4;
 }
 
 message RegisterRequest {
