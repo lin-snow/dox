@@ -6,7 +6,7 @@ interface LoginOptions {
   server: string;
 }
 
-export async function loginCommand(opts: LoginOptions): Promise<void> {
+export async function login(opts: LoginOptions): Promise<void> {
   let serverUrl: URL;
   try {
     serverUrl = new URL(opts.server);

@@ -1,13 +1,8 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 
-import { addCommand } from "./cli/add";
-import { doneCommand, undoneCommand } from "./cli/done";
-import { editCommand } from "./cli/edit";
-import { getCommand } from "./cli/get";
-import { listCommand } from "./cli/list";
-import { loginCommand } from "./cli/login";
-import { rmCommand } from "./cli/rm";
+import * as auth from "./cli/auth";
+import * as todo from "./cli/todo";
 
 const args = process.argv.slice(2);
 
@@ -35,42 +30,42 @@ const commands: CommandSpec[] = [
     name: "login",
     description: "Authenticate to a dox server",
     requiredOption: ["--server <url>", "server URL, e.g. http://localhost:8080"],
-    action: loginCommand,
+    action: auth.login,
   },
   {
     name: "list",
     description: "List all todos, newest first",
     alias: "ls",
     action: async function (this: Command) {
-      await listCommand(this.optsWithGlobals());
+      await todo.list(this.optsWithGlobals());
     },
   },
   {
     name: "add <title>",
     description: "Create a new todo",
     action: async function (this: Command, title: string) {
-      await addCommand(title, this.optsWithGlobals());
+      await todo.add(title, this.optsWithGlobals());
     },
   },
   {
     name: "get <id>",
     description: "Show a single todo by id",
     action: async function (this: Command, id: string) {
-      await getCommand(id, this.optsWithGlobals());
+      await todo.get(id, this.optsWithGlobals());
     },
   },
   {
     name: "done <id>",
     description: "Mark a todo as done",
     action: async function (this: Command, id: string) {
-      await doneCommand(id, this.optsWithGlobals());
+      await todo.done(id, this.optsWithGlobals());
     },
   },
   {
     name: "undone <id>",
     description: "Mark a todo as not done",
     action: async function (this: Command, id: string) {
-      await undoneCommand(id, this.optsWithGlobals());
+      await todo.undone(id, this.optsWithGlobals());
     },
   },
   {
@@ -78,7 +73,7 @@ const commands: CommandSpec[] = [
     description: "Edit a todo's title",
     requiredOption: ["--title <text>", "new title"],
     action: async function (this: Command, id: string, opts: { title: string }) {
-      await editCommand(id, opts.title, this.optsWithGlobals());
+      await todo.edit(id, opts.title, this.optsWithGlobals());
     },
   },
   {
@@ -86,7 +81,7 @@ const commands: CommandSpec[] = [
     description: "Delete a todo permanently",
     alias: "del",
     action: async function (this: Command, id: string) {
-      await rmCommand(id, this.optsWithGlobals());
+      await todo.rm(id, this.optsWithGlobals());
     },
   },
 ];

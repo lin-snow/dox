@@ -1,7 +1,15 @@
-import { ApiClient, HumanOutput, JsonOutput, type Output, loadConfig } from "@dox/core";
+import {
+  HumanOutput,
+  JsonOutput,
+  type Output,
+  TodoClient,
+  buildFetcher,
+  loadConfig,
+  realIO,
+} from "@dox/core";
 
 export interface CliContext {
-  api: ApiClient;
+  api: TodoClient;
   output: Output;
 }
 
@@ -10,13 +18,16 @@ export interface GlobalOpts {
 }
 
 async function buildContext(opts: GlobalOpts): Promise<CliContext> {
+  const io = realIO();
   const cfg = await loadConfig();
   if (!cfg) {
-    console.error("dox: not logged in. Run 'dox login --server <url>' first.");
+    io.stderr.write("dox: not logged in. Run 'dox login --server <url>' first.\n");
     process.exit(1);
   }
-  const output = opts.json ? new JsonOutput() : new HumanOutput();
-  return { api: new ApiClient(cfg), output };
+  const fetcher = buildFetcher(cfg, io);
+  const api = new TodoClient(fetcher, cfg.server);
+  const output = opts.json ? new JsonOutput(io) : new HumanOutput(io);
+  return { api, output };
 }
 
 export async function withContext(

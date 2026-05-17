@@ -6,9 +6,12 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./api": "./src/api/index.ts",
     "./config": "./src/config/index.ts",
-    "./output": "./src/output/index.ts"
+    "./output": "./src/output/index.ts",
+    "./http": "./src/http/index.ts",
+    "./io": "./src/io/index.ts",
+    "./todo": "./src/todo/index.ts",
+    "./auth": "./src/auth/index.ts"
   },
   "dependencies": {
     "@dox/proto-gen": "workspace:*",

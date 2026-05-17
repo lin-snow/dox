@@ -1,4 +1,5 @@
-import type { Todo } from "../api";
+import type { IO } from "../io";
+import type { Todo } from "../todo/domain";
 
 export interface Output {
   todo(t: Todo): void;
@@ -8,42 +9,46 @@ export interface Output {
 }
 
 export class HumanOutput implements Output {
+  constructor(private readonly io: IO) {}
+
   todo(t: Todo): void {
-    console.log(formatTodo(t));
+    this.io.stdout.write(formatTodo(t) + "\n");
   }
 
   todos(ts: Todo[]): void {
     if (ts.length === 0) {
-      console.log("(no todos)");
+      this.io.stdout.write("(no todos)\n");
       return;
     }
-    for (const t of ts) console.log(formatTodo(t));
+    this.io.stdout.write(ts.map(formatTodo).join("\n") + "\n");
   }
 
-  ok(message: string, _details?: Record<string, unknown>): void {
-    console.log(message);
+  ok(message: string): void {
+    this.io.stdout.write(message + "\n");
   }
 
   error(message: string): void {
-    console.error(`dox: ${message}`);
+    this.io.stderr.write(`dox: ${message}\n`);
   }
 }
 
 export class JsonOutput implements Output {
+  constructor(private readonly io: IO) {}
+
   todo(t: Todo): void {
-    console.log(JSON.stringify(t));
+    this.io.stdout.write(JSON.stringify(t) + "\n");
   }
 
   todos(ts: Todo[]): void {
-    console.log(JSON.stringify({ todos: ts }));
+    this.io.stdout.write(JSON.stringify({ todos: ts }) + "\n");
   }
 
   ok(message: string, details?: Record<string, unknown>): void {
-    console.log(JSON.stringify({ ok: true, message, ...(details ?? {}) }));
+    this.io.stdout.write(JSON.stringify({ ok: true, message, ...(details ?? {}) }) + "\n");
   }
 
   error(message: string): void {
-    console.error(JSON.stringify({ error: message }));
+    this.io.stderr.write(JSON.stringify({ error: message }) + "\n");
   }
 }
 
