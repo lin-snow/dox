@@ -4,10 +4,25 @@
 
 package queries
 
+type DeviceToken struct {
+	ID         string
+	Name       string
+	TokenHash  string
+	CreatedAt  int64
+	LastSeenAt int64
+}
+
+type PairingCode struct {
+	Code      string
+	Name      string
+	ExpiresAt int64
+	Used      int64
+}
+
 type Todo struct {
 	ID        string
 	Title     string
-	Done      int64
+	Done      bool
 	CreatedAt int64
 	UpdatedAt int64
 }

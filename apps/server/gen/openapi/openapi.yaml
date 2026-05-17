@@ -3,10 +3,37 @@
 
 openapi: 3.0.3
 info:
-    title: TodoService API
-    description: TodoService manages todos for the authenticated device.
+    title: ""
     version: 0.0.1
 paths:
+    /v1/auth/redeem:
+        post:
+            tags:
+                - AuthService
+            description: |-
+                RedeemPairingCode trades a one-time pairing code for a per-device bearer
+                 token. The code is invalidated on success and rejected if expired or
+                 already consumed.
+            operationId: AuthService_RedeemPairingCode
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RedeemPairingCodeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RedeemPairingCodeResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/todos:
         get:
             tags:
@@ -158,6 +185,20 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Todo'
+        RedeemPairingCodeRequest:
+            type: object
+            properties:
+                code:
+                    type: string
+        RedeemPairingCodeResponse:
+            type: object
+            properties:
+                token:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
         Status:
             type: object
             properties:
@@ -203,4 +244,9 @@ components:
                 done:
                     type: boolean
 tags:
+    - name: AuthService
+      description: |-
+        AuthService is the only public surface (no Authorization header required).
+         All other RPCs require a bearer token issued via RedeemPairingCode.
     - name: TodoService
+      description: TodoService manages todos for the authenticated device.

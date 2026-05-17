@@ -14,6 +14,12 @@ type Config struct {
 	LogLevel       slog.Level
 }
 
+// Logger returns a JSON slog logger configured at cfg.LogLevel, writing to
+// stderr. Callers typically pass the result to slog.SetDefault.
+func (cfg *Config) Logger() *slog.Logger {
+	return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel}))
+}
+
 func Load() (*Config, error) {
 	cfg := &Config{
 		BootstrapToken: os.Getenv("DOX_BOOTSTRAP_TOKEN"),
