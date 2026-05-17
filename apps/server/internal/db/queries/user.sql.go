@@ -21,22 +21,24 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, name, role, created_at)
-VALUES (?, ?, ?, ?)
-RETURNING id, name, role, created_at
+INSERT INTO users (id, name, password_hash, role, created_at)
+VALUES (?, ?, ?, ?, ?)
+RETURNING id, name, password_hash, role, created_at
 `
 
 type CreateUserParams struct {
-	ID        string
-	Name      string
-	Role      string
-	CreatedAt int64
+	ID           string
+	Name         string
+	PasswordHash string
+	Role         string
+	CreatedAt    int64
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
 		arg.ID,
 		arg.Name,
+		arg.PasswordHash,
 		arg.Role,
 		arg.CreatedAt,
 	)
@@ -44,6 +46,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PasswordHash,
 		&i.Role,
 		&i.CreatedAt,
 	)
@@ -76,7 +79,7 @@ func (q *Queries) GetSetting(ctx context.Context, key string) (string, error) {
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, role, created_at
+SELECT id, name, password_hash, role, created_at
 FROM users
 WHERE id = ?
 LIMIT 1
@@ -88,6 +91,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PasswordHash,
 		&i.Role,
 		&i.CreatedAt,
 	)
@@ -95,7 +99,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 }
 
 const getUserByName = `-- name: GetUserByName :one
-SELECT id, name, role, created_at
+SELECT id, name, password_hash, role, created_at
 FROM users
 WHERE name = ?
 LIMIT 1
@@ -107,6 +111,7 @@ func (q *Queries) GetUserByName(ctx context.Context, name string) (User, error) 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.PasswordHash,
 		&i.Role,
 		&i.CreatedAt,
 	)
@@ -114,7 +119,7 @@ func (q *Queries) GetUserByName(ctx context.Context, name string) (User, error) 
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, name, role, created_at
+SELECT id, name, password_hash, role, created_at
 FROM users
 ORDER BY created_at ASC
 `
@@ -131,6 +136,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.PasswordHash,
 			&i.Role,
 			&i.CreatedAt,
 		); err != nil {
@@ -145,6 +151,23 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :execrows
+UPDATE users SET password_hash = ?1 WHERE id = ?2
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash string
+	ID           string
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const upsertSetting = `-- name: UpsertSetting :exec

@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ServerInfo_FullMethodName        = "/dox.v1.AuthService/ServerInfo"
-	AuthService_Register_FullMethodName          = "/dox.v1.AuthService/Register"
-	AuthService_RedeemPairingCode_FullMethodName = "/dox.v1.AuthService/RedeemPairingCode"
+	AuthService_ServerInfo_FullMethodName = "/dox.v1.AuthService/ServerInfo"
+	AuthService_Register_FullMethodName   = "/dox.v1.AuthService/Register"
+	AuthService_Login_FullMethodName      = "/dox.v1.AuthService/Login"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -29,18 +29,19 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // AuthService hosts the public (unauthenticated) RPCs:
-//   - ServerInfo lets a client probe the server before logging in, so the
-//     onboarding UI can pick the right branch (first-user / open registration /
-//     invite-required) without exposing concepts to the user.
-//   - Register creates a user. The first-ever Register on an empty server makes
-//     the caller the owner. Subsequent Registers require either a valid invite
-//     code or registration_open=true.
-//   - RedeemPairingCode is for an existing user adding another device to their
-//     own account (no new user is created).
+//   - ServerInfo lets a client probe a server before logging in so the
+//     onboarding UI can pick the right branch (first-user / existing-user
+//     login / register-with-invite) and surface the server's identity.
+//   - Register creates a user. The first-ever Register on an empty server
+//     makes the caller the owner and may set the server's display
+//     name/description inline. Subsequent Registers require either a valid
+//     invite code or registration_open=true.
+//   - Login authenticates an existing user with username + password and
+//     returns a JWT.
 type AuthServiceClient interface {
 	ServerInfo(ctx context.Context, in *ServerInfoRequest, opts ...grpc.CallOption) (*ServerInfoResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	RedeemPairingCode(ctx context.Context, in *RedeemPairingCodeRequest, opts ...grpc.CallOption) (*RedeemPairingCodeResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
 type authServiceClient struct {
@@ -71,10 +72,10 @@ func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, o
 	return out, nil
 }
 
-func (c *authServiceClient) RedeemPairingCode(ctx context.Context, in *RedeemPairingCodeRequest, opts ...grpc.CallOption) (*RedeemPairingCodeResponse, error) {
+func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RedeemPairingCodeResponse)
-	err := c.cc.Invoke(ctx, AuthService_RedeemPairingCode_FullMethodName, in, out, cOpts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, AuthService_Login_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -86,18 +87,19 @@ func (c *authServiceClient) RedeemPairingCode(ctx context.Context, in *RedeemPai
 // for forward compatibility.
 //
 // AuthService hosts the public (unauthenticated) RPCs:
-//   - ServerInfo lets a client probe the server before logging in, so the
-//     onboarding UI can pick the right branch (first-user / open registration /
-//     invite-required) without exposing concepts to the user.
-//   - Register creates a user. The first-ever Register on an empty server makes
-//     the caller the owner. Subsequent Registers require either a valid invite
-//     code or registration_open=true.
-//   - RedeemPairingCode is for an existing user adding another device to their
-//     own account (no new user is created).
+//   - ServerInfo lets a client probe a server before logging in so the
+//     onboarding UI can pick the right branch (first-user / existing-user
+//     login / register-with-invite) and surface the server's identity.
+//   - Register creates a user. The first-ever Register on an empty server
+//     makes the caller the owner and may set the server's display
+//     name/description inline. Subsequent Registers require either a valid
+//     invite code or registration_open=true.
+//   - Login authenticates an existing user with username + password and
+//     returns a JWT.
 type AuthServiceServer interface {
 	ServerInfo(context.Context, *ServerInfoRequest) (*ServerInfoResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	RedeemPairingCode(context.Context, *RedeemPairingCodeRequest) (*RedeemPairingCodeResponse, error)
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -114,8 +116,8 @@ func (UnimplementedAuthServiceServer) ServerInfo(context.Context, *ServerInfoReq
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedAuthServiceServer) RedeemPairingCode(context.Context, *RedeemPairingCodeRequest) (*RedeemPairingCodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RedeemPairingCode not implemented")
+func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -174,20 +176,20 @@ func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_RedeemPairingCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RedeemPairingCodeRequest)
+func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).RedeemPairingCode(ctx, in)
+		return srv.(AuthServiceServer).Login(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_RedeemPairingCode_FullMethodName,
+		FullMethod: AuthService_Login_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).RedeemPairingCode(ctx, req.(*RedeemPairingCodeRequest))
+		return srv.(AuthServiceServer).Login(ctx, req.(*LoginRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -208,8 +210,8 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Register_Handler,
 		},
 		{
-			MethodName: "RedeemPairingCode",
-			Handler:    _AuthService_RedeemPairingCode_Handler,
+			MethodName: "Login",
+			Handler:    _AuthService_Login_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -91,92 +91,18 @@ func (x *User) GetCreatedAt() int64 {
 	return 0
 }
 
-type Device struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	CreatedAt     int64                  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	LastSeenAt    int64                  `protobuf:"varint,5,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Device) Reset() {
-	*x = Device{}
-	mi := &file_dox_v1_user_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Device) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Device) ProtoMessage() {}
-
-func (x *Device) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Device.ProtoReflect.Descriptor instead.
-func (*Device) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *Device) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Device) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *Device) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *Device) GetCreatedAt() int64 {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return 0
-}
-
-func (x *Device) GetLastSeenAt() int64 {
-	if x != nil {
-		return x.LastSeenAt
-	}
-	return 0
-}
-
 type ServerSettings struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	RegistrationOpen bool                   `protobuf:"varint,1,opt,name=registration_open,json=registrationOpen,proto3" json:"registration_open,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	RegistrationOpen  bool                   `protobuf:"varint,1,opt,name=registration_open,json=registrationOpen,proto3" json:"registration_open,omitempty"`
+	ServerName        string                 `protobuf:"bytes,2,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	ServerDescription string                 `protobuf:"bytes,3,opt,name=server_description,json=serverDescription,proto3" json:"server_description,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ServerSettings) Reset() {
 	*x = ServerSettings{}
-	mi := &file_dox_v1_user_proto_msgTypes[2]
+	mi := &file_dox_v1_user_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -188,7 +114,7 @@ func (x *ServerSettings) String() string {
 func (*ServerSettings) ProtoMessage() {}
 
 func (x *ServerSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[2]
+	mi := &file_dox_v1_user_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -201,7 +127,7 @@ func (x *ServerSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerSettings.ProtoReflect.Descriptor instead.
 func (*ServerSettings) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{2}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ServerSettings) GetRegistrationOpen() bool {
@@ -209,6 +135,20 @@ func (x *ServerSettings) GetRegistrationOpen() bool {
 		return x.RegistrationOpen
 	}
 	return false
+}
+
+func (x *ServerSettings) GetServerName() string {
+	if x != nil {
+		return x.ServerName
+	}
+	return ""
+}
+
+func (x *ServerSettings) GetServerDescription() string {
+	if x != nil {
+		return x.ServerDescription
+	}
+	return ""
 }
 
 type GetMeRequest struct {
@@ -219,7 +159,7 @@ type GetMeRequest struct {
 
 func (x *GetMeRequest) Reset() {
 	*x = GetMeRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[3]
+	mi := &file_dox_v1_user_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -231,7 +171,7 @@ func (x *GetMeRequest) String() string {
 func (*GetMeRequest) ProtoMessage() {}
 
 func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[3]
+	mi := &file_dox_v1_user_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -244,7 +184,95 @@ func (x *GetMeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMeRequest.ProtoReflect.Descriptor instead.
 func (*GetMeRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{2}
+}
+
+type ChangePasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OldPassword   string                 `protobuf:"bytes,1,opt,name=old_password,json=oldPassword,proto3" json:"old_password,omitempty"`
+	NewPassword   string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePasswordRequest) Reset() {
+	*x = ChangePasswordRequest{}
+	mi := &file_dox_v1_user_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordRequest) ProtoMessage() {}
+
+func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_user_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
+func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
 	return file_dox_v1_user_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ChangePasswordRequest) GetOldPassword() string {
+	if x != nil {
+		return x.OldPassword
+	}
+	return ""
+}
+
+func (x *ChangePasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+type ChangePasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePasswordResponse) Reset() {
+	*x = ChangePasswordResponse{}
+	mi := &file_dox_v1_user_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordResponse) ProtoMessage() {}
+
+func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_user_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
+func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{4}
 }
 
 type ListUsersRequest struct {
@@ -255,7 +283,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[4]
+	mi := &file_dox_v1_user_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -267,7 +295,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[4]
+	mi := &file_dox_v1_user_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -280,7 +308,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{4}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{5}
 }
 
 type ListUsersResponse struct {
@@ -292,7 +320,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_dox_v1_user_proto_msgTypes[5]
+	mi := &file_dox_v1_user_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +332,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[5]
+	mi := &file_dox_v1_user_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +345,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{5}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListUsersResponse) GetUsers() []*User {
@@ -336,7 +364,7 @@ type DeleteUserRequest struct {
 
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[6]
+	mi := &file_dox_v1_user_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -348,7 +376,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[6]
+	mi := &file_dox_v1_user_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -361,7 +389,7 @@ func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{6}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteUserRequest) GetId() string {
@@ -379,7 +407,7 @@ type DeleteUserResponse struct {
 
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
-	mi := &file_dox_v1_user_proto_msgTypes[7]
+	mi := &file_dox_v1_user_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +419,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[7]
+	mi := &file_dox_v1_user_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +432,97 @@ func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{7}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{8}
+}
+
+type ResetUserPasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetUserPasswordRequest) Reset() {
+	*x = ResetUserPasswordRequest{}
+	mi := &file_dox_v1_user_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetUserPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetUserPasswordRequest) ProtoMessage() {}
+
+func (x *ResetUserPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_user_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetUserPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetUserPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ResetUserPasswordRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ResetUserPasswordResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Plaintext one-time temp password. Owner must relay to the user; the
+	// user should ChangePassword on first login.
+	TempPassword  string `protobuf:"bytes,1,opt,name=temp_password,json=tempPassword,proto3" json:"temp_password,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetUserPasswordResponse) Reset() {
+	*x = ResetUserPasswordResponse{}
+	mi := &file_dox_v1_user_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetUserPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetUserPasswordResponse) ProtoMessage() {}
+
+func (x *ResetUserPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_user_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetUserPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetUserPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ResetUserPasswordResponse) GetTempPassword() string {
+	if x != nil {
+		return x.TempPassword
+	}
+	return ""
 }
 
 type GetServerSettingsRequest struct {
@@ -415,7 +533,7 @@ type GetServerSettingsRequest struct {
 
 func (x *GetServerSettingsRequest) Reset() {
 	*x = GetServerSettingsRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[8]
+	mi := &file_dox_v1_user_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +545,7 @@ func (x *GetServerSettingsRequest) String() string {
 func (*GetServerSettingsRequest) ProtoMessage() {}
 
 func (x *GetServerSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[8]
+	mi := &file_dox_v1_user_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,19 +558,21 @@ func (x *GetServerSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetServerSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{8}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{11}
 }
 
 type UpdateServerSettingsRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	RegistrationOpen *bool                  `protobuf:"varint,1,opt,name=registration_open,json=registrationOpen,proto3,oneof" json:"registration_open,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	RegistrationOpen  *bool                  `protobuf:"varint,1,opt,name=registration_open,json=registrationOpen,proto3,oneof" json:"registration_open,omitempty"`
+	ServerName        *string                `protobuf:"bytes,2,opt,name=server_name,json=serverName,proto3,oneof" json:"server_name,omitempty"`
+	ServerDescription *string                `protobuf:"bytes,3,opt,name=server_description,json=serverDescription,proto3,oneof" json:"server_description,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *UpdateServerSettingsRequest) Reset() {
 	*x = UpdateServerSettingsRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[9]
+	mi := &file_dox_v1_user_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +584,7 @@ func (x *UpdateServerSettingsRequest) String() string {
 func (*UpdateServerSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateServerSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[9]
+	mi := &file_dox_v1_user_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +597,7 @@ func (x *UpdateServerSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateServerSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateServerSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{9}
+	return file_dox_v1_user_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateServerSettingsRequest) GetRegistrationOpen() bool {
@@ -487,269 +607,18 @@ func (x *UpdateServerSettingsRequest) GetRegistrationOpen() bool {
 	return false
 }
 
-type ListMyDevicesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListMyDevicesRequest) Reset() {
-	*x = ListMyDevicesRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListMyDevicesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListMyDevicesRequest) ProtoMessage() {}
-
-func (x *ListMyDevicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListMyDevicesRequest.ProtoReflect.Descriptor instead.
-func (*ListMyDevicesRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{10}
-}
-
-type ListMyDevicesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Devices       []*Device              `protobuf:"bytes,1,rep,name=devices,proto3" json:"devices,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListMyDevicesResponse) Reset() {
-	*x = ListMyDevicesResponse{}
-	mi := &file_dox_v1_user_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListMyDevicesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListMyDevicesResponse) ProtoMessage() {}
-
-func (x *ListMyDevicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListMyDevicesResponse.ProtoReflect.Descriptor instead.
-func (*ListMyDevicesResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *ListMyDevicesResponse) GetDevices() []*Device {
-	if x != nil {
-		return x.Devices
-	}
-	return nil
-}
-
-type CreatePairingCodeRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	DeviceName string                 `protobuf:"bytes,1,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
-	// Code lifetime in milliseconds. 0 → 60_000.
-	TtlMs         int64 `protobuf:"varint,2,opt,name=ttl_ms,json=ttlMs,proto3" json:"ttl_ms,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreatePairingCodeRequest) Reset() {
-	*x = CreatePairingCodeRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreatePairingCodeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreatePairingCodeRequest) ProtoMessage() {}
-
-func (x *CreatePairingCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreatePairingCodeRequest.ProtoReflect.Descriptor instead.
-func (*CreatePairingCodeRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *CreatePairingCodeRequest) GetDeviceName() string {
-	if x != nil {
-		return x.DeviceName
+func (x *UpdateServerSettingsRequest) GetServerName() string {
+	if x != nil && x.ServerName != nil {
+		return *x.ServerName
 	}
 	return ""
 }
 
-func (x *CreatePairingCodeRequest) GetTtlMs() int64 {
-	if x != nil {
-		return x.TtlMs
-	}
-	return 0
-}
-
-type CreatePairingCodeResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	ExpiresAt     int64                  `protobuf:"varint,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreatePairingCodeResponse) Reset() {
-	*x = CreatePairingCodeResponse{}
-	mi := &file_dox_v1_user_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreatePairingCodeResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreatePairingCodeResponse) ProtoMessage() {}
-
-func (x *CreatePairingCodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreatePairingCodeResponse.ProtoReflect.Descriptor instead.
-func (*CreatePairingCodeResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *CreatePairingCodeResponse) GetCode() string {
-	if x != nil {
-		return x.Code
+func (x *UpdateServerSettingsRequest) GetServerDescription() string {
+	if x != nil && x.ServerDescription != nil {
+		return *x.ServerDescription
 	}
 	return ""
-}
-
-func (x *CreatePairingCodeResponse) GetExpiresAt() int64 {
-	if x != nil {
-		return x.ExpiresAt
-	}
-	return 0
-}
-
-type RevokeMyDeviceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DeviceId      string                 `protobuf:"bytes,1,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokeMyDeviceRequest) Reset() {
-	*x = RevokeMyDeviceRequest{}
-	mi := &file_dox_v1_user_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokeMyDeviceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokeMyDeviceRequest) ProtoMessage() {}
-
-func (x *RevokeMyDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokeMyDeviceRequest.ProtoReflect.Descriptor instead.
-func (*RevokeMyDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *RevokeMyDeviceRequest) GetDeviceId() string {
-	if x != nil {
-		return x.DeviceId
-	}
-	return ""
-}
-
-type RevokeMyDeviceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokeMyDeviceResponse) Reset() {
-	*x = RevokeMyDeviceResponse{}
-	mi := &file_dox_v1_user_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokeMyDeviceResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokeMyDeviceResponse) ProtoMessage() {}
-
-func (x *RevokeMyDeviceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_user_proto_msgTypes[15]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokeMyDeviceResponse.ProtoReflect.Descriptor instead.
-func (*RevokeMyDeviceResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_user_proto_rawDescGZIP(), []int{15}
 }
 
 var File_dox_v1_user_proto protoreflect.FileDescriptor
@@ -762,52 +631,45 @@ const file_dox_v1_user_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04role\x18\x03 \x01(\tR\x04role\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\x03R\tcreatedAt\"\x86\x01\n" +
-	"\x06Device\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
-	"\n" +
-	"created_at\x18\x04 \x01(\x03R\tcreatedAt\x12 \n" +
-	"\flast_seen_at\x18\x05 \x01(\x03R\n" +
-	"lastSeenAt\"=\n" +
+	"created_at\x18\x04 \x01(\x03R\tcreatedAt\"\x8d\x01\n" +
 	"\x0eServerSettings\x12+\n" +
-	"\x11registration_open\x18\x01 \x01(\bR\x10registrationOpen\"\x0e\n" +
-	"\fGetMeRequest\"\x12\n" +
+	"\x11registration_open\x18\x01 \x01(\bR\x10registrationOpen\x12\x1f\n" +
+	"\vserver_name\x18\x02 \x01(\tR\n" +
+	"serverName\x12-\n" +
+	"\x12server_description\x18\x03 \x01(\tR\x11serverDescription\"\x0e\n" +
+	"\fGetMeRequest\"]\n" +
+	"\x15ChangePasswordRequest\x12!\n" +
+	"\fold_password\x18\x01 \x01(\tR\voldPassword\x12!\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x18\n" +
+	"\x16ChangePasswordResponse\"\x12\n" +
 	"\x10ListUsersRequest\"7\n" +
 	"\x11ListUsersResponse\x12\"\n" +
 	"\x05users\x18\x01 \x03(\v2\f.dox.v1.UserR\x05users\"#\n" +
 	"\x11DeleteUserRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
-	"\x12DeleteUserResponse\"\x1a\n" +
-	"\x18GetServerSettingsRequest\"e\n" +
+	"\x12DeleteUserResponse\"3\n" +
+	"\x18ResetUserPasswordRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"@\n" +
+	"\x19ResetUserPasswordResponse\x12#\n" +
+	"\rtemp_password\x18\x01 \x01(\tR\ftempPassword\"\x1a\n" +
+	"\x18GetServerSettingsRequest\"\xe6\x01\n" +
 	"\x1bUpdateServerSettingsRequest\x120\n" +
-	"\x11registration_open\x18\x01 \x01(\bH\x00R\x10registrationOpen\x88\x01\x01B\x14\n" +
-	"\x12_registration_open\"\x16\n" +
-	"\x14ListMyDevicesRequest\"A\n" +
-	"\x15ListMyDevicesResponse\x12(\n" +
-	"\adevices\x18\x01 \x03(\v2\x0e.dox.v1.DeviceR\adevices\"R\n" +
-	"\x18CreatePairingCodeRequest\x12\x1f\n" +
-	"\vdevice_name\x18\x01 \x01(\tR\n" +
-	"deviceName\x12\x15\n" +
-	"\x06ttl_ms\x18\x02 \x01(\x03R\x05ttlMs\"N\n" +
-	"\x19CreatePairingCodeResponse\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\x12\x1d\n" +
-	"\n" +
-	"expires_at\x18\x02 \x01(\x03R\texpiresAt\"4\n" +
-	"\x15RevokeMyDeviceRequest\x12\x1b\n" +
-	"\tdevice_id\x18\x01 \x01(\tR\bdeviceId\"\x18\n" +
-	"\x16RevokeMyDeviceResponse2\xa4\x06\n" +
+	"\x11registration_open\x18\x01 \x01(\bH\x00R\x10registrationOpen\x88\x01\x01\x12$\n" +
+	"\vserver_name\x18\x02 \x01(\tH\x01R\n" +
+	"serverName\x88\x01\x01\x122\n" +
+	"\x12server_description\x18\x03 \x01(\tH\x02R\x11serverDescription\x88\x01\x01B\x14\n" +
+	"\x12_registration_openB\x0e\n" +
+	"\f_server_nameB\x15\n" +
+	"\x13_server_description2\xc6\x05\n" +
 	"\vUserService\x12;\n" +
-	"\x05GetMe\x12\x14.dox.v1.GetMeRequest\x1a\f.dox.v1.User\"\x0e\x82\xd3\xe4\x93\x02\b\x12\x06/v1/me\x12S\n" +
+	"\x05GetMe\x12\x14.dox.v1.GetMeRequest\x1a\f.dox.v1.User\"\x0e\x82\xd3\xe4\x93\x02\b\x12\x06/v1/me\x12k\n" +
+	"\x0eChangePassword\x12\x1d.dox.v1.ChangePasswordRequest\x1a\x1e.dox.v1.ChangePasswordResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/me/password\x12S\n" +
 	"\tListUsers\x12\x18.dox.v1.ListUsersRequest\x1a\x19.dox.v1.ListUsersResponse\"\x11\x82\xd3\xe4\x93\x02\v\x12\t/v1/users\x12[\n" +
 	"\n" +
-	"DeleteUser\x12\x19.dox.v1.DeleteUserRequest\x1a\x1a.dox.v1.DeleteUserResponse\"\x16\x82\xd3\xe4\x93\x02\x10*\x0e/v1/users/{id}\x12c\n" +
+	"DeleteUser\x12\x19.dox.v1.DeleteUserRequest\x1a\x1a.dox.v1.DeleteUserResponse\"\x16\x82\xd3\xe4\x93\x02\x10*\x0e/v1/users/{id}\x12\x87\x01\n" +
+	"\x11ResetUserPassword\x12 .dox.v1.ResetUserPasswordRequest\x1a!.dox.v1.ResetUserPasswordResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/users/{user_id}/reset-password\x12c\n" +
 	"\x11GetServerSettings\x12 .dox.v1.GetServerSettingsRequest\x1a\x16.dox.v1.ServerSettings\"\x14\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/settings\x12l\n" +
-	"\x14UpdateServerSettings\x12#.dox.v1.UpdateServerSettingsRequest\x1a\x16.dox.v1.ServerSettings\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*2\f/v1/settings\x12d\n" +
-	"\rListMyDevices\x12\x1c.dox.v1.ListMyDevicesRequest\x1a\x1d.dox.v1.ListMyDevicesResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/me/devices\x12x\n" +
-	"\x11CreatePairingCode\x12 .dox.v1.CreatePairingCodeRequest\x1a!.dox.v1.CreatePairingCodeResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/me/devices/pair\x12s\n" +
-	"\x0eRevokeMyDevice\x12\x1d.dox.v1.RevokeMyDeviceRequest\x1a\x1e.dox.v1.RevokeMyDeviceResponse\"\"\x82\xd3\xe4\x93\x02\x1c*\x1a/v1/me/devices/{device_id}B6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
+	"\x14UpdateServerSettings\x12#.dox.v1.UpdateServerSettingsRequest\x1a\x16.dox.v1.ServerSettings\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*2\f/v1/settingsB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
 var (
 	file_dox_v1_user_proto_rawDescOnce sync.Once
@@ -821,49 +683,43 @@ func file_dox_v1_user_proto_rawDescGZIP() []byte {
 	return file_dox_v1_user_proto_rawDescData
 }
 
-var file_dox_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_dox_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_dox_v1_user_proto_goTypes = []any{
 	(*User)(nil),                        // 0: dox.v1.User
-	(*Device)(nil),                      // 1: dox.v1.Device
-	(*ServerSettings)(nil),              // 2: dox.v1.ServerSettings
-	(*GetMeRequest)(nil),                // 3: dox.v1.GetMeRequest
-	(*ListUsersRequest)(nil),            // 4: dox.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),           // 5: dox.v1.ListUsersResponse
-	(*DeleteUserRequest)(nil),           // 6: dox.v1.DeleteUserRequest
-	(*DeleteUserResponse)(nil),          // 7: dox.v1.DeleteUserResponse
-	(*GetServerSettingsRequest)(nil),    // 8: dox.v1.GetServerSettingsRequest
-	(*UpdateServerSettingsRequest)(nil), // 9: dox.v1.UpdateServerSettingsRequest
-	(*ListMyDevicesRequest)(nil),        // 10: dox.v1.ListMyDevicesRequest
-	(*ListMyDevicesResponse)(nil),       // 11: dox.v1.ListMyDevicesResponse
-	(*CreatePairingCodeRequest)(nil),    // 12: dox.v1.CreatePairingCodeRequest
-	(*CreatePairingCodeResponse)(nil),   // 13: dox.v1.CreatePairingCodeResponse
-	(*RevokeMyDeviceRequest)(nil),       // 14: dox.v1.RevokeMyDeviceRequest
-	(*RevokeMyDeviceResponse)(nil),      // 15: dox.v1.RevokeMyDeviceResponse
+	(*ServerSettings)(nil),              // 1: dox.v1.ServerSettings
+	(*GetMeRequest)(nil),                // 2: dox.v1.GetMeRequest
+	(*ChangePasswordRequest)(nil),       // 3: dox.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),      // 4: dox.v1.ChangePasswordResponse
+	(*ListUsersRequest)(nil),            // 5: dox.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),           // 6: dox.v1.ListUsersResponse
+	(*DeleteUserRequest)(nil),           // 7: dox.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),          // 8: dox.v1.DeleteUserResponse
+	(*ResetUserPasswordRequest)(nil),    // 9: dox.v1.ResetUserPasswordRequest
+	(*ResetUserPasswordResponse)(nil),   // 10: dox.v1.ResetUserPasswordResponse
+	(*GetServerSettingsRequest)(nil),    // 11: dox.v1.GetServerSettingsRequest
+	(*UpdateServerSettingsRequest)(nil), // 12: dox.v1.UpdateServerSettingsRequest
 }
 var file_dox_v1_user_proto_depIdxs = []int32{
 	0,  // 0: dox.v1.ListUsersResponse.users:type_name -> dox.v1.User
-	1,  // 1: dox.v1.ListMyDevicesResponse.devices:type_name -> dox.v1.Device
-	3,  // 2: dox.v1.UserService.GetMe:input_type -> dox.v1.GetMeRequest
-	4,  // 3: dox.v1.UserService.ListUsers:input_type -> dox.v1.ListUsersRequest
-	6,  // 4: dox.v1.UserService.DeleteUser:input_type -> dox.v1.DeleteUserRequest
-	8,  // 5: dox.v1.UserService.GetServerSettings:input_type -> dox.v1.GetServerSettingsRequest
-	9,  // 6: dox.v1.UserService.UpdateServerSettings:input_type -> dox.v1.UpdateServerSettingsRequest
-	10, // 7: dox.v1.UserService.ListMyDevices:input_type -> dox.v1.ListMyDevicesRequest
-	12, // 8: dox.v1.UserService.CreatePairingCode:input_type -> dox.v1.CreatePairingCodeRequest
-	14, // 9: dox.v1.UserService.RevokeMyDevice:input_type -> dox.v1.RevokeMyDeviceRequest
-	0,  // 10: dox.v1.UserService.GetMe:output_type -> dox.v1.User
-	5,  // 11: dox.v1.UserService.ListUsers:output_type -> dox.v1.ListUsersResponse
-	7,  // 12: dox.v1.UserService.DeleteUser:output_type -> dox.v1.DeleteUserResponse
-	2,  // 13: dox.v1.UserService.GetServerSettings:output_type -> dox.v1.ServerSettings
-	2,  // 14: dox.v1.UserService.UpdateServerSettings:output_type -> dox.v1.ServerSettings
-	11, // 15: dox.v1.UserService.ListMyDevices:output_type -> dox.v1.ListMyDevicesResponse
-	13, // 16: dox.v1.UserService.CreatePairingCode:output_type -> dox.v1.CreatePairingCodeResponse
-	15, // 17: dox.v1.UserService.RevokeMyDevice:output_type -> dox.v1.RevokeMyDeviceResponse
-	10, // [10:18] is the sub-list for method output_type
-	2,  // [2:10] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	2,  // 1: dox.v1.UserService.GetMe:input_type -> dox.v1.GetMeRequest
+	3,  // 2: dox.v1.UserService.ChangePassword:input_type -> dox.v1.ChangePasswordRequest
+	5,  // 3: dox.v1.UserService.ListUsers:input_type -> dox.v1.ListUsersRequest
+	7,  // 4: dox.v1.UserService.DeleteUser:input_type -> dox.v1.DeleteUserRequest
+	9,  // 5: dox.v1.UserService.ResetUserPassword:input_type -> dox.v1.ResetUserPasswordRequest
+	11, // 6: dox.v1.UserService.GetServerSettings:input_type -> dox.v1.GetServerSettingsRequest
+	12, // 7: dox.v1.UserService.UpdateServerSettings:input_type -> dox.v1.UpdateServerSettingsRequest
+	0,  // 8: dox.v1.UserService.GetMe:output_type -> dox.v1.User
+	4,  // 9: dox.v1.UserService.ChangePassword:output_type -> dox.v1.ChangePasswordResponse
+	6,  // 10: dox.v1.UserService.ListUsers:output_type -> dox.v1.ListUsersResponse
+	8,  // 11: dox.v1.UserService.DeleteUser:output_type -> dox.v1.DeleteUserResponse
+	10, // 12: dox.v1.UserService.ResetUserPassword:output_type -> dox.v1.ResetUserPasswordResponse
+	1,  // 13: dox.v1.UserService.GetServerSettings:output_type -> dox.v1.ServerSettings
+	1,  // 14: dox.v1.UserService.UpdateServerSettings:output_type -> dox.v1.ServerSettings
+	8,  // [8:15] is the sub-list for method output_type
+	1,  // [1:8] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_dox_v1_user_proto_init() }
@@ -871,14 +727,14 @@ func file_dox_v1_user_proto_init() {
 	if File_dox_v1_user_proto != nil {
 		return
 	}
-	file_dox_v1_user_proto_msgTypes[9].OneofWrappers = []any{}
+	file_dox_v1_user_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dox_v1_user_proto_rawDesc), len(file_dox_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

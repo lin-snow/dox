@@ -60,9 +60,9 @@ func (*ServerInfoRequest) Descriptor() ([]byte, []int) {
 
 type ServerInfoResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// True once the server has at least one registered user. When false, the next
-	// Register call promotes the caller to owner regardless of invite/registration
-	// policy.
+	// True once the server has at least one registered user. When false, the
+	// next Register call promotes the caller to owner regardless of invite/
+	// registration policy.
 	HasUsers bool `protobuf:"varint,1,opt,name=has_users,json=hasUsers,proto3" json:"has_users,omitempty"`
 	// Mirrors the registration_open server setting. When true, Register works
 	// without an invite code (only meaningful once has_users is true).
@@ -72,7 +72,13 @@ type ServerInfoResponse struct {
 	Version string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
 	// Short commit sha for the running server build. May carry a "-dirty"
 	// suffix for local builds.
-	Commit        string `protobuf:"bytes,4,opt,name=commit,proto3" json:"commit,omitempty"`
+	Commit string `protobuf:"bytes,4,opt,name=commit,proto3" json:"commit,omitempty"`
+	// Owner-set display name. Empty until configured.
+	ServerName string `protobuf:"bytes,5,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	// Owner-set one-liner description. Empty until configured.
+	ServerDescription string `protobuf:"bytes,6,opt,name=server_description,json=serverDescription,proto3" json:"server_description,omitempty"`
+	// Display name of the server owner. Empty until first Register completes.
+	OwnerName     string `protobuf:"bytes,7,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -135,16 +141,41 @@ func (x *ServerInfoResponse) GetCommit() string {
 	return ""
 }
 
+func (x *ServerInfoResponse) GetServerName() string {
+	if x != nil {
+		return x.ServerName
+	}
+	return ""
+}
+
+func (x *ServerInfoResponse) GetServerDescription() string {
+	if x != nil {
+		return x.ServerDescription
+	}
+	return ""
+}
+
+func (x *ServerInfoResponse) GetOwnerName() string {
+	if x != nil {
+		return x.OwnerName
+	}
+	return ""
+}
+
 type RegisterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Display name for the new user. Must be unique across the server.
 	UserName string `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	// Name for the first device (e.g. "laptop", "phone").
-	DeviceName string `protobuf:"bytes,2,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
+	// Plaintext password. Server hashes with argon2id. Min 8 chars.
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	// Required when registration is closed and the users table is non-empty.
-	InviteCode    *string `protobuf:"bytes,3,opt,name=invite_code,json=inviteCode,proto3,oneof" json:"invite_code,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	InviteCode *string `protobuf:"bytes,3,opt,name=invite_code,json=inviteCode,proto3,oneof" json:"invite_code,omitempty"`
+	// First-user only: optional server identity fields. Ignored on subsequent
+	// Register calls — owners change them later via UpdateServerSettings.
+	ServerName        *string `protobuf:"bytes,4,opt,name=server_name,json=serverName,proto3,oneof" json:"server_name,omitempty"`
+	ServerDescription *string `protobuf:"bytes,5,opt,name=server_description,json=serverDescription,proto3,oneof" json:"server_description,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RegisterRequest) Reset() {
@@ -184,9 +215,9 @@ func (x *RegisterRequest) GetUserName() string {
 	return ""
 }
 
-func (x *RegisterRequest) GetDeviceName() string {
+func (x *RegisterRequest) GetPassword() string {
 	if x != nil {
-		return x.DeviceName
+		return x.Password
 	}
 	return ""
 }
@@ -198,14 +229,27 @@ func (x *RegisterRequest) GetInviteCode() string {
 	return ""
 }
 
+func (x *RegisterRequest) GetServerName() string {
+	if x != nil && x.ServerName != nil {
+		return *x.ServerName
+	}
+	return ""
+}
+
+func (x *RegisterRequest) GetServerDescription() string {
+	if x != nil && x.ServerDescription != nil {
+		return *x.ServerDescription
+	}
+	return ""
+}
+
 type RegisterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	UserName      string                 `protobuf:"bytes,3,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
-	DeviceId      string                 `protobuf:"bytes,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
-	DeviceName    string                 `protobuf:"bytes,6,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JWT (HS256). Caller stores it and presents as Authorization: Bearer.
+	Token         string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	UserId        string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserName      string `protobuf:"bytes,3,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	Role          string `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,41 +312,28 @@ func (x *RegisterResponse) GetRole() string {
 	return ""
 }
 
-func (x *RegisterResponse) GetDeviceId() string {
-	if x != nil {
-		return x.DeviceId
-	}
-	return ""
-}
-
-func (x *RegisterResponse) GetDeviceName() string {
-	if x != nil {
-		return x.DeviceName
-	}
-	return ""
-}
-
-type RedeemPairingCodeRequest struct {
+type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	UserName      string                 `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RedeemPairingCodeRequest) Reset() {
-	*x = RedeemPairingCodeRequest{}
+func (x *LoginRequest) Reset() {
+	*x = LoginRequest{}
 	mi := &file_dox_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RedeemPairingCodeRequest) String() string {
+func (x *LoginRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RedeemPairingCodeRequest) ProtoMessage() {}
+func (*LoginRequest) ProtoMessage() {}
 
-func (x *RedeemPairingCodeRequest) ProtoReflect() protoreflect.Message {
+func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_dox_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -314,43 +345,49 @@ func (x *RedeemPairingCodeRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RedeemPairingCodeRequest.ProtoReflect.Descriptor instead.
-func (*RedeemPairingCodeRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
+func (*LoginRequest) Descriptor() ([]byte, []int) {
 	return file_dox_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *RedeemPairingCodeRequest) GetCode() string {
+func (x *LoginRequest) GetUserName() string {
 	if x != nil {
-		return x.Code
+		return x.UserName
 	}
 	return ""
 }
 
-type RedeemPairingCodeResponse struct {
+func (x *LoginRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type LoginResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	DeviceId      string                 `protobuf:"bytes,2,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
-	DeviceName    string                 `protobuf:"bytes,3,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
-	UserId        string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	UserName      string                 `protobuf:"bytes,5,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserName      string                 `protobuf:"bytes,3,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RedeemPairingCodeResponse) Reset() {
-	*x = RedeemPairingCodeResponse{}
+func (x *LoginResponse) Reset() {
+	*x = LoginResponse{}
 	mi := &file_dox_v1_auth_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RedeemPairingCodeResponse) String() string {
+func (x *LoginResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RedeemPairingCodeResponse) ProtoMessage() {}
+func (*LoginResponse) ProtoMessage() {}
 
-func (x *RedeemPairingCodeResponse) ProtoReflect() protoreflect.Message {
+func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_dox_v1_auth_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -362,42 +399,35 @@ func (x *RedeemPairingCodeResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RedeemPairingCodeResponse.ProtoReflect.Descriptor instead.
-func (*RedeemPairingCodeResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
+func (*LoginResponse) Descriptor() ([]byte, []int) {
 	return file_dox_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *RedeemPairingCodeResponse) GetToken() string {
+func (x *LoginResponse) GetToken() string {
 	if x != nil {
 		return x.Token
 	}
 	return ""
 }
 
-func (x *RedeemPairingCodeResponse) GetDeviceId() string {
-	if x != nil {
-		return x.DeviceId
-	}
-	return ""
-}
-
-func (x *RedeemPairingCodeResponse) GetDeviceName() string {
-	if x != nil {
-		return x.DeviceName
-	}
-	return ""
-}
-
-func (x *RedeemPairingCodeResponse) GetUserId() string {
+func (x *LoginResponse) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *RedeemPairingCodeResponse) GetUserName() string {
+func (x *LoginResponse) GetUserName() string {
 	if x != nil {
 		return x.UserName
+	}
+	return ""
+}
+
+func (x *LoginResponse) GetRole() string {
+	if x != nil {
+		return x.Role
 	}
 	return ""
 }
@@ -407,41 +437,46 @@ var File_dox_v1_auth_proto protoreflect.FileDescriptor
 const file_dox_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x11dox/v1/auth.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x13\n" +
-	"\x11ServerInfoRequest\"\x90\x01\n" +
+	"\x11ServerInfoRequest\"\xff\x01\n" +
 	"\x12ServerInfoResponse\x12\x1b\n" +
 	"\thas_users\x18\x01 \x01(\bR\bhasUsers\x12+\n" +
 	"\x11registration_open\x18\x02 \x01(\bR\x10registrationOpen\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12\x16\n" +
-	"\x06commit\x18\x04 \x01(\tR\x06commit\"\x85\x01\n" +
+	"\x06commit\x18\x04 \x01(\tR\x06commit\x12\x1f\n" +
+	"\vserver_name\x18\x05 \x01(\tR\n" +
+	"serverName\x12-\n" +
+	"\x12server_description\x18\x06 \x01(\tR\x11serverDescription\x12\x1d\n" +
+	"\n" +
+	"owner_name\x18\a \x01(\tR\townerName\"\x81\x02\n" +
 	"\x0fRegisterRequest\x12\x1b\n" +
-	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1f\n" +
-	"\vdevice_name\x18\x02 \x01(\tR\n" +
-	"deviceName\x12$\n" +
+	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12$\n" +
 	"\vinvite_code\x18\x03 \x01(\tH\x00R\n" +
-	"inviteCode\x88\x01\x01B\x0e\n" +
-	"\f_invite_code\"\xb0\x01\n" +
+	"inviteCode\x88\x01\x01\x12$\n" +
+	"\vserver_name\x18\x04 \x01(\tH\x01R\n" +
+	"serverName\x88\x01\x01\x122\n" +
+	"\x12server_description\x18\x05 \x01(\tH\x02R\x11serverDescription\x88\x01\x01B\x0e\n" +
+	"\f_invite_codeB\x0e\n" +
+	"\f_server_nameB\x15\n" +
+	"\x13_server_description\"r\n" +
 	"\x10RegisterResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tuser_name\x18\x03 \x01(\tR\buserName\x12\x12\n" +
-	"\x04role\x18\x04 \x01(\tR\x04role\x12\x1b\n" +
-	"\tdevice_id\x18\x05 \x01(\tR\bdeviceId\x12\x1f\n" +
-	"\vdevice_name\x18\x06 \x01(\tR\n" +
-	"deviceName\".\n" +
-	"\x18RedeemPairingCodeRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\"\xa5\x01\n" +
-	"\x19RedeemPairingCodeResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1b\n" +
-	"\tdevice_id\x18\x02 \x01(\tR\bdeviceId\x12\x1f\n" +
-	"\vdevice_name\x18\x03 \x01(\tR\n" +
-	"deviceName\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tuser_name\x18\x05 \x01(\tR\buserName2\xc3\x02\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role\"G\n" +
+	"\fLoginRequest\x12\x1b\n" +
+	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"o\n" +
+	"\rLoginResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tuser_name\x18\x03 \x01(\tR\buserName\x12\x12\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role2\x9e\x02\n" +
 	"\vAuthService\x12a\n" +
 	"\n" +
 	"ServerInfo\x12\x19.dox.v1.ServerInfoRequest\x1a\x1a.dox.v1.ServerInfoResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/auth/server-info\x12[\n" +
-	"\bRegister\x12\x17.dox.v1.RegisterRequest\x1a\x18.dox.v1.RegisterResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12t\n" +
-	"\x11RedeemPairingCode\x12 .dox.v1.RedeemPairingCodeRequest\x1a!.dox.v1.RedeemPairingCodeResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/auth/redeemB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
+	"\bRegister\x12\x17.dox.v1.RegisterRequest\x1a\x18.dox.v1.RegisterResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12O\n" +
+	"\x05Login\x12\x14.dox.v1.LoginRequest\x1a\x15.dox.v1.LoginResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/loginB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
 var (
 	file_dox_v1_auth_proto_rawDescOnce sync.Once
@@ -457,20 +492,20 @@ func file_dox_v1_auth_proto_rawDescGZIP() []byte {
 
 var file_dox_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_dox_v1_auth_proto_goTypes = []any{
-	(*ServerInfoRequest)(nil),         // 0: dox.v1.ServerInfoRequest
-	(*ServerInfoResponse)(nil),        // 1: dox.v1.ServerInfoResponse
-	(*RegisterRequest)(nil),           // 2: dox.v1.RegisterRequest
-	(*RegisterResponse)(nil),          // 3: dox.v1.RegisterResponse
-	(*RedeemPairingCodeRequest)(nil),  // 4: dox.v1.RedeemPairingCodeRequest
-	(*RedeemPairingCodeResponse)(nil), // 5: dox.v1.RedeemPairingCodeResponse
+	(*ServerInfoRequest)(nil),  // 0: dox.v1.ServerInfoRequest
+	(*ServerInfoResponse)(nil), // 1: dox.v1.ServerInfoResponse
+	(*RegisterRequest)(nil),    // 2: dox.v1.RegisterRequest
+	(*RegisterResponse)(nil),   // 3: dox.v1.RegisterResponse
+	(*LoginRequest)(nil),       // 4: dox.v1.LoginRequest
+	(*LoginResponse)(nil),      // 5: dox.v1.LoginResponse
 }
 var file_dox_v1_auth_proto_depIdxs = []int32{
 	0, // 0: dox.v1.AuthService.ServerInfo:input_type -> dox.v1.ServerInfoRequest
 	2, // 1: dox.v1.AuthService.Register:input_type -> dox.v1.RegisterRequest
-	4, // 2: dox.v1.AuthService.RedeemPairingCode:input_type -> dox.v1.RedeemPairingCodeRequest
+	4, // 2: dox.v1.AuthService.Login:input_type -> dox.v1.LoginRequest
 	1, // 3: dox.v1.AuthService.ServerInfo:output_type -> dox.v1.ServerInfoResponse
 	3, // 4: dox.v1.AuthService.Register:output_type -> dox.v1.RegisterResponse
-	5, // 5: dox.v1.AuthService.RedeemPairingCode:output_type -> dox.v1.RedeemPairingCodeResponse
+	5, // 5: dox.v1.AuthService.Login:output_type -> dox.v1.LoginResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

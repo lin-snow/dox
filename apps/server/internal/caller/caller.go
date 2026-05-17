@@ -9,12 +9,12 @@ const (
 	RoleMember = "member"
 )
 
-// Caller is the subject of an authenticated request.
+// Caller is the subject of an authenticated request, populated by the authn
+// middleware from a verified JWT.
 type Caller struct {
 	UserID   string
 	UserName string
 	Role     string
-	DeviceID string
 }
 
 type ctxKey struct{}

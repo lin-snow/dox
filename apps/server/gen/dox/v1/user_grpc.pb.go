@@ -20,13 +20,12 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	UserService_GetMe_FullMethodName                = "/dox.v1.UserService/GetMe"
+	UserService_ChangePassword_FullMethodName       = "/dox.v1.UserService/ChangePassword"
 	UserService_ListUsers_FullMethodName            = "/dox.v1.UserService/ListUsers"
 	UserService_DeleteUser_FullMethodName           = "/dox.v1.UserService/DeleteUser"
+	UserService_ResetUserPassword_FullMethodName    = "/dox.v1.UserService/ResetUserPassword"
 	UserService_GetServerSettings_FullMethodName    = "/dox.v1.UserService/GetServerSettings"
 	UserService_UpdateServerSettings_FullMethodName = "/dox.v1.UserService/UpdateServerSettings"
-	UserService_ListMyDevices_FullMethodName        = "/dox.v1.UserService/ListMyDevices"
-	UserService_CreatePairingCode_FullMethodName    = "/dox.v1.UserService/CreatePairingCode"
-	UserService_RevokeMyDevice_FullMethodName       = "/dox.v1.UserService/RevokeMyDevice"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -34,16 +33,18 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // UserService covers user introspection, server-wide settings (owner-only),
-// and the caller's own device management.
+// and the caller's own password management.
 type UserServiceClient interface {
 	GetMe(ctx context.Context, in *GetMeRequest, opts ...grpc.CallOption) (*User, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
+	// Owner-only. Resets a user's password to a fresh one-time temp password
+	// (returned in the response) — owner relays it out-of-band; the user is
+	// expected to ChangePassword on first login.
+	ResetUserPassword(ctx context.Context, in *ResetUserPasswordRequest, opts ...grpc.CallOption) (*ResetUserPasswordResponse, error)
 	GetServerSettings(ctx context.Context, in *GetServerSettingsRequest, opts ...grpc.CallOption) (*ServerSettings, error)
 	UpdateServerSettings(ctx context.Context, in *UpdateServerSettingsRequest, opts ...grpc.CallOption) (*ServerSettings, error)
-	ListMyDevices(ctx context.Context, in *ListMyDevicesRequest, opts ...grpc.CallOption) (*ListMyDevicesResponse, error)
-	CreatePairingCode(ctx context.Context, in *CreatePairingCodeRequest, opts ...grpc.CallOption) (*CreatePairingCodeResponse, error)
-	RevokeMyDevice(ctx context.Context, in *RevokeMyDeviceRequest, opts ...grpc.CallOption) (*RevokeMyDeviceResponse, error)
 }
 
 type userServiceClient struct {
@@ -58,6 +59,16 @@ func (c *userServiceClient) GetMe(ctx context.Context, in *GetMeRequest, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(User)
 	err := c.cc.Invoke(ctx, UserService_GetMe_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangePasswordResponse)
+	err := c.cc.Invoke(ctx, UserService_ChangePassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +95,16 @@ func (c *userServiceClient) DeleteUser(ctx context.Context, in *DeleteUserReques
 	return out, nil
 }
 
+func (c *userServiceClient) ResetUserPassword(ctx context.Context, in *ResetUserPasswordRequest, opts ...grpc.CallOption) (*ResetUserPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetUserPasswordResponse)
+	err := c.cc.Invoke(ctx, UserService_ResetUserPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) GetServerSettings(ctx context.Context, in *GetServerSettingsRequest, opts ...grpc.CallOption) (*ServerSettings, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ServerSettings)
@@ -104,51 +125,23 @@ func (c *userServiceClient) UpdateServerSettings(ctx context.Context, in *Update
 	return out, nil
 }
 
-func (c *userServiceClient) ListMyDevices(ctx context.Context, in *ListMyDevicesRequest, opts ...grpc.CallOption) (*ListMyDevicesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListMyDevicesResponse)
-	err := c.cc.Invoke(ctx, UserService_ListMyDevices_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userServiceClient) CreatePairingCode(ctx context.Context, in *CreatePairingCodeRequest, opts ...grpc.CallOption) (*CreatePairingCodeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreatePairingCodeResponse)
-	err := c.cc.Invoke(ctx, UserService_CreatePairingCode_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userServiceClient) RevokeMyDevice(ctx context.Context, in *RevokeMyDeviceRequest, opts ...grpc.CallOption) (*RevokeMyDeviceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RevokeMyDeviceResponse)
-	err := c.cc.Invoke(ctx, UserService_RevokeMyDevice_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
 //
 // UserService covers user introspection, server-wide settings (owner-only),
-// and the caller's own device management.
+// and the caller's own password management.
 type UserServiceServer interface {
 	GetMe(context.Context, *GetMeRequest) (*User, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
+	// Owner-only. Resets a user's password to a fresh one-time temp password
+	// (returned in the response) — owner relays it out-of-band; the user is
+	// expected to ChangePassword on first login.
+	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
 	GetServerSettings(context.Context, *GetServerSettingsRequest) (*ServerSettings, error)
 	UpdateServerSettings(context.Context, *UpdateServerSettingsRequest) (*ServerSettings, error)
-	ListMyDevices(context.Context, *ListMyDevicesRequest) (*ListMyDevicesResponse, error)
-	CreatePairingCode(context.Context, *CreatePairingCodeRequest) (*CreatePairingCodeResponse, error)
-	RevokeMyDevice(context.Context, *RevokeMyDeviceRequest) (*RevokeMyDeviceResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -162,26 +155,23 @@ type UnimplementedUserServiceServer struct{}
 func (UnimplementedUserServiceServer) GetMe(context.Context, *GetMeRequest) (*User, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMe not implemented")
 }
+func (UnimplementedUserServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
+}
 func (UnimplementedUserServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
 }
 func (UnimplementedUserServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
 }
+func (UnimplementedUserServiceServer) ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetUserPassword not implemented")
+}
 func (UnimplementedUserServiceServer) GetServerSettings(context.Context, *GetServerSettingsRequest) (*ServerSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetServerSettings not implemented")
 }
 func (UnimplementedUserServiceServer) UpdateServerSettings(context.Context, *UpdateServerSettingsRequest) (*ServerSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateServerSettings not implemented")
-}
-func (UnimplementedUserServiceServer) ListMyDevices(context.Context, *ListMyDevicesRequest) (*ListMyDevicesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListMyDevices not implemented")
-}
-func (UnimplementedUserServiceServer) CreatePairingCode(context.Context, *CreatePairingCodeRequest) (*CreatePairingCodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreatePairingCode not implemented")
-}
-func (UnimplementedUserServiceServer) RevokeMyDevice(context.Context, *RevokeMyDeviceRequest) (*RevokeMyDeviceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RevokeMyDevice not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -222,6 +212,24 @@ func _UserService_GetMe_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ChangePassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListUsersRequest)
 	if err := dec(in); err != nil {
@@ -254,6 +262,24 @@ func _UserService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).DeleteUser(ctx, req.(*DeleteUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ResetUserPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetUserPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ResetUserPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ResetUserPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ResetUserPassword(ctx, req.(*ResetUserPasswordRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -294,60 +320,6 @@ func _UserService_UpdateServerSettings_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_ListMyDevices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListMyDevicesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).ListMyDevices(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_ListMyDevices_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).ListMyDevices(ctx, req.(*ListMyDevicesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserService_CreatePairingCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreatePairingCodeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).CreatePairingCode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_CreatePairingCode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).CreatePairingCode(ctx, req.(*CreatePairingCodeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserService_RevokeMyDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RevokeMyDeviceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).RevokeMyDevice(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_RevokeMyDevice_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).RevokeMyDevice(ctx, req.(*RevokeMyDeviceRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -360,6 +332,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_GetMe_Handler,
 		},
 		{
+			MethodName: "ChangePassword",
+			Handler:    _UserService_ChangePassword_Handler,
+		},
+		{
 			MethodName: "ListUsers",
 			Handler:    _UserService_ListUsers_Handler,
 		},
@@ -368,24 +344,16 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_DeleteUser_Handler,
 		},
 		{
+			MethodName: "ResetUserPassword",
+			Handler:    _UserService_ResetUserPassword_Handler,
+		},
+		{
 			MethodName: "GetServerSettings",
 			Handler:    _UserService_GetServerSettings_Handler,
 		},
 		{
 			MethodName: "UpdateServerSettings",
 			Handler:    _UserService_UpdateServerSettings_Handler,
-		},
-		{
-			MethodName: "ListMyDevices",
-			Handler:    _UserService_ListMyDevices_Handler,
-		},
-		{
-			MethodName: "CreatePairingCode",
-			Handler:    _UserService_CreatePairingCode_Handler,
-		},
-		{
-			MethodName: "RevokeMyDevice",
-			Handler:    _UserService_RevokeMyDevice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

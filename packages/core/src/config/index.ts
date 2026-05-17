@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -9,12 +9,11 @@ export interface Config {
   server: string;
   token: string;
   // The user identity bound to the token. Populated by `dox register` and
-  // `dox login` (RedeemPairingCode). Cached locally so the TUI can gate
-  // owner-only UI without an extra round-trip; the server stays authoritative.
+  // `dox login`. Cached locally so the TUI can gate owner-only UI without an
+  // extra round-trip; the server stays authoritative.
   userId: string;
   userName: string;
   role: string; // "owner" | "member"
-  deviceId: string;
   // Default project filter for TUI / CLI. "inbox" filters to Inbox; a project
   // id filters to that project; absent / "" means "all visible".
   defaultProject?: string;
@@ -44,7 +43,6 @@ export async function loadConfig(): Promise<Config | null> {
     userId: pickString(parsed, "user_id"),
     userName: pickString(parsed, "user_name"),
     role: pickString(parsed, "role"),
-    deviceId: pickString(parsed, "device_id"),
     defaultProject: typeof ui.default_project === "string" ? ui.default_project : undefined,
   };
 }
@@ -57,7 +55,6 @@ export async function saveConfig(cfg: Config): Promise<void> {
     user_id: cfg.userId,
     user_name: cfg.userName,
     role: cfg.role,
-    device_id: cfg.deviceId,
   };
   if (cfg.defaultProject) {
     body.ui = { default_project: cfg.defaultProject };
@@ -66,6 +63,15 @@ export async function saveConfig(cfg: Config): Promise<void> {
   const path = configPath();
   await writeFile(path, raw, { mode: 0o600 });
   await chmod(path, 0o600);
+}
+
+// clearConfig removes the on-disk config. Used by `dox logout`. Returns true
+// if a file was removed, false if nothing was there.
+export async function clearConfig(): Promise<boolean> {
+  const path = configPath();
+  if (!existsSync(path)) return false;
+  await rm(path, { force: true });
+  return true;
 }
 
 export function getConfigPath(): string {

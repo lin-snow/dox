@@ -33,7 +33,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	q := queries.New(dbConn)
 
-	user := handler.NewUser(q)
+	secret, err := authn.LoadOrCreateJWTSecret(ctx, q)
+	if err != nil {
+		return fmt.Errorf("load jwt secret: %w", err)
+	}
+
+	user := handler.NewUser(q, secret)
 	proj := handler.NewProject(q)
 	inv := handler.NewInvite(q)
 	td := handler.NewTodo(q)
@@ -58,7 +63,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           authn.Middleware(authn.NewVerifier(q))(mux),
+		Handler:           authn.Middleware(authn.NewJWTVerifier(secret))(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

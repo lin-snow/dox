@@ -8,15 +8,6 @@ import (
 	"database/sql"
 )
 
-type DeviceToken struct {
-	ID         string
-	UserID     string
-	Name       string
-	TokenHash  string
-	CreatedAt  int64
-	LastSeenAt int64
-}
-
 type Invite struct {
 	CodeHash  string
 	IssuedBy  string
@@ -26,14 +17,6 @@ type Invite struct {
 	ExpiresAt int64
 	UsedAt    sql.NullInt64
 	UsedBy    sql.NullString
-}
-
-type PairingCode struct {
-	Code      string
-	UserID    string
-	Name      string
-	ExpiresAt int64
-	Used      int64
 }
 
 type Project struct {
@@ -63,17 +46,18 @@ type Setting struct {
 type Todo struct {
 	ID          string
 	Title       string
+	Description sql.NullString
 	Done        bool
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
 	UpdatedAt   int64
-	Description sql.NullString
 }
 
 type User struct {
-	ID        string
-	Name      string
-	Role      string
-	CreatedAt int64
+	ID           string
+	Name         string
+	PasswordHash string
+	Role         string
+	CreatedAt    int64
 }

@@ -32,7 +32,7 @@ func newTodoFixture(t *testing.T) (*handler.Todo, *queries.Queries, context.Cont
 	q := queries.New(conn)
 	user := seedUser(t, q, "alice", caller.RoleOwner)
 	ctx := caller.With(context.Background(), caller.Caller{
-		UserID: user.ID, UserName: user.Name, Role: user.Role, DeviceID: "test-device",
+		UserID: user.ID, UserName: user.Name, Role: user.Role,
 	})
 	return handler.NewTodo(q), q, ctx
 }
@@ -40,7 +40,7 @@ func newTodoFixture(t *testing.T) (*handler.Todo, *queries.Queries, context.Cont
 func seedUser(t *testing.T, q *queries.Queries, name, role string) queries.User {
 	t.Helper()
 	u, err := q.CreateUser(context.Background(), queries.CreateUserParams{
-		ID: ulid.Make().String(), Name: name, Role: role, CreatedAt: 1,
+		ID: ulid.Make().String(), Name: name, PasswordHash: "stub", Role: role, CreatedAt: 1,
 	})
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)

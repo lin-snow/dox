@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/user.proto.
  */
 export const file_dox_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdXNlci5wcm90bxIGZG94LnYxIkIKBFVzZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRyb2xlGAMgASgJEhIKCmNyZWF0ZWRfYXQYBCABKAMiXQoGRGV2aWNlEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRISCgpjcmVhdGVkX2F0GAQgASgDEhQKDGxhc3Rfc2Vlbl9hdBgFIAEoAyIrCg5TZXJ2ZXJTZXR0aW5ncxIZChFyZWdpc3RyYXRpb25fb3BlbhgBIAEoCCIOCgxHZXRNZVJlcXVlc3QiEgoQTGlzdFVzZXJzUmVxdWVzdCIwChFMaXN0VXNlcnNSZXNwb25zZRIbCgV1c2VycxgBIAMoCzIMLmRveC52MS5Vc2VyIh8KEURlbGV0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgJIhQKEkRlbGV0ZVVzZXJSZXNwb25zZSIaChhHZXRTZXJ2ZXJTZXR0aW5nc1JlcXVlc3QiUwobVXBkYXRlU2VydmVyU2V0dGluZ3NSZXF1ZXN0Eh4KEXJlZ2lzdHJhdGlvbl9vcGVuGAEgASgISACIAQFCFAoSX3JlZ2lzdHJhdGlvbl9vcGVuIhYKFExpc3RNeURldmljZXNSZXF1ZXN0IjgKFUxpc3RNeURldmljZXNSZXNwb25zZRIfCgdkZXZpY2VzGAEgAygLMg4uZG94LnYxLkRldmljZSI/ChhDcmVhdGVQYWlyaW5nQ29kZVJlcXVlc3QSEwoLZGV2aWNlX25hbWUYASABKAkSDgoGdHRsX21zGAIgASgDIj0KGUNyZWF0ZVBhaXJpbmdDb2RlUmVzcG9uc2USDAoEY29kZRgBIAEoCRISCgpleHBpcmVzX2F0GAIgASgDIioKFVJldm9rZU15RGV2aWNlUmVxdWVzdBIRCglkZXZpY2VfaWQYASABKAkiGAoWUmV2b2tlTXlEZXZpY2VSZXNwb25zZTKkBgoLVXNlclNlcnZpY2USOwoFR2V0TWUSFC5kb3gudjEuR2V0TWVSZXF1ZXN0GgwuZG94LnYxLlVzZXIiDoLT5JMCCBIGL3YxL21lElMKCUxpc3RVc2VycxIYLmRveC52MS5MaXN0VXNlcnNSZXF1ZXN0GhkuZG94LnYxLkxpc3RVc2Vyc1Jlc3BvbnNlIhGC0+STAgsSCS92MS91c2VycxJbCgpEZWxldGVVc2VyEhkuZG94LnYxLkRlbGV0ZVVzZXJSZXF1ZXN0GhouZG94LnYxLkRlbGV0ZVVzZXJSZXNwb25zZSIWgtPkkwIQKg4vdjEvdXNlcnMve2lkfRJjChFHZXRTZXJ2ZXJTZXR0aW5ncxIgLmRveC52MS5HZXRTZXJ2ZXJTZXR0aW5nc1JlcXVlc3QaFi5kb3gudjEuU2VydmVyU2V0dGluZ3MiFILT5JMCDhIML3YxL3NldHRpbmdzEmwKFFVwZGF0ZVNlcnZlclNldHRpbmdzEiMuZG94LnYxLlVwZGF0ZVNlcnZlclNldHRpbmdzUmVxdWVzdBoWLmRveC52MS5TZXJ2ZXJTZXR0aW5ncyIXgtPkkwIROgEqMgwvdjEvc2V0dGluZ3MSZAoNTGlzdE15RGV2aWNlcxIcLmRveC52MS5MaXN0TXlEZXZpY2VzUmVxdWVzdBodLmRveC52MS5MaXN0TXlEZXZpY2VzUmVzcG9uc2UiFoLT5JMCEBIOL3YxL21lL2RldmljZXMSeAoRQ3JlYXRlUGFpcmluZ0NvZGUSIC5kb3gudjEuQ3JlYXRlUGFpcmluZ0NvZGVSZXF1ZXN0GiEuZG94LnYxLkNyZWF0ZVBhaXJpbmdDb2RlUmVzcG9uc2UiHoLT5JMCGDoBKiITL3YxL21lL2RldmljZXMvcGFpchJzCg5SZXZva2VNeURldmljZRIdLmRveC52MS5SZXZva2VNeURldmljZVJlcXVlc3QaHi5kb3gudjEuUmV2b2tlTXlEZXZpY2VSZXNwb25zZSIigtPkkwIcKhovdjEvbWUvZGV2aWNlcy97ZGV2aWNlX2lkfUI2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdXNlci5wcm90bxIGZG94LnYxIkIKBFVzZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRyb2xlGAMgASgJEhIKCmNyZWF0ZWRfYXQYBCABKAMiXAoOU2VydmVyU2V0dGluZ3MSGQoRcmVnaXN0cmF0aW9uX29wZW4YASABKAgSEwoLc2VydmVyX25hbWUYAiABKAkSGgoSc2VydmVyX2Rlc2NyaXB0aW9uGAMgASgJIg4KDEdldE1lUmVxdWVzdCJDChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSFAoMb2xkX3Bhc3N3b3JkGAEgASgJEhQKDG5ld19wYXNzd29yZBgCIAEoCSIYChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlIhIKEExpc3RVc2Vyc1JlcXVlc3QiMAoRTGlzdFVzZXJzUmVzcG9uc2USGwoFdXNlcnMYASADKAsyDC5kb3gudjEuVXNlciIfChFEZWxldGVVc2VyUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVVc2VyUmVzcG9uc2UiKwoYUmVzZXRVc2VyUGFzc3dvcmRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkiMgoZUmVzZXRVc2VyUGFzc3dvcmRSZXNwb25zZRIVCg10ZW1wX3Bhc3N3b3JkGAEgASgJIhoKGEdldFNlcnZlclNldHRpbmdzUmVxdWVzdCK1AQobVXBkYXRlU2VydmVyU2V0dGluZ3NSZXF1ZXN0Eh4KEXJlZ2lzdHJhdGlvbl9vcGVuGAEgASgISACIAQESGAoLc2VydmVyX25hbWUYAiABKAlIAYgBARIfChJzZXJ2ZXJfZGVzY3JpcHRpb24YAyABKAlIAogBAUIUChJfcmVnaXN0cmF0aW9uX29wZW5CDgoMX3NlcnZlcl9uYW1lQhUKE19zZXJ2ZXJfZGVzY3JpcHRpb24yxgUKC1VzZXJTZXJ2aWNlEjsKBUdldE1lEhQuZG94LnYxLkdldE1lUmVxdWVzdBoMLmRveC52MS5Vc2VyIg6C0+STAggSBi92MS9tZRJrCg5DaGFuZ2VQYXNzd29yZBIdLmRveC52MS5DaGFuZ2VQYXNzd29yZFJlcXVlc3QaHi5kb3gudjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZSIagtPkkwIUOgEqIg8vdjEvbWUvcGFzc3dvcmQSUwoJTGlzdFVzZXJzEhguZG94LnYxLkxpc3RVc2Vyc1JlcXVlc3QaGS5kb3gudjEuTGlzdFVzZXJzUmVzcG9uc2UiEYLT5JMCCxIJL3YxL3VzZXJzElsKCkRlbGV0ZVVzZXISGS5kb3gudjEuRGVsZXRlVXNlclJlcXVlc3QaGi5kb3gudjEuRGVsZXRlVXNlclJlc3BvbnNlIhaC0+STAhAqDi92MS91c2Vycy97aWR9EocBChFSZXNldFVzZXJQYXNzd29yZBIgLmRveC52MS5SZXNldFVzZXJQYXNzd29yZFJlcXVlc3QaIS5kb3gudjEuUmVzZXRVc2VyUGFzc3dvcmRSZXNwb25zZSItgtPkkwInOgEqIiIvdjEvdXNlcnMve3VzZXJfaWR9L3Jlc2V0LXBhc3N3b3JkEmMKEUdldFNlcnZlclNldHRpbmdzEiAuZG94LnYxLkdldFNlcnZlclNldHRpbmdzUmVxdWVzdBoWLmRveC52MS5TZXJ2ZXJTZXR0aW5ncyIUgtPkkwIOEgwvdjEvc2V0dGluZ3MSbAoUVXBkYXRlU2VydmVyU2V0dGluZ3MSIy5kb3gudjEuVXBkYXRlU2VydmVyU2V0dGluZ3NSZXF1ZXN0GhYuZG94LnYxLlNlcnZlclNldHRpbmdzIheC0+STAhE6ASoyDC92MS9zZXR0aW5nc0I2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
 
 /**
  * @generated from message dox.v1.User
@@ -48,43 +48,6 @@ export const UserSchema: GenMessage<User> = /*@__PURE__*/
   messageDesc(file_dox_v1_user, 0);
 
 /**
- * @generated from message dox.v1.Device
- */
-export type Device = Message<"dox.v1.Device"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string user_id = 2;
-   */
-  userId: string;
-
-  /**
-   * @generated from field: string name = 3;
-   */
-  name: string;
-
-  /**
-   * @generated from field: int64 created_at = 4;
-   */
-  createdAt: bigint;
-
-  /**
-   * @generated from field: int64 last_seen_at = 5;
-   */
-  lastSeenAt: bigint;
-};
-
-/**
- * Describes the message dox.v1.Device.
- * Use `create(DeviceSchema)` to create a new message.
- */
-export const DeviceSchema: GenMessage<Device> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 1);
-
-/**
  * @generated from message dox.v1.ServerSettings
  */
 export type ServerSettings = Message<"dox.v1.ServerSettings"> & {
@@ -92,6 +55,16 @@ export type ServerSettings = Message<"dox.v1.ServerSettings"> & {
    * @generated from field: bool registration_open = 1;
    */
   registrationOpen: boolean;
+
+  /**
+   * @generated from field: string server_name = 2;
+   */
+  serverName: string;
+
+  /**
+   * @generated from field: string server_description = 3;
+   */
+  serverDescription: string;
 };
 
 /**
@@ -99,7 +72,7 @@ export type ServerSettings = Message<"dox.v1.ServerSettings"> & {
  * Use `create(ServerSettingsSchema)` to create a new message.
  */
 export const ServerSettingsSchema: GenMessage<ServerSettings> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 2);
+  messageDesc(file_dox_v1_user, 1);
 
 /**
  * @generated from message dox.v1.GetMeRequest
@@ -112,7 +85,42 @@ export type GetMeRequest = Message<"dox.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_user, 2);
+
+/**
+ * @generated from message dox.v1.ChangePasswordRequest
+ */
+export type ChangePasswordRequest = Message<"dox.v1.ChangePasswordRequest"> & {
+  /**
+   * @generated from field: string old_password = 1;
+   */
+  oldPassword: string;
+
+  /**
+   * @generated from field: string new_password = 2;
+   */
+  newPassword: string;
+};
+
+/**
+ * Describes the message dox.v1.ChangePasswordRequest.
+ * Use `create(ChangePasswordRequestSchema)` to create a new message.
+ */
+export const ChangePasswordRequestSchema: GenMessage<ChangePasswordRequest> = /*@__PURE__*/
   messageDesc(file_dox_v1_user, 3);
+
+/**
+ * @generated from message dox.v1.ChangePasswordResponse
+ */
+export type ChangePasswordResponse = Message<"dox.v1.ChangePasswordResponse"> & {
+};
+
+/**
+ * Describes the message dox.v1.ChangePasswordResponse.
+ * Use `create(ChangePasswordResponseSchema)` to create a new message.
+ */
+export const ChangePasswordResponseSchema: GenMessage<ChangePasswordResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_user, 4);
 
 /**
  * @generated from message dox.v1.ListUsersRequest
@@ -125,7 +133,7 @@ export type ListUsersRequest = Message<"dox.v1.ListUsersRequest"> & {
  * Use `create(ListUsersRequestSchema)` to create a new message.
  */
 export const ListUsersRequestSchema: GenMessage<ListUsersRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 4);
+  messageDesc(file_dox_v1_user, 5);
 
 /**
  * @generated from message dox.v1.ListUsersResponse
@@ -142,7 +150,7 @@ export type ListUsersResponse = Message<"dox.v1.ListUsersResponse"> & {
  * Use `create(ListUsersResponseSchema)` to create a new message.
  */
 export const ListUsersResponseSchema: GenMessage<ListUsersResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 5);
+  messageDesc(file_dox_v1_user, 6);
 
 /**
  * @generated from message dox.v1.DeleteUserRequest
@@ -159,7 +167,7 @@ export type DeleteUserRequest = Message<"dox.v1.DeleteUserRequest"> & {
  * Use `create(DeleteUserRequestSchema)` to create a new message.
  */
 export const DeleteUserRequestSchema: GenMessage<DeleteUserRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 6);
+  messageDesc(file_dox_v1_user, 7);
 
 /**
  * @generated from message dox.v1.DeleteUserResponse
@@ -172,7 +180,44 @@ export type DeleteUserResponse = Message<"dox.v1.DeleteUserResponse"> & {
  * Use `create(DeleteUserResponseSchema)` to create a new message.
  */
 export const DeleteUserResponseSchema: GenMessage<DeleteUserResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 7);
+  messageDesc(file_dox_v1_user, 8);
+
+/**
+ * @generated from message dox.v1.ResetUserPasswordRequest
+ */
+export type ResetUserPasswordRequest = Message<"dox.v1.ResetUserPasswordRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message dox.v1.ResetUserPasswordRequest.
+ * Use `create(ResetUserPasswordRequestSchema)` to create a new message.
+ */
+export const ResetUserPasswordRequestSchema: GenMessage<ResetUserPasswordRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_user, 9);
+
+/**
+ * @generated from message dox.v1.ResetUserPasswordResponse
+ */
+export type ResetUserPasswordResponse = Message<"dox.v1.ResetUserPasswordResponse"> & {
+  /**
+   * Plaintext one-time temp password. Owner must relay to the user; the
+   * user should ChangePassword on first login.
+   *
+   * @generated from field: string temp_password = 1;
+   */
+  tempPassword: string;
+};
+
+/**
+ * Describes the message dox.v1.ResetUserPasswordResponse.
+ * Use `create(ResetUserPasswordResponseSchema)` to create a new message.
+ */
+export const ResetUserPasswordResponseSchema: GenMessage<ResetUserPasswordResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_user, 10);
 
 /**
  * @generated from message dox.v1.GetServerSettingsRequest
@@ -185,7 +230,7 @@ export type GetServerSettingsRequest = Message<"dox.v1.GetServerSettingsRequest"
  * Use `create(GetServerSettingsRequestSchema)` to create a new message.
  */
 export const GetServerSettingsRequestSchema: GenMessage<GetServerSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 8);
+  messageDesc(file_dox_v1_user, 11);
 
 /**
  * @generated from message dox.v1.UpdateServerSettingsRequest
@@ -195,6 +240,16 @@ export type UpdateServerSettingsRequest = Message<"dox.v1.UpdateServerSettingsRe
    * @generated from field: optional bool registration_open = 1;
    */
   registrationOpen?: boolean | undefined;
+
+  /**
+   * @generated from field: optional string server_name = 2;
+   */
+  serverName?: string | undefined;
+
+  /**
+   * @generated from field: optional string server_description = 3;
+   */
+  serverDescription?: string | undefined;
 };
 
 /**
@@ -202,117 +257,11 @@ export type UpdateServerSettingsRequest = Message<"dox.v1.UpdateServerSettingsRe
  * Use `create(UpdateServerSettingsRequestSchema)` to create a new message.
  */
 export const UpdateServerSettingsRequestSchema: GenMessage<UpdateServerSettingsRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 9);
-
-/**
- * @generated from message dox.v1.ListMyDevicesRequest
- */
-export type ListMyDevicesRequest = Message<"dox.v1.ListMyDevicesRequest"> & {
-};
-
-/**
- * Describes the message dox.v1.ListMyDevicesRequest.
- * Use `create(ListMyDevicesRequestSchema)` to create a new message.
- */
-export const ListMyDevicesRequestSchema: GenMessage<ListMyDevicesRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 10);
-
-/**
- * @generated from message dox.v1.ListMyDevicesResponse
- */
-export type ListMyDevicesResponse = Message<"dox.v1.ListMyDevicesResponse"> & {
-  /**
-   * @generated from field: repeated dox.v1.Device devices = 1;
-   */
-  devices: Device[];
-};
-
-/**
- * Describes the message dox.v1.ListMyDevicesResponse.
- * Use `create(ListMyDevicesResponseSchema)` to create a new message.
- */
-export const ListMyDevicesResponseSchema: GenMessage<ListMyDevicesResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 11);
-
-/**
- * @generated from message dox.v1.CreatePairingCodeRequest
- */
-export type CreatePairingCodeRequest = Message<"dox.v1.CreatePairingCodeRequest"> & {
-  /**
-   * @generated from field: string device_name = 1;
-   */
-  deviceName: string;
-
-  /**
-   * Code lifetime in milliseconds. 0 → 60_000.
-   *
-   * @generated from field: int64 ttl_ms = 2;
-   */
-  ttlMs: bigint;
-};
-
-/**
- * Describes the message dox.v1.CreatePairingCodeRequest.
- * Use `create(CreatePairingCodeRequestSchema)` to create a new message.
- */
-export const CreatePairingCodeRequestSchema: GenMessage<CreatePairingCodeRequest> = /*@__PURE__*/
   messageDesc(file_dox_v1_user, 12);
 
 /**
- * @generated from message dox.v1.CreatePairingCodeResponse
- */
-export type CreatePairingCodeResponse = Message<"dox.v1.CreatePairingCodeResponse"> & {
-  /**
-   * @generated from field: string code = 1;
-   */
-  code: string;
-
-  /**
-   * @generated from field: int64 expires_at = 2;
-   */
-  expiresAt: bigint;
-};
-
-/**
- * Describes the message dox.v1.CreatePairingCodeResponse.
- * Use `create(CreatePairingCodeResponseSchema)` to create a new message.
- */
-export const CreatePairingCodeResponseSchema: GenMessage<CreatePairingCodeResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 13);
-
-/**
- * @generated from message dox.v1.RevokeMyDeviceRequest
- */
-export type RevokeMyDeviceRequest = Message<"dox.v1.RevokeMyDeviceRequest"> & {
-  /**
-   * @generated from field: string device_id = 1;
-   */
-  deviceId: string;
-};
-
-/**
- * Describes the message dox.v1.RevokeMyDeviceRequest.
- * Use `create(RevokeMyDeviceRequestSchema)` to create a new message.
- */
-export const RevokeMyDeviceRequestSchema: GenMessage<RevokeMyDeviceRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 14);
-
-/**
- * @generated from message dox.v1.RevokeMyDeviceResponse
- */
-export type RevokeMyDeviceResponse = Message<"dox.v1.RevokeMyDeviceResponse"> & {
-};
-
-/**
- * Describes the message dox.v1.RevokeMyDeviceResponse.
- * Use `create(RevokeMyDeviceResponseSchema)` to create a new message.
- */
-export const RevokeMyDeviceResponseSchema: GenMessage<RevokeMyDeviceResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_user, 15);
-
-/**
  * UserService covers user introspection, server-wide settings (owner-only),
- * and the caller's own device management.
+ * and the caller's own password management.
  *
  * @generated from service dox.v1.UserService
  */
@@ -324,6 +273,14 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof GetMeRequestSchema;
     output: typeof UserSchema;
+  },
+  /**
+   * @generated from rpc dox.v1.UserService.ChangePassword
+   */
+  changePassword: {
+    methodKind: "unary";
+    input: typeof ChangePasswordRequestSchema;
+    output: typeof ChangePasswordResponseSchema;
   },
   /**
    * @generated from rpc dox.v1.UserService.ListUsers
@@ -342,6 +299,18 @@ export const UserService: GenService<{
     output: typeof DeleteUserResponseSchema;
   },
   /**
+   * Owner-only. Resets a user's password to a fresh one-time temp password
+   * (returned in the response) — owner relays it out-of-band; the user is
+   * expected to ChangePassword on first login.
+   *
+   * @generated from rpc dox.v1.UserService.ResetUserPassword
+   */
+  resetUserPassword: {
+    methodKind: "unary";
+    input: typeof ResetUserPasswordRequestSchema;
+    output: typeof ResetUserPasswordResponseSchema;
+  },
+  /**
    * @generated from rpc dox.v1.UserService.GetServerSettings
    */
   getServerSettings: {
@@ -356,30 +325,6 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof UpdateServerSettingsRequestSchema;
     output: typeof ServerSettingsSchema;
-  },
-  /**
-   * @generated from rpc dox.v1.UserService.ListMyDevices
-   */
-  listMyDevices: {
-    methodKind: "unary";
-    input: typeof ListMyDevicesRequestSchema;
-    output: typeof ListMyDevicesResponseSchema;
-  },
-  /**
-   * @generated from rpc dox.v1.UserService.CreatePairingCode
-   */
-  createPairingCode: {
-    methodKind: "unary";
-    input: typeof CreatePairingCodeRequestSchema;
-    output: typeof CreatePairingCodeResponseSchema;
-  },
-  /**
-   * @generated from rpc dox.v1.UserService.RevokeMyDevice
-   */
-  revokeMyDevice: {
-    methodKind: "unary";
-    input: typeof RevokeMyDeviceRequestSchema;
-    output: typeof RevokeMyDeviceResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_user, 0);

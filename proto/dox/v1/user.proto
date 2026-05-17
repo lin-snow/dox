@@ -14,23 +14,24 @@ message User {
   int64 created_at = 4;
 }
 
-message Device {
-  string id = 1;
-  string user_id = 2;
-  string name = 3;
-  int64 created_at = 4;
-  int64 last_seen_at = 5;
-}
-
 message ServerSettings {
   bool registration_open = 1;
+  string server_name = 2;
+  string server_description = 3;
 }
 
 // UserService covers user introspection, server-wide settings (owner-only),
-// and the caller's own device management.
+// and the caller's own password management.
 service UserService {
   rpc GetMe(GetMeRequest) returns (User) {
     option (google.api.http) = {get: "/v1/me"};
+  }
+
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/me/password"
+      body: "*"
+    };
   }
 
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
@@ -39,6 +40,16 @@ service UserService {
 
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
     option (google.api.http) = {delete: "/v1/users/{id}"};
+  }
+
+  // Owner-only. Resets a user's password to a fresh one-time temp password
+  // (returned in the response) — owner relays it out-of-band; the user is
+  // expected to ChangePassword on first login.
+  rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/reset-password"
+      body: "*"
+    };
   }
 
   rpc GetServerSettings(GetServerSettingsRequest) returns (ServerSettings) {
@@ -51,24 +62,15 @@ service UserService {
       body: "*"
     };
   }
-
-  rpc ListMyDevices(ListMyDevicesRequest) returns (ListMyDevicesResponse) {
-    option (google.api.http) = {get: "/v1/me/devices"};
-  }
-
-  rpc CreatePairingCode(CreatePairingCodeRequest) returns (CreatePairingCodeResponse) {
-    option (google.api.http) = {
-      post: "/v1/me/devices/pair"
-      body: "*"
-    };
-  }
-
-  rpc RevokeMyDevice(RevokeMyDeviceRequest) returns (RevokeMyDeviceResponse) {
-    option (google.api.http) = {delete: "/v1/me/devices/{device_id}"};
-  }
 }
 
 message GetMeRequest {}
+
+message ChangePasswordRequest {
+  string old_password = 1;
+  string new_password = 2;
+}
+message ChangePasswordResponse {}
 
 message ListUsersRequest {}
 message ListUsersResponse {
@@ -80,28 +82,19 @@ message DeleteUserRequest {
 }
 message DeleteUserResponse {}
 
+message ResetUserPasswordRequest {
+  string user_id = 1;
+}
+message ResetUserPasswordResponse {
+  // Plaintext one-time temp password. Owner must relay to the user; the
+  // user should ChangePassword on first login.
+  string temp_password = 1;
+}
+
 message GetServerSettingsRequest {}
 
 message UpdateServerSettingsRequest {
   optional bool registration_open = 1;
+  optional string server_name = 2;
+  optional string server_description = 3;
 }
-
-message ListMyDevicesRequest {}
-message ListMyDevicesResponse {
-  repeated Device devices = 1;
-}
-
-message CreatePairingCodeRequest {
-  string device_name = 1;
-  // Code lifetime in milliseconds. 0 → 60_000.
-  int64 ttl_ms = 2;
-}
-message CreatePairingCodeResponse {
-  string code = 1;
-  int64 expires_at = 2;
-}
-
-message RevokeMyDeviceRequest {
-  string device_id = 1;
-}
-message RevokeMyDeviceResponse {}

@@ -7,7 +7,7 @@ import {
   type Config,
   type ServerInfo,
   fetchServerInfo,
-  redeemPairingCode,
+  login,
   register,
   saveConfig,
 } from "@dox/core";
@@ -18,25 +18,44 @@ import { Panel } from "./Panel";
 import { SectionHeader } from "./SectionHeader";
 import { Stepper } from "./Stepper";
 
+// Onboarding routes a brand-new client onto a dox server. The flow has
+// exactly three terminal intents:
+//
+//   - "first-user": server is empty; this caller will be the owner. The
+//     wizard collects username + password and offers an optional server
+//     identity step (server name, description).
+//   - "login":      server has users; caller already has an account here.
+//     Collect username + password, POST /v1/auth/login.
+//   - "register":   server has users; caller is brand new to it. Collect
+//     invite code (if registration is closed), username, password.
+//
+// The branch ("login" vs "register") is picked by the user, not inferred
+// from server state — previously the UI auto-routed to register when
+// registration_open=true, silently creating duplicate accounts for any
+// returning owner who reinstalled.
 type Stage =
   | "server"
   | "probing"
   | "choose-branch"
   | "enter-invite"
   | "enter-username"
-  | "enter-device"
-  | "pair-code"
+  | "enter-password"
+  | "confirm-password"
+  | "enter-server-name"
+  | "enter-server-description"
   | "submitting";
 
-type Intent = "register" | "pair";
+type Intent = "first-user" | "login" | "register";
 
 // "fresh" = no config on disk; "reauth" = config existed but its token was
-// rejected by the server (device revoked, DB rotated, etc.). Surfaced as a
-// different welcome line so the user knows why they're seeing this screen.
+// rejected by the server (expired, secret rotated, user deleted, etc.).
+// Surfaced as a different welcome line so the user knows why they're seeing
+// this screen.
 export type OnboardingReason = "fresh" | "reauth";
 
 const DEFAULT_SERVER = "http://localhost:8080";
-const STEPS = ["Server", "Method", "You", "Device"] as const;
+const STEPS = ["Server", "Method", "Account", "Password"] as const;
+const MIN_PASSWORD_LEN = 8;
 
 interface OnboardingProps {
   reason?: OnboardingReason;
@@ -48,10 +67,11 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
   const [server, setServer] = useState(DEFAULT_SERVER);
   const [info, setInfo] = useState<ServerInfo | null>(null);
   const [userName, setUserName] = useState(os.userInfo().username || "");
-  const [deviceName, setDeviceName] = useState(os.hostname() || "");
+  const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [pairCode, setPairCode] = useState("");
-  const [intent, setIntent] = useState<Intent>("register");
+  const [serverName, setServerName] = useState("");
+  const [serverDesc, setServerDesc] = useState("");
+  const [intent, setIntent] = useState<Intent>("login");
   const [error, setError] = useState<string | null>(null);
 
   // Probe the server when transitioning into "probing".
@@ -63,11 +83,14 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         const result = await fetchServerInfo(server);
         if (cancelled) return;
         setInfo(result);
-        if (!result.hasUsers || result.registrationOpen) {
-          setIntent("register");
-          setInviteCode("");
+        if (!result.hasUsers) {
+          // Empty server: this caller will be the owner. No branch choice —
+          // there's nothing to log in to.
+          setIntent("first-user");
           setStage("enter-username");
         } else {
+          // Has users: always ask. Whether registration is open only changes
+          // whether the register path needs an invite code.
           setStage("choose-branch");
         }
       } catch (err) {
@@ -81,66 +104,79 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     };
   }, [stage, server]);
 
-  // Issue the final register / redeem call when transitioning into "submitting".
+  // Final submit: register / login when transitioning into "submitting".
   useEffect(() => {
     if (stage !== "submitting") return;
     let cancelled = false;
     (async () => {
       try {
-        if (intent === "register") {
-          const res = await register(server, {
-            userName,
-            deviceName,
-            inviteCode: inviteCode || undefined,
-          });
-          const cfg: Config = {
-            server,
-            token: res.token,
-            userId: res.userId,
-            userName: res.userName,
-            role: res.role,
-            deviceId: res.deviceId,
-          };
-          await saveConfig(cfg);
-          if (!cancelled) onDone(cfg);
+        let result;
+        if (intent === "login") {
+          result = await login(server, { userName, password });
         } else {
-          const res = await redeemPairingCode(server, pairCode);
-          const cfg: Config = {
-            server,
-            token: res.token,
-            userId: res.userId,
-            userName: res.userName,
-            // Role unknown until /me; left blank locally, server stays authoritative.
-            role: "",
-            deviceId: res.deviceId,
-          };
-          await saveConfig(cfg);
-          if (!cancelled) onDone(cfg);
+          result = await register(server, {
+            userName,
+            password,
+            inviteCode: inviteCode || undefined,
+            serverName: intent === "first-user" && serverName ? serverName : undefined,
+            serverDescription: intent === "first-user" && serverDesc ? serverDesc : undefined,
+          });
         }
+        const cfg: Config = {
+          server,
+          token: result.token,
+          userId: result.userId,
+          userName: result.userName,
+          role: result.role,
+        };
+        await saveConfig(cfg);
+        if (!cancelled) onDone(cfg);
       } catch (err) {
         if (cancelled) return;
         setError((err as Error).message);
-        setStage(intent === "register" ? "enter-device" : "pair-code");
+        // Drop back to whatever input stage makes sense for the intent.
+        setStage(intent === "login" ? "enter-password" : "confirm-password");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [stage, intent, server, userName, deviceName, inviteCode, pairCode, onDone]);
+  }, [stage, intent, server, userName, password, inviteCode, serverName, serverDesc, onDone]);
 
-  // Branch picker — numeric keys; native useInput is simpler than a Select for two options.
+  // Branch picker — numeric keys, native useInput is simpler than a Select.
   useInput(
     (input) => {
       setError(null);
       if (input === "1") {
-        setIntent("register");
-        setStage("enter-invite");
+        setIntent("login");
+        setStage("enter-username");
       } else if (input === "2") {
-        setIntent("pair");
-        setStage("pair-code");
+        setIntent("register");
+        if (info && !info.registrationOpen) {
+          setStage("enter-invite");
+        } else {
+          setStage("enter-username");
+        }
       }
     },
     { isActive: stage === "choose-branch" },
+  );
+
+  // Skip key for the optional first-user server-name / description stages.
+  useInput(
+    (input) => {
+      if (input === "s") {
+        setError(null);
+        if (stage === "enter-server-name") {
+          setServerName("");
+          setStage("enter-server-description");
+        } else if (stage === "enter-server-description") {
+          setServerDesc("");
+          setStage("submitting");
+        }
+      }
+    },
+    { isActive: stage === "enter-server-name" || stage === "enter-server-description" },
   );
 
   const submitServer = (raw: string) => {
@@ -161,26 +197,54 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     if (!trimmed) return;
     setError(null);
     setUserName(trimmed);
-    setStage("enter-device");
+    setStage("enter-password");
   };
 
-  const submitDeviceName = (raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return;
+  const submitPassword = (raw: string) => {
+    if (intent === "login") {
+      // Login: no length check (legacy users may have short passwords); the
+      // server will reject if wrong.
+      if (!raw) return;
+      setError(null);
+      setPassword(raw);
+      setStage("submitting");
+      return;
+    }
+    if (raw.length < MIN_PASSWORD_LEN) {
+      setError(`password must be at least ${MIN_PASSWORD_LEN} characters`);
+      return;
+    }
     setError(null);
-    setDeviceName(trimmed);
+    setPassword(raw);
+    setStage("confirm-password");
+  };
+
+  const submitConfirmPassword = (raw: string) => {
+    if (raw !== password) {
+      setError("passwords don't match");
+      return;
+    }
+    setError(null);
+    if (intent === "first-user") {
+      setStage("enter-server-name");
+    } else {
+      setStage("submitting");
+    }
+  };
+
+  const submitServerName = (raw: string) => {
+    setError(null);
+    setServerName(raw.trim());
+    setStage("enter-server-description");
+  };
+
+  const submitServerDesc = (raw: string) => {
+    setError(null);
+    setServerDesc(raw.trim());
     setStage("submitting");
   };
 
-  const submitPairCode = (raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return;
-    setError(null);
-    setPairCode(trimmed);
-    setStage("submitting");
-  };
-
-  const stepIndex = stepIndexFor(stage, intent);
+  const stepIndex = stepIndexFor(stage);
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -200,13 +264,13 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         <Stepper steps={STEPS as unknown as string[]} activeIndex={stepIndex} />
       </Box>
 
-      {/* Confirmed-so-far context, rendered as compact chips */}
       <ContextStrip
         server={stage !== "server" ? server : undefined}
         info={stage !== "server" && stage !== "probing" ? info : null}
+        intent={stage !== "server" && stage !== "probing" && stage !== "choose-branch" ? intent : undefined}
         inviteCode={intent === "register" && inviteCode ? inviteCode : undefined}
         userName={
-          intent === "register" && (stage === "enter-device" || stage === "submitting")
+          (stage === "enter-password" || stage === "confirm-password" || stage === "enter-server-name" || stage === "enter-server-description" || stage === "submitting")
             ? userName
             : undefined
         }
@@ -220,36 +284,27 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
               <Text color={color.muted}>where does your dox server live?</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput
-                  defaultValue={server}
-                  placeholder={DEFAULT_SERVER}
-                  onSubmit={submitServer}
-                />
+                <TextInput defaultValue={server} placeholder={DEFAULT_SERVER} onSubmit={submitServer} />
               </Box>
             </Box>
           )}
 
-          {stage === "probing" && (
-            <Spinner label={`connecting to ${server}…`} />
-          )}
+          {stage === "probing" && <Spinner label={`connecting to ${server}…`} />}
 
           {stage === "choose-branch" && (
             <Box flexDirection="column">
               <Text color={color.muted}>how would you like to connect?</Text>
               <Box flexDirection="column" marginTop={1}>
                 <Box>
-                  <Text color={color.accent} bold>
-                    {"  1  "}
-                  </Text>
-                  <Text>create a new account </Text>
-                  <Text color={color.muted}>(you have an invite code)</Text>
+                  <Text color={color.accent} bold>{"  1  "}</Text>
+                  <Text>Log in to an existing account on this server</Text>
                 </Box>
                 <Box>
-                  <Text color={color.accent} bold>
-                    {"  2  "}
+                  <Text color={color.accent} bold>{"  2  "}</Text>
+                  <Text>Create a new account </Text>
+                  <Text color={color.muted}>
+                    {info && info.registrationOpen ? "(open — no invite needed)" : "(invite code required)"}
                   </Text>
-                  <Text>add this device to my account </Text>
-                  <Text color={color.muted}>(pairing code)</Text>
                 </Box>
               </Box>
               <Box marginTop={1}>
@@ -270,7 +325,9 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
 
           {stage === "enter-username" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>pick a username</Text>
+              <Text color={color.muted}>
+                {intent === "login" ? "your username" : "pick a username"}
+              </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
                 <TextInput defaultValue={userName} onSubmit={submitUserName} />
@@ -278,32 +335,54 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
             </Box>
           )}
 
-          {stage === "enter-device" && (
+          {stage === "enter-password" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>name this device</Text>
+              <Text color={color.muted}>
+                {intent === "login" ? "your password" : `pick a password (min ${MIN_PASSWORD_LEN} chars)`}
+              </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput defaultValue={deviceName} onSubmit={submitDeviceName} />
+                <TextInput placeholder="••••••••" onSubmit={submitPassword} />
               </Box>
             </Box>
           )}
 
-          {stage === "pair-code" && (
+          {stage === "confirm-password" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>confirm password</Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput placeholder="••••••••" onSubmit={submitConfirmPassword} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "enter-server-name" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                run{" "}
-                <Text color={color.accent}>dox device pair --name &lt;name&gt;</Text>{" "}
-                on a logged-in device, then paste the code:
+                give this server a display name <Text dimColor>(or press [s] to skip)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput placeholder="ABCD-EFGH" onSubmit={submitPairCode} />
+                <TextInput placeholder="Alice's Dox" onSubmit={submitServerName} />
+              </Box>
+            </Box>
+          )}
+
+          {stage === "enter-server-description" && (
+            <Box flexDirection="column">
+              <Text color={color.muted}>
+                one-line description <Text dimColor>(or press [s] to skip)</Text>
+              </Text>
+              <Box marginTop={1}>
+                <Text color={color.muted}>{">  "}</Text>
+                <TextInput placeholder="family todos" onSubmit={submitServerDesc} />
               </Box>
             </Box>
           )}
 
           {stage === "submitting" && (
-            <Spinner label={intent === "register" ? "creating account…" : "pairing device…"} />
+            <Spinner label={intent === "login" ? "logging in…" : "creating account…"} />
           )}
         </Panel>
       </Box>
@@ -329,50 +408,67 @@ function panelTitle(stage: Stage, intent: Intent): string {
     case "enter-invite":
       return "Invite code";
     case "enter-username":
-      return "Username";
-    case "enter-device":
-      return "Device name";
-    case "pair-code":
-      return "Pairing code";
+      return intent === "login" ? "Username" : "Pick a username";
+    case "enter-password":
+      return intent === "login" ? "Password" : "Pick a password";
+    case "confirm-password":
+      return "Confirm password";
+    case "enter-server-name":
+      return "Server name (optional)";
+    case "enter-server-description":
+      return "Description (optional)";
     case "submitting":
-      return intent === "register" ? "Creating account" : "Pairing device";
+      return intent === "login" ? "Logging in" : "Creating account";
   }
 }
 
-function stepIndexFor(stage: Stage, intent: Intent): number {
-  // Maps internal stages onto the 4-dot stepper. Method step collapses for the
-  // bootstrap / open-registration path where it's auto-selected.
+function stepIndexFor(stage: Stage): number {
+  // 4-dot stepper: Server → Method → Account → Password. The first-user path
+  // skips Method (auto-selected), so its stages collapse onto the same dots.
   switch (stage) {
     case "server":
     case "probing":
       return 0;
     case "choose-branch":
     case "enter-invite":
-    case "pair-code":
       return 1;
     case "enter-username":
       return 2;
-    case "enter-device":
-      return 3;
+    case "enter-password":
+    case "confirm-password":
+    case "enter-server-name":
+    case "enter-server-description":
     case "submitting":
-      return intent === "register" ? 3 : 1;
+      return 3;
   }
 }
 
 interface ContextStripProps {
   server?: string;
   info: ServerInfo | null;
+  intent?: Intent;
   inviteCode?: string;
   userName?: string;
 }
 
-function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps) {
+function ContextStrip({ server, info, intent, inviteCode, userName }: ContextStripProps) {
   const chips: { label: string; value: string; tone?: string }[] = [];
   if (server) chips.push({ label: "server", value: server });
   if (info) {
-    if (!info.hasUsers) chips.push({ label: "mode", value: "first user → owner", tone: color.accent2 });
-    else if (info.registrationOpen) chips.push({ label: "mode", value: "open" });
-    else chips.push({ label: "mode", value: "invite-only" });
+    if (!info.hasUsers) {
+      chips.push({ label: "mode", value: "first user → owner", tone: color.accent2 });
+    } else {
+      const identity = info.serverName
+        ? `${info.serverName}${info.ownerName ? ` · by ${info.ownerName}` : ""}`
+        : info.ownerName
+          ? `by ${info.ownerName}`
+          : "(unnamed server)";
+      chips.push({ label: "joining", value: identity, tone: color.accent2 });
+      chips.push({ label: "registration", value: info.registrationOpen ? "open" : "invite-only" });
+    }
+  }
+  if (intent) {
+    chips.push({ label: "intent", value: intent === "login" ? "log in" : intent === "register" ? "register" : "first user" });
   }
   if (inviteCode) chips.push({ label: "invite", value: inviteCode });
   if (userName) chips.push({ label: "user", value: userName });

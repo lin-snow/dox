@@ -2,7 +2,6 @@
 import { Command } from "commander";
 
 import * as auth from "./cli/auth";
-import * as device from "./cli/device";
 import * as project from "./cli/project";
 import * as server from "./cli/server";
 import * as todo from "./cli/todo";
@@ -29,15 +28,31 @@ program
   .description("Create an account on a dox server (first user becomes the owner)")
   .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
   .option("--name <username>", "username")
-  .option("--device <name>", "device name")
+  .option("--password <password>", "password (min 8 chars)")
   .option("--invite <code>", "invite code (required if registration is closed)")
   .action(auth.registerCmd);
 
 program
   .command("login")
-  .description("Pair this device with an existing account (redeem a code from `dox device pair`)")
+  .description("Log in to an existing account on a dox server")
   .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
-  .action(auth.login);
+  .option("--name <username>", "username")
+  .option("--password <password>", "password")
+  .action(auth.loginCmd);
+
+program
+  .command("logout")
+  .description("Remove local credentials. Server-side token expires on its own.")
+  .action(auth.logoutCmd);
+
+program
+  .command("passwd")
+  .description("Change your password")
+  .option("--old <password>", "current password")
+  .option("--new <password>", "new password (min 8 chars)")
+  .action(function (this: Command) {
+    return auth.passwdCmd(this.optsWithGlobals());
+  });
 
 program
   .command("accept <code>")
@@ -161,29 +176,6 @@ proj
     return project.removeMember(projectId, userId, this.optsWithGlobals());
   });
 
-// ── devices ────────────────────────────────────────────────────────────────
-const dev = program.command("device").description("Manage your devices");
-dev
-  .command("pair")
-  .description("Issue a pairing code to add another device to your account")
-  .requiredOption("--name <device>", "device name")
-  .option("--ttl-ms <ms>", "code lifetime in milliseconds", (v) => Number(v))
-  .action(function (this: Command) {
-    return device.pair(this.optsWithGlobals());
-  });
-dev
-  .command("list")
-  .description("List your devices")
-  .action(function (this: Command) {
-    return device.list(this.optsWithGlobals());
-  });
-dev
-  .command("revoke <id>")
-  .description("Revoke one of your devices")
-  .action(function (this: Command, id: string) {
-    return device.revoke(id, this.optsWithGlobals());
-  });
-
 // ── server (owner-only) ────────────────────────────────────────────────────
 const srv = program.command("server").description("Server-wide operations (owner-only)");
 srv
@@ -210,6 +202,24 @@ srv
   .description("Toggle open registration: 'true' to allow anyone, 'false' for invite-only")
   .action(function (this: Command, value: string) {
     return server.setRegistrationOpen(value, this.optsWithGlobals());
+  });
+srv
+  .command("set-name <name>")
+  .description("Set the server's display name (shown on Onboarding)")
+  .action(function (this: Command, name: string) {
+    return server.setServerName(name, this.optsWithGlobals());
+  });
+srv
+  .command("set-description <desc>")
+  .description("Set the server's one-line description")
+  .action(function (this: Command, desc: string) {
+    return server.setServerDescription(desc, this.optsWithGlobals());
+  });
+srv
+  .command("reset-password <user-name>")
+  .description("Reset a user's password and print a one-time temp password")
+  .action(function (this: Command, name: string) {
+    return server.resetUserPassword(name, this.optsWithGlobals());
   });
 
 await program.parseAsync(process.argv);

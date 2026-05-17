@@ -7,14 +7,15 @@ import "google/api/annotations.proto";
 option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
 
 // AuthService hosts the public (unauthenticated) RPCs:
-//   - ServerInfo lets a client probe the server before logging in, so the
-//     onboarding UI can pick the right branch (first-user / open registration /
-//     invite-required) without exposing concepts to the user.
-//   - Register creates a user. The first-ever Register on an empty server makes
-//     the caller the owner. Subsequent Registers require either a valid invite
-//     code or registration_open=true.
-//   - RedeemPairingCode is for an existing user adding another device to their
-//     own account (no new user is created).
+//   - ServerInfo lets a client probe a server before logging in so the
+//     onboarding UI can pick the right branch (first-user / existing-user
+//     login / register-with-invite) and surface the server's identity.
+//   - Register creates a user. The first-ever Register on an empty server
+//     makes the caller the owner and may set the server's display
+//     name/description inline. Subsequent Registers require either a valid
+//     invite code or registration_open=true.
+//   - Login authenticates an existing user with username + password and
+//     returns a JWT.
 service AuthService {
   rpc ServerInfo(ServerInfoRequest) returns (ServerInfoResponse) {
     option (google.api.http) = {get: "/v1/auth/server-info"};
@@ -27,9 +28,9 @@ service AuthService {
     };
   }
 
-  rpc RedeemPairingCode(RedeemPairingCodeRequest) returns (RedeemPairingCodeResponse) {
+  rpc Login(LoginRequest) returns (LoginResponse) {
     option (google.api.http) = {
-      post: "/v1/auth/redeem"
+      post: "/v1/auth/login"
       body: "*"
     };
   }
@@ -37,9 +38,9 @@ service AuthService {
 
 message ServerInfoRequest {}
 message ServerInfoResponse {
-  // True once the server has at least one registered user. When false, the next
-  // Register call promotes the caller to owner regardless of invite/registration
-  // policy.
+  // True once the server has at least one registered user. When false, the
+  // next Register call promotes the caller to owner regardless of invite/
+  // registration policy.
   bool has_users = 1;
   // Mirrors the registration_open server setting. When true, Register works
   // without an invite code (only meaningful once has_users is true).
@@ -50,34 +51,43 @@ message ServerInfoResponse {
   // Short commit sha for the running server build. May carry a "-dirty"
   // suffix for local builds.
   string commit = 4;
+  // Owner-set display name. Empty until configured.
+  string server_name = 5;
+  // Owner-set one-liner description. Empty until configured.
+  string server_description = 6;
+  // Display name of the server owner. Empty until first Register completes.
+  string owner_name = 7;
 }
 
 message RegisterRequest {
   // Display name for the new user. Must be unique across the server.
   string user_name = 1;
-  // Name for the first device (e.g. "laptop", "phone").
-  string device_name = 2;
+  // Plaintext password. Server hashes with argon2id. Min 8 chars.
+  string password = 2;
   // Required when registration is closed and the users table is non-empty.
   optional string invite_code = 3;
+  // First-user only: optional server identity fields. Ignored on subsequent
+  // Register calls — owners change them later via UpdateServerSettings.
+  optional string server_name = 4;
+  optional string server_description = 5;
 }
 
 message RegisterResponse {
+  // JWT (HS256). Caller stores it and presents as Authorization: Bearer.
   string token = 1;
   string user_id = 2;
   string user_name = 3;
   string role = 4;
-  string device_id = 5;
-  string device_name = 6;
 }
 
-message RedeemPairingCodeRequest {
-  string code = 1;
+message LoginRequest {
+  string user_name = 1;
+  string password = 2;
 }
 
-message RedeemPairingCodeResponse {
+message LoginResponse {
   string token = 1;
-  string device_id = 2;
-  string device_name = 3;
-  string user_id = 4;
-  string user_name = 5;
+  string user_id = 2;
+  string user_name = 3;
+  string role = 4;
 }

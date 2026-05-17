@@ -1,6 +1,6 @@
 // Package authn covers the authentication mechanism: HTTP bearer middleware,
-// the DeviceVerifier that backs it, code/token/hash primitives, and the
-// pairing-code issue helper. No proto handlers live here.
+// the JWT verifier that backs it, password hashing (argon2id), and the
+// short-code primitives used by invite codes. No proto handlers live here.
 package authn
 
 import (
@@ -13,7 +13,8 @@ const codeAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 const codeLen = 8
 
-// GenerateCode returns a fresh 8-character Crockford Base32 pairing code.
+// GenerateCode returns a fresh 8-character Crockford Base32 code. Used by
+// invite codes; pairing is no longer a concept in dox.
 func GenerateCode() (string, error) {
 	buf := make([]byte, codeLen)
 	if _, err := rand.Read(buf); err != nil {

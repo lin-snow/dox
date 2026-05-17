@@ -6,16 +6,16 @@ info:
     title: ""
     version: 0.0.1
 paths:
-    /v1/auth/redeem:
+    /v1/auth/login:
         post:
             tags:
                 - AuthService
-            operationId: AuthService_RedeemPairingCode
+            operationId: AuthService_Login
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/RedeemPairingCodeRequest'
+                            $ref: '#/components/schemas/LoginRequest'
                 required: true
             responses:
                 "200":
@@ -23,7 +23,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/RedeemPairingCodeResponse'
+                                $ref: '#/components/schemas/LoginResponse'
                 default:
                     description: Default error response
                     content:
@@ -138,34 +138,16 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
-    /v1/me/devices:
-        get:
-            tags:
-                - UserService
-            operationId: UserService_ListMyDevices
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/ListMyDevicesResponse'
-                default:
-                    description: Default error response
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Status'
-    /v1/me/devices/pair:
+    /v1/me/password:
         post:
             tags:
                 - UserService
-            operationId: UserService_CreatePairingCode
+            operationId: UserService_ChangePassword
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/CreatePairingCodeRequest'
+                            $ref: '#/components/schemas/ChangePasswordRequest'
                 required: true
             responses:
                 "200":
@@ -173,31 +155,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/CreatePairingCodeResponse'
-                default:
-                    description: Default error response
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/Status'
-    /v1/me/devices/{deviceId}:
-        delete:
-            tags:
-                - UserService
-            operationId: UserService_RevokeMyDevice
-            parameters:
-                - name: deviceId
-                  in: path
-                  required: true
-                  schema:
-                    type: string
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/RevokeMyDeviceResponse'
+                                $ref: '#/components/schemas/ChangePasswordResponse'
                 default:
                     description: Default error response
                     content:
@@ -586,6 +544,40 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/users/{userId}/reset-password:
+        post:
+            tags:
+                - UserService
+            description: |-
+                Owner-only. Resets a user's password to a fresh one-time temp password
+                 (returned in the response) — owner relays it out-of-band; the user is
+                 expected to ChangePassword on first login.
+            operationId: UserService_ResetUserPassword
+            parameters:
+                - name: userId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ResetUserPasswordRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ResetUserPasswordResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
 components:
     schemas:
         AcceptInviteRequest:
@@ -603,6 +595,16 @@ components:
                          which AcceptInvite rejects (server invites are only redeemable via Register).
                 role:
                     type: string
+        ChangePasswordRequest:
+            type: object
+            properties:
+                oldPassword:
+                    type: string
+                newPassword:
+                    type: string
+        ChangePasswordResponse:
+            type: object
+            properties: {}
         CreateInviteRequest:
             type: object
             properties:
@@ -615,21 +617,6 @@ components:
                 ttlMs:
                     type: string
                     description: Code lifetime in milliseconds. 0 → 24h.
-        CreatePairingCodeRequest:
-            type: object
-            properties:
-                deviceName:
-                    type: string
-                ttlMs:
-                    type: string
-                    description: Code lifetime in milliseconds. 0 → 60_000.
-        CreatePairingCodeResponse:
-            type: object
-            properties:
-                code:
-                    type: string
-                expiresAt:
-                    type: string
         CreateProjectRequest:
             type: object
             properties:
@@ -659,19 +646,6 @@ components:
         DeleteUserResponse:
             type: object
             properties: {}
-        Device:
-            type: object
-            properties:
-                id:
-                    type: string
-                userId:
-                    type: string
-                name:
-                    type: string
-                createdAt:
-                    type: string
-                lastSeenAt:
-                    type: string
         GoogleProtobufAny:
             type: object
             properties:
@@ -698,13 +672,6 @@ components:
                     type: string
                 expiresAt:
                     type: string
-        ListMyDevicesResponse:
-            type: object
-            properties:
-                devices:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/Device'
         ListProjectMembersResponse:
             type: object
             properties:
@@ -733,6 +700,24 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/User'
+        LoginRequest:
+            type: object
+            properties:
+                userName:
+                    type: string
+                password:
+                    type: string
+        LoginResponse:
+            type: object
+            properties:
+                token:
+                    type: string
+                userId:
+                    type: string
+                userName:
+                    type: string
+                role:
+                    type: string
         Project:
             type: object
             properties:
@@ -765,66 +750,62 @@ components:
                     description: '"editor" or "viewer".'
                 addedAt:
                     type: string
-        RedeemPairingCodeRequest:
-            type: object
-            properties:
-                code:
-                    type: string
-        RedeemPairingCodeResponse:
-            type: object
-            properties:
-                token:
-                    type: string
-                deviceId:
-                    type: string
-                deviceName:
-                    type: string
-                userId:
-                    type: string
-                userName:
-                    type: string
         RegisterRequest:
             type: object
             properties:
                 userName:
                     type: string
                     description: Display name for the new user. Must be unique across the server.
-                deviceName:
+                password:
                     type: string
-                    description: Name for the first device (e.g. "laptop", "phone").
+                    description: Plaintext password. Server hashes with argon2id. Min 8 chars.
                 inviteCode:
                     type: string
                     description: Required when registration is closed and the users table is non-empty.
+                serverName:
+                    type: string
+                    description: |-
+                        First-user only: optional server identity fields. Ignored on subsequent
+                         Register calls — owners change them later via UpdateServerSettings.
+                serverDescription:
+                    type: string
         RegisterResponse:
             type: object
             properties:
                 token:
                     type: string
+                    description: 'JWT (HS256). Caller stores it and presents as Authorization: Bearer.'
                 userId:
                     type: string
                 userName:
                     type: string
                 role:
                     type: string
-                deviceId:
-                    type: string
-                deviceName:
-                    type: string
         RemoveProjectMemberResponse:
             type: object
             properties: {}
-        RevokeMyDeviceResponse:
+        ResetUserPasswordRequest:
             type: object
-            properties: {}
+            properties:
+                userId:
+                    type: string
+        ResetUserPasswordResponse:
+            type: object
+            properties:
+                tempPassword:
+                    type: string
+                    description: |-
+                        Plaintext one-time temp password. Owner must relay to the user; the
+                         user should ChangePassword on first login.
         ServerInfoResponse:
             type: object
             properties:
                 hasUsers:
                     type: boolean
                     description: |-
-                        True once the server has at least one registered user. When false, the next
-                         Register call promotes the caller to owner regardless of invite/registration
-                         policy.
+                        True once the server has at least one registered user. When false, the
+                         next Register call promotes the caller to owner regardless of invite/
+                         registration policy.
                 registrationOpen:
                     type: boolean
                     description: |-
@@ -840,11 +821,24 @@ components:
                     description: |-
                         Short commit sha for the running server build. May carry a "-dirty"
                          suffix for local builds.
+                serverName:
+                    type: string
+                    description: Owner-set display name. Empty until configured.
+                serverDescription:
+                    type: string
+                    description: Owner-set one-liner description. Empty until configured.
+                ownerName:
+                    type: string
+                    description: Display name of the server owner. Empty until first Register completes.
         ServerSettings:
             type: object
             properties:
                 registrationOpen:
                     type: boolean
+                serverName:
+                    type: string
+                serverDescription:
+                    type: string
         Status:
             type: object
             properties:
@@ -913,6 +907,10 @@ components:
             properties:
                 registrationOpen:
                     type: boolean
+                serverName:
+                    type: string
+                serverDescription:
+                    type: string
         UpdateTodoRequest:
             type: object
             properties:
@@ -941,14 +939,15 @@ tags:
     - name: AuthService
       description: |-
         AuthService hosts the public (unauthenticated) RPCs:
-           - ServerInfo lets a client probe the server before logging in, so the
-             onboarding UI can pick the right branch (first-user / open registration /
-             invite-required) without exposing concepts to the user.
-           - Register creates a user. The first-ever Register on an empty server makes
-             the caller the owner. Subsequent Registers require either a valid invite
-             code or registration_open=true.
-           - RedeemPairingCode is for an existing user adding another device to their
-             own account (no new user is created).
+           - ServerInfo lets a client probe a server before logging in so the
+             onboarding UI can pick the right branch (first-user / existing-user
+             login / register-with-invite) and surface the server's identity.
+           - Register creates a user. The first-ever Register on an empty server
+             makes the caller the owner and may set the server's display
+             name/description inline. Subsequent Registers require either a valid
+             invite code or registration_open=true.
+           - Login authenticates an existing user with username + password and
+             returns a JWT.
     - name: InviteService
       description: |-
         InviteService issues and accepts invitation codes. A server invite
@@ -965,4 +964,4 @@ tags:
     - name: UserService
       description: |-
         UserService covers user introspection, server-wide settings (owner-only),
-         and the caller's own device management.
+         and the caller's own password management.

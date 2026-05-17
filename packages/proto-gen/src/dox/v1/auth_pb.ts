@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/auth.proto.
  */
 export const file_dox_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxIhMKEVNlcnZlckluZm9SZXF1ZXN0ImMKElNlcnZlckluZm9SZXNwb25zZRIRCgloYXNfdXNlcnMYASABKAgSGQoRcmVnaXN0cmF0aW9uX29wZW4YAiABKAgSDwoHdmVyc2lvbhgDIAEoCRIOCgZjb21taXQYBCABKAkiYwoPUmVnaXN0ZXJSZXF1ZXN0EhEKCXVzZXJfbmFtZRgBIAEoCRITCgtkZXZpY2VfbmFtZRgCIAEoCRIYCgtpbnZpdGVfY29kZRgDIAEoCUgAiAEBQg4KDF9pbnZpdGVfY29kZSJ7ChBSZWdpc3RlclJlc3BvbnNlEg0KBXRva2VuGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSEQoJdXNlcl9uYW1lGAMgASgJEgwKBHJvbGUYBCABKAkSEQoJZGV2aWNlX2lkGAUgASgJEhMKC2RldmljZV9uYW1lGAYgASgJIigKGFJlZGVlbVBhaXJpbmdDb2RlUmVxdWVzdBIMCgRjb2RlGAEgASgJInYKGVJlZGVlbVBhaXJpbmdDb2RlUmVzcG9uc2USDQoFdG9rZW4YASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhMKC2RldmljZV9uYW1lGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSEQoJdXNlcl9uYW1lGAUgASgJMsMCCgtBdXRoU2VydmljZRJhCgpTZXJ2ZXJJbmZvEhkuZG94LnYxLlNlcnZlckluZm9SZXF1ZXN0GhouZG94LnYxLlNlcnZlckluZm9SZXNwb25zZSIcgtPkkwIWEhQvdjEvYXV0aC9zZXJ2ZXItaW5mbxJbCghSZWdpc3RlchIXLmRveC52MS5SZWdpc3RlclJlcXVlc3QaGC5kb3gudjEuUmVnaXN0ZXJSZXNwb25zZSIcgtPkkwIWOgEqIhEvdjEvYXV0aC9yZWdpc3RlchJ0ChFSZWRlZW1QYWlyaW5nQ29kZRIgLmRveC52MS5SZWRlZW1QYWlyaW5nQ29kZVJlcXVlc3QaIS5kb3gudjEuUmVkZWVtUGFpcmluZ0NvZGVSZXNwb25zZSIagtPkkwIUOgEqIg8vdjEvYXV0aC9yZWRlZW1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxIhMKEVNlcnZlckluZm9SZXF1ZXN0IqgBChJTZXJ2ZXJJbmZvUmVzcG9uc2USEQoJaGFzX3VzZXJzGAEgASgIEhkKEXJlZ2lzdHJhdGlvbl9vcGVuGAIgASgIEg8KB3ZlcnNpb24YAyABKAkSDgoGY29tbWl0GAQgASgJEhMKC3NlcnZlcl9uYW1lGAUgASgJEhoKEnNlcnZlcl9kZXNjcmlwdGlvbhgGIAEoCRISCgpvd25lcl9uYW1lGAcgASgJIsIBCg9SZWdpc3RlclJlcXVlc3QSEQoJdXNlcl9uYW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJEhgKC2ludml0ZV9jb2RlGAMgASgJSACIAQESGAoLc2VydmVyX25hbWUYBCABKAlIAYgBARIfChJzZXJ2ZXJfZGVzY3JpcHRpb24YBSABKAlIAogBAUIOCgxfaW52aXRlX2NvZGVCDgoMX3NlcnZlcl9uYW1lQhUKE19zZXJ2ZXJfZGVzY3JpcHRpb24iUwoQUmVnaXN0ZXJSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhEKCXVzZXJfbmFtZRgDIAEoCRIMCgRyb2xlGAQgASgJIjMKDExvZ2luUmVxdWVzdBIRCgl1c2VyX25hbWUYASABKAkSEAoIcGFzc3dvcmQYAiABKAkiUAoNTG9naW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhEKCXVzZXJfbmFtZRgDIAEoCRIMCgRyb2xlGAQgASgJMp4CCgtBdXRoU2VydmljZRJhCgpTZXJ2ZXJJbmZvEhkuZG94LnYxLlNlcnZlckluZm9SZXF1ZXN0GhouZG94LnYxLlNlcnZlckluZm9SZXNwb25zZSIcgtPkkwIWEhQvdjEvYXV0aC9zZXJ2ZXItaW5mbxJbCghSZWdpc3RlchIXLmRveC52MS5SZWdpc3RlclJlcXVlc3QaGC5kb3gudjEuUmVnaXN0ZXJSZXNwb25zZSIcgtPkkwIWOgEqIhEvdjEvYXV0aC9yZWdpc3RlchJPCgVMb2dpbhIULmRveC52MS5Mb2dpblJlcXVlc3QaFS5kb3gudjEuTG9naW5SZXNwb25zZSIZgtPkkwITOgEqIg4vdjEvYXV0aC9sb2dpbkI2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
 
 /**
  * @generated from message dox.v1.ServerInfoRequest
@@ -31,9 +31,9 @@ export const ServerInfoRequestSchema: GenMessage<ServerInfoRequest> = /*@__PURE_
  */
 export type ServerInfoResponse = Message<"dox.v1.ServerInfoResponse"> & {
   /**
-   * True once the server has at least one registered user. When false, the next
-   * Register call promotes the caller to owner regardless of invite/registration
-   * policy.
+   * True once the server has at least one registered user. When false, the
+   * next Register call promotes the caller to owner regardless of invite/
+   * registration policy.
    *
    * @generated from field: bool has_users = 1;
    */
@@ -62,6 +62,27 @@ export type ServerInfoResponse = Message<"dox.v1.ServerInfoResponse"> & {
    * @generated from field: string commit = 4;
    */
   commit: string;
+
+  /**
+   * Owner-set display name. Empty until configured.
+   *
+   * @generated from field: string server_name = 5;
+   */
+  serverName: string;
+
+  /**
+   * Owner-set one-liner description. Empty until configured.
+   *
+   * @generated from field: string server_description = 6;
+   */
+  serverDescription: string;
+
+  /**
+   * Display name of the server owner. Empty until first Register completes.
+   *
+   * @generated from field: string owner_name = 7;
+   */
+  ownerName: string;
 };
 
 /**
@@ -83,11 +104,11 @@ export type RegisterRequest = Message<"dox.v1.RegisterRequest"> & {
   userName: string;
 
   /**
-   * Name for the first device (e.g. "laptop", "phone").
+   * Plaintext password. Server hashes with argon2id. Min 8 chars.
    *
-   * @generated from field: string device_name = 2;
+   * @generated from field: string password = 2;
    */
-  deviceName: string;
+  password: string;
 
   /**
    * Required when registration is closed and the users table is non-empty.
@@ -95,6 +116,19 @@ export type RegisterRequest = Message<"dox.v1.RegisterRequest"> & {
    * @generated from field: optional string invite_code = 3;
    */
   inviteCode?: string | undefined;
+
+  /**
+   * First-user only: optional server identity fields. Ignored on subsequent
+   * Register calls — owners change them later via UpdateServerSettings.
+   *
+   * @generated from field: optional string server_name = 4;
+   */
+  serverName?: string | undefined;
+
+  /**
+   * @generated from field: optional string server_description = 5;
+   */
+  serverDescription?: string | undefined;
 };
 
 /**
@@ -108,6 +142,62 @@ export const RegisterRequestSchema: GenMessage<RegisterRequest> = /*@__PURE__*/
  * @generated from message dox.v1.RegisterResponse
  */
 export type RegisterResponse = Message<"dox.v1.RegisterResponse"> & {
+  /**
+   * JWT (HS256). Caller stores it and presents as Authorization: Bearer.
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string user_name = 3;
+   */
+  userName: string;
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role: string;
+};
+
+/**
+ * Describes the message dox.v1.RegisterResponse.
+ * Use `create(RegisterResponseSchema)` to create a new message.
+ */
+export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 3);
+
+/**
+ * @generated from message dox.v1.LoginRequest
+ */
+export type LoginRequest = Message<"dox.v1.LoginRequest"> & {
+  /**
+   * @generated from field: string user_name = 1;
+   */
+  userName: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message dox.v1.LoginRequest.
+ * Use `create(LoginRequestSchema)` to create a new message.
+ */
+export const LoginRequestSchema: GenMessage<LoginRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 4);
+
+/**
+ * @generated from message dox.v1.LoginResponse
+ */
+export type LoginResponse = Message<"dox.v1.LoginResponse"> & {
   /**
    * @generated from field: string token = 1;
    */
@@ -127,89 +217,26 @@ export type RegisterResponse = Message<"dox.v1.RegisterResponse"> & {
    * @generated from field: string role = 4;
    */
   role: string;
-
-  /**
-   * @generated from field: string device_id = 5;
-   */
-  deviceId: string;
-
-  /**
-   * @generated from field: string device_name = 6;
-   */
-  deviceName: string;
 };
 
 /**
- * Describes the message dox.v1.RegisterResponse.
- * Use `create(RegisterResponseSchema)` to create a new message.
+ * Describes the message dox.v1.LoginResponse.
+ * Use `create(LoginResponseSchema)` to create a new message.
  */
-export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 3);
-
-/**
- * @generated from message dox.v1.RedeemPairingCodeRequest
- */
-export type RedeemPairingCodeRequest = Message<"dox.v1.RedeemPairingCodeRequest"> & {
-  /**
-   * @generated from field: string code = 1;
-   */
-  code: string;
-};
-
-/**
- * Describes the message dox.v1.RedeemPairingCodeRequest.
- * Use `create(RedeemPairingCodeRequestSchema)` to create a new message.
- */
-export const RedeemPairingCodeRequestSchema: GenMessage<RedeemPairingCodeRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 4);
-
-/**
- * @generated from message dox.v1.RedeemPairingCodeResponse
- */
-export type RedeemPairingCodeResponse = Message<"dox.v1.RedeemPairingCodeResponse"> & {
-  /**
-   * @generated from field: string token = 1;
-   */
-  token: string;
-
-  /**
-   * @generated from field: string device_id = 2;
-   */
-  deviceId: string;
-
-  /**
-   * @generated from field: string device_name = 3;
-   */
-  deviceName: string;
-
-  /**
-   * @generated from field: string user_id = 4;
-   */
-  userId: string;
-
-  /**
-   * @generated from field: string user_name = 5;
-   */
-  userName: string;
-};
-
-/**
- * Describes the message dox.v1.RedeemPairingCodeResponse.
- * Use `create(RedeemPairingCodeResponseSchema)` to create a new message.
- */
-export const RedeemPairingCodeResponseSchema: GenMessage<RedeemPairingCodeResponse> = /*@__PURE__*/
+export const LoginResponseSchema: GenMessage<LoginResponse> = /*@__PURE__*/
   messageDesc(file_dox_v1_auth, 5);
 
 /**
  * AuthService hosts the public (unauthenticated) RPCs:
- *   - ServerInfo lets a client probe the server before logging in, so the
- *     onboarding UI can pick the right branch (first-user / open registration /
- *     invite-required) without exposing concepts to the user.
- *   - Register creates a user. The first-ever Register on an empty server makes
- *     the caller the owner. Subsequent Registers require either a valid invite
- *     code or registration_open=true.
- *   - RedeemPairingCode is for an existing user adding another device to their
- *     own account (no new user is created).
+ *   - ServerInfo lets a client probe a server before logging in so the
+ *     onboarding UI can pick the right branch (first-user / existing-user
+ *     login / register-with-invite) and surface the server's identity.
+ *   - Register creates a user. The first-ever Register on an empty server
+ *     makes the caller the owner and may set the server's display
+ *     name/description inline. Subsequent Registers require either a valid
+ *     invite code or registration_open=true.
+ *   - Login authenticates an existing user with username + password and
+ *     returns a JWT.
  *
  * @generated from service dox.v1.AuthService
  */
@@ -231,12 +258,12 @@ export const AuthService: GenService<{
     output: typeof RegisterResponseSchema;
   },
   /**
-   * @generated from rpc dox.v1.AuthService.RedeemPairingCode
+   * @generated from rpc dox.v1.AuthService.Login
    */
-  redeemPairingCode: {
+  login: {
     methodKind: "unary";
-    input: typeof RedeemPairingCodeRequestSchema;
-    output: typeof RedeemPairingCodeResponseSchema;
+    input: typeof LoginRequestSchema;
+    output: typeof LoginResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_auth, 0);
