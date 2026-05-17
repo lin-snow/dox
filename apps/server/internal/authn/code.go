@@ -1,7 +1,7 @@
-// Package auth covers bearer tokens, pairing codes, the HTTP middleware that
-// gates the API, the RedeemPairingCode RPC handler, and the admin operations
-// behind `dox-server pair` and `dox-server device`.
-package auth
+// Package authn covers the authentication mechanism: HTTP bearer middleware,
+// the DeviceVerifier that backs it, code/token/hash primitives, and the
+// pairing-code issue helper. No proto handlers live here.
+package authn
 
 import (
 	"crypto/rand"

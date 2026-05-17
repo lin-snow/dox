@@ -1,4 +1,4 @@
-package auth
+package authn
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 )
 
 // CreatePairingCode issues a fresh code with the given TTL, bound to the user
-// the new device will belong to.
+// the new device will belong to. Returns the canonical (un-hyphenated) code.
 func CreatePairingCode(ctx context.Context, q *queries.Queries, userID, name string, ttl time.Duration) (string, error) {
 	if userID == "" {
 		return "", errors.New("user id is required")

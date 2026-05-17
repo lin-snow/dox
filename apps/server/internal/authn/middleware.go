@@ -1,11 +1,11 @@
-package auth
+package authn
 
 import (
 	"context"
 	"net/http"
 	"strings"
 
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 )
 
 // publicPaths skip authentication. Register and RedeemPairingCode are the only
@@ -16,19 +16,11 @@ var publicPaths = map[string]bool{
 	"/v1/auth/redeem":   true,
 }
 
-// CallerInfo is what the verifier returns on a successful device-token lookup.
-// It carries everything middleware needs to populate the request context.
-type CallerInfo struct {
-	DeviceID string
-	UserID   string
-	UserName string
-	Role     string
-}
-
-// DeviceVerifier looks up a device by its token's SHA-256 hash and pings its
-// last_seen_at. Implementations live next to the database layer.
+// DeviceVerifier looks up a device by its token's SHA-256 hash, returning the
+// caller bound to that device. The verifier implementation lives next to the
+// database layer.
 type DeviceVerifier interface {
-	VerifyDeviceToken(ctx context.Context, tokenHash string) (CallerInfo, bool)
+	VerifyDeviceToken(ctx context.Context, tokenHash string) (caller.Caller, bool)
 	TouchDevice(ctx context.Context, deviceID string)
 }
 
@@ -49,19 +41,13 @@ func Middleware(devices DeviceVerifier) func(http.Handler) http.Handler {
 				unauthorized(w)
 				return
 			}
-			info, ok := devices.VerifyDeviceToken(r.Context(), HashToken(token))
+			c, ok := devices.VerifyDeviceToken(r.Context(), HashToken(token))
 			if !ok {
 				unauthorized(w)
 				return
 			}
-			devices.TouchDevice(r.Context(), info.DeviceID)
-			ctx := authctx.With(r.Context(), authctx.Caller{
-				UserID:   info.UserID,
-				UserName: info.UserName,
-				Role:     info.Role,
-				DeviceID: info.DeviceID,
-			})
-			next.ServeHTTP(w, r.WithContext(ctx))
+			devices.TouchDevice(r.Context(), c.DeviceID)
+			next.ServeHTTP(w, r.WithContext(caller.With(r.Context(), c)))
 		})
 	}
 }

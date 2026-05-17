@@ -1,22 +1,26 @@
-package auth_test
+package handler_test
 
 import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
-	"github.com/lin-snow/dox/apps/server/internal/auth"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
+	"github.com/lin-snow/dox/apps/server/internal/authn"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
+	"github.com/lin-snow/dox/apps/server/internal/handler"
 )
 
-func newAuthFixture(t *testing.T) (*auth.Service, *queries.Queries) {
+const defaultTestTTL = 60 * time.Second
+
+func newUserFixture(t *testing.T) (*handler.User, *queries.Queries) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")
 	conn, err := db.Open(path)
@@ -25,11 +29,11 @@ func newAuthFixture(t *testing.T) (*auth.Service, *queries.Queries) {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 	q := queries.New(conn)
-	return auth.NewService(q), q
+	return handler.NewUser(q), q
 }
 
 func TestRegister_FirstUserBecomesOwner(t *testing.T) {
-	s, q := newAuthFixture(t)
+	s, q := newUserFixture(t)
 	resp, err := s.Register(context.Background(), &doxv1.RegisterRequest{
 		UserName:   "alice",
 		DeviceName: "laptop",
@@ -37,13 +41,13 @@ func TestRegister_FirstUserBecomesOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Role != authctx.RoleOwner {
+	if resp.Role != caller.RoleOwner {
 		t.Errorf("want role=owner, got %q", resp.Role)
 	}
 	if resp.Token == "" || resp.UserId == "" || resp.DeviceId == "" {
 		t.Errorf("incomplete response: %+v", resp)
 	}
-	dev, err := q.FindDeviceByTokenHash(context.Background(), auth.HashToken(resp.Token))
+	dev, err := q.FindDeviceByTokenHash(context.Background(), authn.HashToken(resp.Token))
 	if err != nil {
 		t.Fatalf("device not stored: %v", err)
 	}
@@ -53,29 +57,21 @@ func TestRegister_FirstUserBecomesOwner(t *testing.T) {
 }
 
 func TestRegister_ClosedRegistrationRejected(t *testing.T) {
-	s, _ := newAuthFixture(t)
-	// Seed owner.
+	s, _ := newUserFixture(t)
 	if _, err := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "alice", DeviceName: "laptop"}); err != nil {
 		t.Fatal(err)
 	}
-	// Without invite code and registration closed (default).
 	_, err := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "bob", DeviceName: "phone"})
 	if status.Code(err) != codes.PermissionDenied {
 		t.Errorf("want PermissionDenied, got %v", err)
 	}
 }
 
-func TestRegister_DuplicateNameRejected(t *testing.T) {
-	s, _ := newAuthFixture(t)
+func TestRegister_EmptyNameRejected(t *testing.T) {
+	s, _ := newUserFixture(t)
 	if _, err := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "alice", DeviceName: "laptop"}); err != nil {
 		t.Fatal(err)
 	}
-	// Even with open registration, duplicate name fails. Toggle setting.
-	// (Settings test is in user package; here we just verify the AlreadyExists path
-	// by trying to register with same name — without invite the policy gate
-	// triggers first, but with bootstrap path it would. Simplest case: same name
-	// hits UNIQUE before reaching policy. Here policy triggers first; we accept
-	// that and instead test name validation.)
 	_, err := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "", DeviceName: "laptop"})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Errorf("want InvalidArgument for empty user_name, got %v", err)
@@ -83,14 +79,12 @@ func TestRegister_DuplicateNameRejected(t *testing.T) {
 }
 
 func TestRedeemPairingCode_BindsDeviceToExistingUser(t *testing.T) {
-	s, q := newAuthFixture(t)
-	// Seed owner.
+	s, q := newUserFixture(t)
 	owner, err := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "alice", DeviceName: "laptop"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Owner issues a pairing code for themselves (simulating dox device pair).
-	code, err := auth.CreatePairingCode(context.Background(), q, owner.UserId, "phone", defaultTestTTL)
+	code, err := authn.CreatePairingCode(context.Background(), q, owner.UserId, "phone", defaultTestTTL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +109,7 @@ func TestRedeemPairingCode_BindsDeviceToExistingUser(t *testing.T) {
 }
 
 func TestRedeemPairingCode_EmptyRejected(t *testing.T) {
-	s, _ := newAuthFixture(t)
+	s, _ := newUserFixture(t)
 	_, err := s.RedeemPairingCode(context.Background(), &doxv1.RedeemPairingCodeRequest{Code: ""})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Errorf("want InvalidArgument, got %v", err)
@@ -123,13 +117,13 @@ func TestRedeemPairingCode_EmptyRejected(t *testing.T) {
 }
 
 func TestRedeemPairingCode_AcceptsFormattedInput(t *testing.T) {
-	s, q := newAuthFixture(t)
+	s, q := newUserFixture(t)
 	owner, _ := s.Register(context.Background(), &doxv1.RegisterRequest{UserName: "alice", DeviceName: "laptop"})
-	code, err := auth.CreatePairingCode(context.Background(), q, owner.UserId, "phone", defaultTestTTL)
+	code, err := authn.CreatePairingCode(context.Background(), q, owner.UserId, "phone", defaultTestTTL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	formatted := auth.FormatCode(code)
+	formatted := authn.FormatCode(code)
 	if _, err := s.RedeemPairingCode(context.Background(), &doxv1.RedeemPairingCodeRequest{Code: formatted}); err != nil {
 		t.Fatalf("redeem with %q failed: %v", formatted, err)
 	}

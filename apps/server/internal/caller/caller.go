@@ -1,6 +1,6 @@
-// Package authctx carries the authenticated caller through request contexts.
+// Package caller carries the authenticated caller through request contexts.
 // Middleware writes a Caller; service handlers read it.
-package authctx
+package caller
 
 import "context"
 
@@ -33,7 +33,7 @@ func From(ctx context.Context) (Caller, bool) {
 func MustFrom(ctx context.Context) Caller {
 	c, ok := From(ctx)
 	if !ok {
-		panic("authctx: caller missing — middleware misconfigured or test fixture forgot to seed it")
+		panic("caller: missing — middleware misconfigured or test fixture forgot to seed it")
 	}
 	return c
 }

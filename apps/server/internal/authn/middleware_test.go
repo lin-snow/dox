@@ -1,4 +1,4 @@
-package auth_test
+package authn_test
 
 import (
 	"context"
@@ -6,18 +6,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lin-snow/dox/apps/server/internal/auth"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
+	"github.com/lin-snow/dox/apps/server/internal/authn"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 )
 
 type fakeDevices struct {
-	hashToInfo map[string]auth.CallerInfo
-	touched    []string
+	hashToCaller map[string]caller.Caller
+	touched      []string
 }
 
-func (f *fakeDevices) VerifyDeviceToken(_ context.Context, hash string) (auth.CallerInfo, bool) {
-	info, ok := f.hashToInfo[hash]
-	return info, ok
+func (f *fakeDevices) VerifyDeviceToken(_ context.Context, hash string) (caller.Caller, bool) {
+	c, ok := f.hashToCaller[hash]
+	return c, ok
 }
 
 func (f *fakeDevices) TouchDevice(_ context.Context, id string) {
@@ -26,22 +26,22 @@ func (f *fakeDevices) TouchDevice(_ context.Context, id string) {
 
 func TestMiddleware(t *testing.T) {
 	const deviceToken = "device-token-abc"
-	want := auth.CallerInfo{
+	want := caller.Caller{
 		DeviceID: "device-1",
 		UserID:   "user-1",
 		UserName: "alice",
-		Role:     authctx.RoleOwner,
+		Role:     caller.RoleOwner,
 	}
 	devices := &fakeDevices{
-		hashToInfo: map[string]auth.CallerInfo{auth.HashToken(deviceToken): want},
+		hashToCaller: map[string]caller.Caller{authn.HashToken(deviceToken): want},
 	}
 
-	var seenCaller authctx.Caller
+	var seenCaller caller.Caller
 	upstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seenCaller, _ = authctx.From(r.Context())
+		seenCaller, _ = caller.From(r.Context())
 		w.WriteHeader(http.StatusOK)
 	})
-	handler := auth.Middleware(devices)(upstream)
+	handler := authn.Middleware(devices)(upstream)
 
 	tests := []struct {
 		name       string
@@ -61,7 +61,7 @@ func TestMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			seenCaller = authctx.Caller{}
+			seenCaller = caller.Caller{}
 			req := httptest.NewRequest(tt.method, tt.path, nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)

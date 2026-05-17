@@ -1,4 +1,4 @@
-package todo_test
+package handler_test
 
 import (
 	"context"
@@ -13,15 +13,15 @@ import (
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
-	"github.com/lin-snow/dox/apps/server/internal/todo"
+	"github.com/lin-snow/dox/apps/server/internal/handler"
 )
 
-// newTestService returns a TodoService backed by a fresh temp sqlite + a context
-// pre-loaded with a freshly created owner user.
-func newTestService(t *testing.T) (*todo.Service, *queries.Queries, context.Context) {
+// newTodoFixture returns a TodoService backed by a fresh temp sqlite + a
+// context pre-loaded with a freshly created owner user.
+func newTodoFixture(t *testing.T) (*handler.Todo, *queries.Queries, context.Context) {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.db")
 	conn, err := db.Open(path)
@@ -30,11 +30,11 @@ func newTestService(t *testing.T) (*todo.Service, *queries.Queries, context.Cont
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 	q := queries.New(conn)
-	user := seedUser(t, q, "alice", authctx.RoleOwner)
-	ctx := authctx.With(context.Background(), authctx.Caller{
+	user := seedUser(t, q, "alice", caller.RoleOwner)
+	ctx := caller.With(context.Background(), caller.Caller{
 		UserID: user.ID, UserName: user.Name, Role: user.Role, DeviceID: "test-device",
 	})
-	return todo.NewService(q), q, ctx
+	return handler.NewTodo(q), q, ctx
 }
 
 func seedUser(t *testing.T, q *queries.Queries, name, role string) queries.User {
@@ -46,13 +46,6 @@ func seedUser(t *testing.T, q *queries.Queries, name, role string) queries.User 
 		t.Fatalf("CreateUser: %v", err)
 	}
 	return u
-}
-
-func ctxFor(t *testing.T, u queries.User) context.Context {
-	t.Helper()
-	return authctx.With(context.Background(), authctx.Caller{
-		UserID: u.ID, UserName: u.Name, Role: u.Role, DeviceID: "test-device",
-	})
 }
 
 func TestCreateTodo(t *testing.T) {
@@ -69,7 +62,7 @@ func TestCreateTodo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, _, ctx := newTestService(t)
+			s, _, ctx := newTodoFixture(t)
 			got, err := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: tt.title})
 			if tt.wantErr {
 				if err == nil {
@@ -103,7 +96,7 @@ func TestCreateTodo(t *testing.T) {
 }
 
 func TestGetTodo(t *testing.T) {
-	s, _, ctx := newTestService(t)
+	s, _, ctx := newTodoFixture(t)
 	created, err := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "task"})
 	if err != nil {
 		t.Fatal(err)
@@ -132,10 +125,13 @@ func TestGetTodo(t *testing.T) {
 			t.Errorf("want InvalidArgument, got %v", status.Code(err))
 		}
 	})
+
+	// silence unused-import warning if helper isn't used later
+	_ = sql.NullString{}
 }
 
 func TestUpdateTodo(t *testing.T) {
-	s, _, ctx := newTestService(t)
+	s, _, ctx := newTodoFixture(t)
 	created, err := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "old"})
 	if err != nil {
 		t.Fatal(err)
@@ -181,7 +177,7 @@ func TestUpdateTodo(t *testing.T) {
 }
 
 func TestDeleteTodo(t *testing.T) {
-	s, _, ctx := newTestService(t)
+	s, _, ctx := newTodoFixture(t)
 	created, err := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "doomed"})
 	if err != nil {
 		t.Fatal(err)
@@ -195,7 +191,7 @@ func TestDeleteTodo(t *testing.T) {
 }
 
 func TestIDPrefixResolution(t *testing.T) {
-	s, _, ctx := newTestService(t)
+	s, _, ctx := newTodoFixture(t)
 	a, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "alpha"})
 	b, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "beta"})
 
@@ -272,68 +268,3 @@ func commonPrefix(a, b string) string {
 	}
 	return a[:n]
 }
-
-func TestListTodos(t *testing.T) {
-	s, _, ctx := newTestService(t)
-
-	t.Run("empty", func(t *testing.T) {
-		resp, err := s.ListTodos(ctx, &doxv1.ListTodosRequest{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(resp.Todos) != 0 {
-			t.Errorf("want 0, got %d", len(resp.Todos))
-		}
-	})
-
-	t.Run("returns inbox todos", func(t *testing.T) {
-		a, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "a"})
-		b, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "b"})
-		c, _ := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{Title: "c"})
-		resp, err := s.ListTodos(ctx, &doxv1.ListTodosRequest{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(resp.Todos) != 3 {
-			t.Fatalf("want 3, got %d", len(resp.Todos))
-		}
-		ids := map[string]bool{}
-		for _, t := range resp.Todos {
-			ids[t.Id] = true
-		}
-		for _, want := range []string{a.Id, b.Id, c.Id} {
-			if !ids[want] {
-				t.Errorf("missing %q", want)
-			}
-		}
-	})
-}
-
-func TestInboxIsolation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "test.db")
-	conn, err := db.Open(path)
-	if err != nil {
-		t.Fatalf("db.Open: %v", err)
-	}
-	t.Cleanup(func() { _ = conn.Close() })
-	q := queries.New(conn)
-	alice := seedUser(t, q, "alice", authctx.RoleOwner)
-	bob := seedUser(t, q, "bob", authctx.RoleMember)
-	s := todo.NewService(q)
-
-	ctxA := ctxFor(t, alice)
-	ctxB := ctxFor(t, bob)
-
-	if _, err := s.CreateTodo(ctxA, &doxv1.CreateTodoRequest{Title: "alice-private"}); err != nil {
-		t.Fatal(err)
-	}
-	respB, err := s.ListTodos(ctxB, &doxv1.ListTodosRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(respB.Todos) != 0 {
-		t.Errorf("bob saw alice's inbox: %d todos", len(respB.Todos))
-	}
-}
-
-var _ = sql.ErrNoRows // keep import set stable

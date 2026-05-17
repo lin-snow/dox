@@ -1,10 +1,8 @@
-// Package project implements the ProjectService gRPC handler.
-package project
+package handler
 
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"strings"
 	"time"
 
@@ -13,8 +11,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
 
@@ -24,22 +22,22 @@ const (
 	maxColor       = 32
 )
 
-type Service struct {
+type Project struct {
 	doxv1.UnimplementedProjectServiceServer
 	q   *queries.Queries
 	now func() int64
 }
 
-func NewService(q *queries.Queries) *Service {
-	return &Service{
+func NewProject(q *queries.Queries) *Project {
+	return &Project{
 		q:   q,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
 
-func (s *Service) ListProjects(ctx context.Context, _ *doxv1.ListProjectsRequest) (*doxv1.ListProjectsResponse, error) {
-	caller := authctx.MustFrom(ctx)
-	rows, err := s.q.ListProjectsVisibleTo(ctx, caller.UserID)
+func (s *Project) ListProjects(ctx context.Context, _ *doxv1.ListProjectsRequest) (*doxv1.ListProjectsResponse, error) {
+	c := caller.MustFrom(ctx)
+	rows, err := s.q.ListProjectsVisibleTo(ctx, c.UserID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list projects: %v", err)
 	}
@@ -50,13 +48,13 @@ func (s *Service) ListProjects(ctx context.Context, _ *doxv1.ListProjectsRequest
 	return &doxv1.ListProjectsResponse{Projects: out}, nil
 }
 
-func (s *Service) GetProject(ctx context.Context, req *doxv1.GetProjectRequest) (*doxv1.Project, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) GetProject(ctx context.Context, req *doxv1.GetProjectRequest) (*doxv1.Project, error) {
+	c := caller.MustFrom(ctx)
 	id := req.GetId()
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
-	if err := authz.CanReadProject(ctx, s.q, caller.UserID, id); err != nil {
+	if err := authz.CanReadProject(ctx, s.q, c.UserID, id); err != nil {
 		return nil, err
 	}
 	p, err := s.q.GetProject(ctx, id)
@@ -66,8 +64,8 @@ func (s *Service) GetProject(ctx context.Context, req *doxv1.GetProjectRequest) 
 	return projectToProto(p), nil
 }
 
-func (s *Service) CreateProject(ctx context.Context, req *doxv1.CreateProjectRequest) (*doxv1.Project, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) CreateProject(ctx context.Context, req *doxv1.CreateProjectRequest) (*doxv1.Project, error) {
+	c := caller.MustFrom(ctx)
 	name := strings.TrimSpace(req.GetName())
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
@@ -88,7 +86,7 @@ func (s *Service) CreateProject(ctx context.Context, req *doxv1.CreateProjectReq
 	now := s.now()
 	row, err := s.q.CreateProject(ctx, queries.CreateProjectParams{
 		ID:          id,
-		OwnerID:     caller.UserID,
+		OwnerID:     c.UserID,
 		Name:        name,
 		Description: desc.value,
 		Color:       color.value,
@@ -102,13 +100,13 @@ func (s *Service) CreateProject(ctx context.Context, req *doxv1.CreateProjectReq
 	return projectToProto(row), nil
 }
 
-func (s *Service) UpdateProject(ctx context.Context, req *doxv1.UpdateProjectRequest) (*doxv1.Project, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) UpdateProject(ctx context.Context, req *doxv1.UpdateProjectRequest) (*doxv1.Project, error) {
+	c := caller.MustFrom(ctx)
 	id := req.GetId()
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
-	if err := authz.CanAdminProject(ctx, s.q, caller.UserID, id); err != nil {
+	if err := authz.CanAdminProject(ctx, s.q, c.UserID, id); err != nil {
 		return nil, err
 	}
 	existing, err := s.q.GetProject(ctx, id)
@@ -165,13 +163,13 @@ func (s *Service) UpdateProject(ctx context.Context, req *doxv1.UpdateProjectReq
 	return projectToProto(row), nil
 }
 
-func (s *Service) DeleteProject(ctx context.Context, req *doxv1.DeleteProjectRequest) (*doxv1.DeleteProjectResponse, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) DeleteProject(ctx context.Context, req *doxv1.DeleteProjectRequest) (*doxv1.DeleteProjectResponse, error) {
+	c := caller.MustFrom(ctx)
 	id := req.GetId()
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
-	if err := authz.CanAdminProject(ctx, s.q, caller.UserID, id); err != nil {
+	if err := authz.CanAdminProject(ctx, s.q, c.UserID, id); err != nil {
 		return nil, err
 	}
 	if _, err := s.q.DeleteProject(ctx, id); err != nil {
@@ -180,13 +178,13 @@ func (s *Service) DeleteProject(ctx context.Context, req *doxv1.DeleteProjectReq
 	return &doxv1.DeleteProjectResponse{}, nil
 }
 
-func (s *Service) ListProjectMembers(ctx context.Context, req *doxv1.ListProjectMembersRequest) (*doxv1.ListProjectMembersResponse, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) ListProjectMembers(ctx context.Context, req *doxv1.ListProjectMembersRequest) (*doxv1.ListProjectMembersResponse, error) {
+	c := caller.MustFrom(ctx)
 	pid := req.GetProjectId()
 	if pid == "" {
 		return nil, status.Error(codes.InvalidArgument, "project_id is required")
 	}
-	if err := authz.CanReadProject(ctx, s.q, caller.UserID, pid); err != nil {
+	if err := authz.CanReadProject(ctx, s.q, c.UserID, pid); err != nil {
 		return nil, err
 	}
 	rows, err := s.q.ListProjectMembers(ctx, pid)
@@ -204,14 +202,14 @@ func (s *Service) ListProjectMembers(ctx context.Context, req *doxv1.ListProject
 	return &doxv1.ListProjectMembersResponse{Members: out}, nil
 }
 
-func (s *Service) RemoveProjectMember(ctx context.Context, req *doxv1.RemoveProjectMemberRequest) (*doxv1.RemoveProjectMemberResponse, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Project) RemoveProjectMember(ctx context.Context, req *doxv1.RemoveProjectMemberRequest) (*doxv1.RemoveProjectMemberResponse, error) {
+	c := caller.MustFrom(ctx)
 	pid := req.GetProjectId()
 	uid := req.GetUserId()
 	if pid == "" || uid == "" {
 		return nil, status.Error(codes.InvalidArgument, "project_id and user_id are required")
 	}
-	if err := authz.CanAdminProject(ctx, s.q, caller.UserID, pid); err != nil {
+	if err := authz.CanAdminProject(ctx, s.q, c.UserID, pid); err != nil {
 		return nil, err
 	}
 	n, err := s.q.RemoveProjectMember(ctx, queries.RemoveProjectMemberParams{
@@ -258,5 +256,3 @@ func optionalText(p *string, max int) optString {
 	}
 	return optString{value: sql.NullString{String: *p, Valid: true}}
 }
-
-var _ = errors.New // keep import set stable across edits

@@ -1,11 +1,4 @@
-// Package invite implements the InviteService gRPC handler.
-//
-// Two flavors of invite share one storage table:
-//   - Server invite (project_id unset): owner only. Brings a new user onto the
-//     server via AuthService.Register.
-//   - Project invite (project_id set): project owner only. New users redeem
-//     via Register; existing users redeem via AcceptInvite.
-package invite
+package handler
 
 import (
 	"context"
@@ -17,29 +10,34 @@ import (
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
-	"github.com/lin-snow/dox/apps/server/internal/auth"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
+	"github.com/lin-snow/dox/apps/server/internal/authn"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
 
 const defaultInviteTTL = 24 * time.Hour
 
-type Service struct {
+// Invite implements InviteService. Two flavors of invite share one storage:
+//   - Server invite (project_id unset): owner only. Brings a new user onto the
+//     server via AuthService.Register.
+//   - Project invite (project_id set): project owner only. New users redeem
+//     via Register; existing users redeem via AcceptInvite.
+type Invite struct {
 	doxv1.UnimplementedInviteServiceServer
 	q   *queries.Queries
 	now func() int64
 }
 
-func NewService(q *queries.Queries) *Service {
-	return &Service{
+func NewInvite(q *queries.Queries) *Invite {
+	return &Invite{
 		q:   q,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
 
-func (s *Service) CreateInvite(ctx context.Context, req *doxv1.CreateInviteRequest) (*doxv1.Invite, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Invite) CreateInvite(ctx context.Context, req *doxv1.CreateInviteRequest) (*doxv1.Invite, error) {
+	c := caller.MustFrom(ctx)
 	ttl := time.Duration(req.GetTtlMs()) * time.Millisecond
 	if ttl <= 0 {
 		ttl = defaultInviteTTL
@@ -52,7 +50,7 @@ func (s *Service) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReque
 	switch {
 	case req.ProjectId == nil || *req.ProjectId == "":
 		// Server invite — owner only.
-		if caller.Role != authctx.RoleOwner {
+		if c.Role != caller.RoleOwner {
 			return nil, status.Error(codes.PermissionDenied, "only the server owner may issue server invites")
 		}
 	default:
@@ -60,22 +58,22 @@ func (s *Service) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReque
 		if req.Role == nil || (*req.Role != authz.RoleEditor && *req.Role != authz.RoleViewer) {
 			return nil, status.Error(codes.InvalidArgument, "role must be 'editor' or 'viewer' for project invites")
 		}
-		if err := authz.CanAdminProject(ctx, s.q, caller.UserID, *req.ProjectId); err != nil {
+		if err := authz.CanAdminProject(ctx, s.q, c.UserID, *req.ProjectId); err != nil {
 			return nil, err
 		}
 		projectID = sql.NullString{String: *req.ProjectId, Valid: true}
 		role = sql.NullString{String: *req.Role, Valid: true}
 	}
 
-	code, err := auth.GenerateCode()
+	code, err := authn.GenerateCode()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "generate code: %v", err)
 	}
 	now := s.now()
 	expires := now + ttl.Milliseconds()
 	if err := s.q.CreateInvite(ctx, queries.CreateInviteParams{
-		CodeHash:  auth.HashInviteCode(code),
-		IssuedBy:  caller.UserID,
+		CodeHash:  authn.HashInviteCode(code),
+		IssuedBy:  c.UserID,
 		ProjectID: projectID,
 		Role:      role,
 		CreatedAt: now,
@@ -85,7 +83,7 @@ func (s *Service) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReque
 	}
 	return &doxv1.Invite{
 		Code:      code,
-		IssuedBy:  caller.UserID,
+		IssuedBy:  c.UserID,
 		ProjectId: projectID.String,
 		Role:      role.String,
 		CreatedAt: now,
@@ -93,8 +91,8 @@ func (s *Service) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReque
 	}, nil
 }
 
-func (s *Service) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteRequest) (*doxv1.AcceptInviteResponse, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteRequest) (*doxv1.AcceptInviteResponse, error) {
+	c := caller.MustFrom(ctx)
 	if req.GetCode() == "" {
 		return nil, status.Error(codes.InvalidArgument, "code is required")
 	}
@@ -102,8 +100,8 @@ func (s *Service) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReque
 	row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
 		Now:      now,
 		UsedAt:   sql.NullInt64{Int64: now, Valid: true},
-		UsedBy:   sql.NullString{String: caller.UserID, Valid: true},
-		CodeHash: auth.HashInviteCode(req.GetCode()),
+		UsedBy:   sql.NullString{String: c.UserID, Valid: true},
+		CodeHash: authn.HashInviteCode(req.GetCode()),
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -113,12 +111,11 @@ func (s *Service) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReque
 	}
 	if !row.ProjectID.Valid {
 		// Server invites have no project — they only make sense via Register.
-		// AcceptInvite is for already-on-server users, who don't need to be re-created.
 		return nil, status.Error(codes.FailedPrecondition, "server invites must be redeemed via Register on a fresh client")
 	}
 	if err := s.q.AddProjectMember(ctx, queries.AddProjectMemberParams{
 		ProjectID: row.ProjectID.String,
-		UserID:    caller.UserID,
+		UserID:    c.UserID,
 		Role:      row.Role.String,
 		AddedAt:   now,
 	}); err != nil {

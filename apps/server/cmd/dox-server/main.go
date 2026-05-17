@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/lin-snow/dox/apps/server/internal/app"
 	"github.com/lin-snow/dox/apps/server/internal/config"
-	"github.com/lin-snow/dox/apps/server/internal/httpserver"
 )
 
 func main() {
@@ -27,5 +27,5 @@ func run() error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
-	return httpserver.Run(ctx, cfg)
+	return app.Run(ctx, cfg)
 }

@@ -1,10 +1,4 @@
-// Package todo implements the TodoService gRPC handler.
-//
-// Visibility rules:
-//   - Inbox todo (project_id NULL) is visible only to its created_by.
-//   - Project todo is visible to project owner + members.
-//   - Mutations require owner or editor; viewers are read-only.
-package todo
+package handler
 
 import (
 	"context"
@@ -18,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
-	"github.com/lin-snow/dox/apps/server/internal/authctx"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
+	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 )
 
@@ -32,37 +26,43 @@ const (
 	projectInbox = "inbox"
 )
 
-type Service struct {
+// Todo implements TodoService.
+//
+// Visibility rules:
+//   - Inbox todo (project_id NULL) is visible only to its created_by.
+//   - Project todo is visible to project owner + members.
+//   - Mutations require owner or editor; viewers are read-only.
+type Todo struct {
 	doxv1.UnimplementedTodoServiceServer
 	q   *queries.Queries
 	now func() int64
 }
 
-func NewService(q *queries.Queries) *Service {
-	return &Service{
+func NewTodo(q *queries.Queries) *Todo {
+	return &Todo{
 		q:   q,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
 
-func (s *Service) ListTodos(ctx context.Context, req *doxv1.ListTodosRequest) (*doxv1.ListTodosResponse, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Todo) ListTodos(ctx context.Context, req *doxv1.ListTodosRequest) (*doxv1.ListTodosResponse, error) {
+	c := caller.MustFrom(ctx)
 	var rows []queries.Todo
 	switch {
 	case req.ProjectId == nil:
-		r, err := s.q.ListTodosForUser(ctx, caller.UserID)
+		r, err := s.q.ListTodosForUser(ctx, c.UserID)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "list todos: %v", err)
 		}
 		rows = r
 	case *req.ProjectId == projectInbox:
-		r, err := s.q.ListInboxTodos(ctx, caller.UserID)
+		r, err := s.q.ListInboxTodos(ctx, c.UserID)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "list inbox: %v", err)
 		}
 		rows = r
 	default:
-		if err := authz.CanReadProject(ctx, s.q, caller.UserID, *req.ProjectId); err != nil {
+		if err := authz.CanReadProject(ctx, s.q, c.UserID, *req.ProjectId); err != nil {
 			return nil, err
 		}
 		r, err := s.q.ListTodosInProject(ctx, sql.NullString{String: *req.ProjectId, Valid: true})
@@ -73,29 +73,29 @@ func (s *Service) ListTodos(ctx context.Context, req *doxv1.ListTodosRequest) (*
 	}
 	todos := make([]*doxv1.Todo, 0, len(rows))
 	for _, r := range rows {
-		todos = append(todos, modelToProto(r))
+		todos = append(todos, todoToProto(r))
 	}
 	return &doxv1.ListTodosResponse{Todos: todos}, nil
 }
 
-func (s *Service) GetTodo(ctx context.Context, req *doxv1.GetTodoRequest) (*doxv1.Todo, error) {
-	caller := authctx.MustFrom(ctx)
-	id, err := s.resolveID(ctx, caller.UserID, req.GetId())
+func (s *Todo) GetTodo(ctx context.Context, req *doxv1.GetTodoRequest) (*doxv1.Todo, error) {
+	c := caller.MustFrom(ctx)
+	id, err := s.resolveID(ctx, c.UserID, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 	row, err := s.q.GetTodo(ctx, id)
 	if err != nil {
-		return nil, translateGetErr(err, id)
+		return nil, translateGetTodoErr(err, id)
 	}
-	if err := s.assertVisible(ctx, caller.UserID, row); err != nil {
+	if err := s.assertVisible(ctx, c.UserID, row); err != nil {
 		return nil, err
 	}
-	return modelToProto(row), nil
+	return todoToProto(row), nil
 }
 
-func (s *Service) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*doxv1.Todo, error) {
-	caller := authctx.MustFrom(ctx)
+func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*doxv1.Todo, error) {
+	c := caller.MustFrom(ctx)
 	title := strings.TrimSpace(req.GetTitle())
 	if title == "" {
 		return nil, status.Error(codes.InvalidArgument, "title is required")
@@ -106,7 +106,7 @@ func (s *Service) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) 
 
 	var projectID sql.NullString
 	if req.ProjectId != nil && *req.ProjectId != "" {
-		if err := authz.CanWriteProjectTodos(ctx, s.q, caller.UserID, *req.ProjectId); err != nil {
+		if err := authz.CanWriteProjectTodos(ctx, s.q, c.UserID, *req.ProjectId); err != nil {
 			return nil, err
 		}
 		projectID = sql.NullString{String: *req.ProjectId, Valid: true}
@@ -118,27 +118,27 @@ func (s *Service) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) 
 		ID:        id,
 		Title:     title,
 		ProjectID: projectID,
-		CreatedBy: caller.UserID,
+		CreatedBy: c.UserID,
 		CreatedAt: now,
 		UpdatedAt: now,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create todo: %v", err)
 	}
-	return modelToProto(row), nil
+	return todoToProto(row), nil
 }
 
-func (s *Service) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*doxv1.Todo, error) {
-	caller := authctx.MustFrom(ctx)
-	id, err := s.resolveID(ctx, caller.UserID, req.GetId())
+func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*doxv1.Todo, error) {
+	c := caller.MustFrom(ctx)
+	id, err := s.resolveID(ctx, c.UserID, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 	existing, err := s.q.GetTodo(ctx, id)
 	if err != nil {
-		return nil, translateGetErr(err, id)
+		return nil, translateGetTodoErr(err, id)
 	}
-	if err := s.assertWritable(ctx, caller.UserID, existing); err != nil {
+	if err := s.assertWritable(ctx, c.UserID, existing); err != nil {
 		return nil, err
 	}
 
@@ -167,20 +167,20 @@ func (s *Service) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) 
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "update todo: %v", err)
 	}
-	return modelToProto(row), nil
+	return todoToProto(row), nil
 }
 
-func (s *Service) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*doxv1.DeleteTodoResponse, error) {
-	caller := authctx.MustFrom(ctx)
-	id, err := s.resolveID(ctx, caller.UserID, req.GetId())
+func (s *Todo) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*doxv1.DeleteTodoResponse, error) {
+	c := caller.MustFrom(ctx)
+	id, err := s.resolveID(ctx, c.UserID, req.GetId())
 	if err != nil {
 		return nil, err
 	}
 	existing, err := s.q.GetTodo(ctx, id)
 	if err != nil {
-		return nil, translateGetErr(err, id)
+		return nil, translateGetTodoErr(err, id)
 	}
-	if err := s.assertWritable(ctx, caller.UserID, existing); err != nil {
+	if err := s.assertWritable(ctx, c.UserID, existing); err != nil {
 		return nil, err
 	}
 	if _, err := s.q.DeleteTodo(ctx, id); err != nil {
@@ -191,7 +191,7 @@ func (s *Service) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) 
 
 // resolveID accepts either a full ULID or a unique prefix (scoped to the
 // caller's visible todos) and returns the canonical 26-char id.
-func (s *Service) resolveID(ctx context.Context, userID, raw string) (string, error) {
+func (s *Todo) resolveID(ctx context.Context, userID, raw string) (string, error) {
 	if raw == "" {
 		return "", status.Error(codes.InvalidArgument, "id is required")
 	}
@@ -220,7 +220,7 @@ func (s *Service) resolveID(ctx context.Context, userID, raw string) (string, er
 }
 
 // assertVisible returns NotFound if the caller cannot see the todo.
-func (s *Service) assertVisible(ctx context.Context, userID string, t queries.Todo) error {
+func (s *Todo) assertVisible(ctx context.Context, userID string, t queries.Todo) error {
 	if !t.ProjectID.Valid {
 		if t.CreatedBy == userID {
 			return nil
@@ -232,7 +232,7 @@ func (s *Service) assertVisible(ctx context.Context, userID string, t queries.To
 
 // assertWritable returns NotFound for invisible todos and PermissionDenied for
 // read-only access.
-func (s *Service) assertWritable(ctx context.Context, userID string, t queries.Todo) error {
+func (s *Todo) assertWritable(ctx context.Context, userID string, t queries.Todo) error {
 	if !t.ProjectID.Valid {
 		if t.CreatedBy == userID {
 			return nil
@@ -242,21 +242,21 @@ func (s *Service) assertWritable(ctx context.Context, userID string, t queries.T
 	return authz.CanWriteProjectTodos(ctx, s.q, userID, t.ProjectID.String)
 }
 
-func translateGetErr(err error, id string) error {
+func translateGetTodoErr(err error, id string) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		return status.Errorf(codes.NotFound, "todo %q not found", id)
 	}
 	return status.Errorf(codes.Internal, "get todo: %v", err)
 }
 
-func modelToProto(t queries.Todo) *doxv1.Todo {
+func todoToProto(t queries.Todo) *doxv1.Todo {
 	out := &doxv1.Todo{
 		Id:        t.ID,
 		Title:     t.Title,
 		Done:      t.Done,
+		CreatedBy: t.CreatedBy,
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
-		CreatedBy: t.CreatedBy,
 	}
 	if t.ProjectID.Valid {
 		v := t.ProjectID.String
