@@ -120,7 +120,9 @@ const manifest = {
   },
   bugs: { url: "https://github.com/lin-snow/dox/issues" },
   keywords: ["todo", "self-hosted", "cli", "tui", "dox"],
-  bin: { dox: "./dox.js" },
+  // npm strips `./`-prefixed bin values as "invalid script name"; use the
+  // plain filename instead. (Verified against npm bundled with Node 25.)
+  bin: { dox: "dox.js" },
   files: ["dox.js", "README.md"],
   engines: { node: ">=20" },
   publishConfig: { access: "public" },

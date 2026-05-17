@@ -83,7 +83,7 @@ async function flush() {
 // than setImmediate alone for flushing React 19's deferred work.
 async function flushUntil(
   predicate: () => boolean,
-  attempts = 200,
+  attempts = 1000,
 ): Promise<void> {
   for (let i = 0; i < attempts; i++) {
     if (predicate()) return;
