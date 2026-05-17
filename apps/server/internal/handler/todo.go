@@ -33,14 +33,20 @@ const (
 //   - Inbox todo (project_id NULL) is visible only to its created_by.
 //   - Project todo is visible to project owner + members.
 //   - Mutations require owner or editor; viewers are read-only.
+//
+// Holds the *sql.DB alongside *queries.Queries so mutations that also emit
+// activity events (CreateTodo on a project, UpdateTodo flipping done) can
+// wrap both writes in a single transaction via runInTx.
 type Todo struct {
 	doxv1.UnimplementedTodoServiceServer
+	db  *sql.DB
 	q   *queries.Queries
 	now func() int64
 }
 
-func NewTodo(q *queries.Queries) *Todo {
+func NewTodo(db *sql.DB, q *queries.Queries) *Todo {
 	return &Todo{
+		db:  db,
 		q:   q,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
@@ -132,14 +138,33 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 
 	id := ulid.Make().String()
 	now := s.now()
-	row, err := s.q.CreateTodo(ctx, queries.CreateTodoParams{
-		ID:          id,
-		Title:       title,
-		Description: description,
-		ProjectID:   projectID,
-		CreatedBy:   c.UserID,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+	var row queries.CreateTodoRow
+	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		var err error
+		row, err = q.CreateTodo(ctx, queries.CreateTodoParams{
+			ID:          id,
+			Title:       title,
+			Description: description,
+			ProjectID:   projectID,
+			CreatedBy:   c.UserID,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		})
+		if err != nil {
+			return err
+		}
+		if !projectID.Valid {
+			return nil
+		}
+		return emitEvent(ctx, q, eventEmission{
+			Verb:        verbTodoCreated,
+			ActorID:     c.UserID,
+			ProjectID:   projectID.String,
+			TargetType:  targetTypeTodo,
+			TargetID:    id,
+			TargetLabel: title,
+			At:          now,
+		})
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create todo: %v", err)
@@ -185,12 +210,37 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		description = next
 	}
 
-	row, err := s.q.UpdateTodo(ctx, queries.UpdateTodoParams{
-		Title:       title,
-		Done:        done,
-		Description: description,
-		UpdatedAt:   s.now(),
-		ID:          id,
+	now := s.now()
+	// Emit a todo_completed event only on the false→true transition for a
+	// project-scoped todo. Re-marking an already-done todo or toggling back to
+	// open should be silent in the feed.
+	emitCompleted := !existing.Done && done && existing.ProjectID.Valid
+
+	var row queries.UpdateTodoRow
+	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		var err error
+		row, err = q.UpdateTodo(ctx, queries.UpdateTodoParams{
+			Title:       title,
+			Done:        done,
+			Description: description,
+			UpdatedAt:   now,
+			ID:          id,
+		})
+		if err != nil {
+			return err
+		}
+		if !emitCompleted {
+			return nil
+		}
+		return emitEvent(ctx, q, eventEmission{
+			Verb:        verbTodoCompleted,
+			ActorID:     c.UserID,
+			ProjectID:   existing.ProjectID.String,
+			TargetType:  targetTypeTodo,
+			TargetID:    id,
+			TargetLabel: title,
+			At:          now,
+		})
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "update todo: %v", err)

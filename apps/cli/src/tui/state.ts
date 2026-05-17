@@ -1,4 +1,4 @@
-import type { Project, Todo } from "@dox/core";
+import type { ActivityEvent, Project, Todo } from "@dox/core";
 
 import type { Filter } from "./components/Sidebar";
 import { filterKey } from "./components/Sidebar";
@@ -20,6 +20,7 @@ export interface State {
   focus: Focus;
   todos: Todo[];
   projects: Project[];
+  events: ActivityEvent[];
   filter: Filter;
   cursor: number;
   sidebarCursor: number;
@@ -50,6 +51,7 @@ export interface State {
 export type Action =
   | { type: "TODOS_LOADED"; todos: Todo[] }
   | { type: "PROJECTS_LOADED"; projects: Project[] }
+  | { type: "EVENTS_LOADED"; events: ActivityEvent[] }
   | { type: "LOAD_ERROR"; error: string }
   | { type: "SYNC_START" }
   | { type: "SYNC_END" }
@@ -94,6 +96,7 @@ export const initialState: State = {
   focus: "list",
   todos: [],
   projects: [],
+  events: [],
   filter: "inbox",
   cursor: 0,
   sidebarCursor: 0,
@@ -138,6 +141,8 @@ export function reducer(state: State, action: Action): State {
     }
     case "PROJECTS_LOADED":
       return { ...state, projects: action.projects };
+    case "EVENTS_LOADED":
+      return { ...state, events: action.events };
     case "LOAD_ERROR":
       return { ...state, loading: false, syncing: false, error: action.error };
     case "SYNC_START":

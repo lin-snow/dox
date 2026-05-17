@@ -7,3 +7,4 @@ export * from "./auth";
 export * from "./project";
 export * from "./user";
 export * from "./invite";
+export * from "./event";

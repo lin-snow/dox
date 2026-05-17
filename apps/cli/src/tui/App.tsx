@@ -3,9 +3,10 @@ import { Spinner } from "@inkjs/ui";
 import { homedir } from "node:os";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
-import type { Project, ServerInfo, Todo, TodoApi } from "@dox/core";
+import type { EventsApi, Project, ServerInfo, Todo, TodoApi } from "@dox/core";
 import { fetchServerInfo } from "@dox/core";
 
+import { ActivityFeed } from "./components/ActivityFeed";
 import { DualBarChart } from "./components/DualBarChart";
 import { ErrorAlert } from "./components/ErrorAlert";
 import { Footer } from "./components/Footer";
@@ -33,6 +34,9 @@ import type { Filter } from "./components/Sidebar";
 import { filterKey } from "./components/Sidebar";
 
 const POLL_INTERVAL_MS = 30_000;
+// Activity feed updates passively; a slower cadence keeps the events query
+// load proportional to its UX value (a glance, not the working surface).
+const EVENTS_POLL_INTERVAL_MS = 60_000;
 const VERSION = "v0.0.0";
 const ACTIVITY_DAYS = 14;
 
@@ -45,15 +49,17 @@ interface ProjectsApi {
 interface AppProps {
   api: TodoApi;
   projects?: ProjectsApi;
+  events?: EventsApi;
   identity?: { userName?: string; server?: string; configPath?: string };
 }
 
-export function App({ api, projects, identity }: AppProps) {
+export function App({ api, projects, events, identity }: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const { exit } = useApp();
   const { stdout } = useStdout();
   const totalCols = stdout?.columns ?? 100;
+  const totalRows = stdout?.rows ?? 40;
 
   const refresh = useCallback(async () => {
     dispatch({ type: "SYNC_START" });
@@ -76,6 +82,26 @@ export function App({ api, projects, identity }: AppProps) {
     const timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [refresh]);
+
+  // Separate, slower poll for the activity feed — see EVENTS_POLL_INTERVAL_MS.
+  // Silently swallows errors so a 500 on /v1/events doesn't paint a banner over
+  // the main todos view; the panel just keeps showing the last good snapshot.
+  const refreshEvents = useCallback(async () => {
+    if (!events) return;
+    try {
+      const list = await events.list();
+      dispatch({ type: "EVENTS_LOADED", events: list });
+    } catch {
+      // Intentional: events are a non-critical sidebar; main flows keep working.
+    }
+  }, [events]);
+
+  useEffect(() => {
+    if (!events) return;
+    void refreshEvents();
+    const timer = setInterval(() => void refreshEvents(), EVENTS_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [events, refreshEvents]);
 
   // One-shot fetch: server build identity doesn't change at runtime, so we
   // don't poll. Failures stay silent — the Status panel just shows "—" until a
@@ -337,19 +363,34 @@ export function App({ api, projects, identity }: AppProps) {
   };
 
   // ── layout widths ─────────────────────────────────────────────────────────
-  // Mirrors the SurgeDM grid. Subtract 2 cols for the outer paddingX={1}
-  // on each side, plus 4 cols of inter-panel gap (2 gaps × 2 cells each).
+  // Two columns side-by-side. Left column stacks the Server|Status header row
+  // on top of a tall Todos list. Right column has a tall combined Activity
+  // panel on top (chart + Recent feed inside one TitledPanel) with the
+  // contextual Todo Info below it. Subtract 2 cols for outer paddingX={1}.
   const usable = Math.max(60, totalCols - 2);
+  const colGap = 2;
+  const leftColW = Math.max(40, Math.floor(usable * 0.6));
+  const rightColW = Math.max(30, usable - leftColW - colGap);
   const topGap = 2;
+  const topCombined = leftColW - topGap;
   // Server panel needs to fit the 23-cell-wide logo + 1-cell padding either
   // side + 1-cell border either side → minimum width 27.
-  const topServerW = Math.max(27, Math.floor(usable * 0.26));
-  const topRest = usable - topServerW - topGap * 2;
-  const topActivityW = Math.max(26, Math.floor(topRest * 0.42));
-  const topStatsW = Math.max(30, topRest - topActivityW);
-  const botGap = 2;
-  const botListW = Math.max(40, Math.floor(usable * 0.6));
-  const botRightW = Math.max(30, usable - botListW - botGap);
+  const serverW = Math.max(27, Math.floor(topCombined * 0.46));
+  const statusW = Math.max(26, topCombined - serverW);
+
+  // ── layout heights ────────────────────────────────────────────────────────
+  // Grow with the terminal so a tall window translates directly into a taller
+  // Todos viewport. Reserves a few rows for the footer + outer padding so the
+  // bottom panels don't push the footer off-screen.
+  const innerH = Math.max(32, totalRows - 4);
+  const topRowH = 14;
+  const rowGap = 1;
+  const todosH = Math.max(18, innerH - topRowH - rowGap);
+  // Right column splits into Activity (top, taller than topRowH but capped so
+  // it doesn't dominate) and TodoInfo (bottom, absorbs the rest). Sums to
+  // innerH so both columns end on the same row.
+  const todoInfoH = Math.max(11, Math.min(18, Math.floor(innerH * 0.38)));
+  const activityH = Math.max(15, innerH - todoInfoH - rowGap);
 
   const activeTab = filterToTabKey(state.filter);
   const projectById = useMemo(
@@ -364,14 +405,11 @@ export function App({ api, projects, identity }: AppProps) {
   const showSpinner = state.loading && state.todos.length === 0;
 
   // ── Todos list viewport ───────────────────────────────────────────────────
-  // The right column below ("Todo Info" 13 + spacer 1 + placeholder 9) totals
-  // 23 rows. The Todos panel's chrome above the list eats: border-top 1 +
-  // paddingY-top 1 + meta 1 + marginTop 1 + tabs 1 + marginTop 1 = 6, plus
-  // paddingY-bottom 1 + border-bottom 1 = 2 below. That leaves 23 - 8 = 15
-  // rows for the list itself. Capping the rendered slice to that height keeps
-  // the bottom row's two columns aligned and stops a long todo list from
-  // pushing the footer off-screen.
-  const LIST_VIEWPORT_H = Math.max(5, 13 + 1 + 9 - 8);
+  // Panel chrome above the list eats: border-top 1 + paddingY-top 1 + meta 1
+  // + marginTop 1 + tabs 1 + marginTop 1 = 6, plus paddingY-bottom 1 +
+  // border-bottom 1 = 2 below — 8 rows total. Capping the rendered slice to
+  // what fits keeps the panel from pushing the footer off-screen.
+  const LIST_VIEWPORT_H = Math.max(5, todosH - 8);
   const listWindow = sliceWindow(visible, state.cursor, LIST_VIEWPORT_H);
 
   // Full-screen settings view replaces the main grid when active. Kept as an
@@ -582,64 +620,37 @@ export function App({ api, projects, identity }: AppProps) {
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      {/* ── row 1: server · status · stats ─────────────────────────────── */}
       <Box>
-        <TitledPanel title="Server" width={topServerW} paddingY={1} height={14}>
-          <Logo />
-          <Box marginTop={1}>
-            <Text color={color.muted}>serving at </Text>
-            <Text color={color.accent2} wrap="truncate">
-              {identity?.server ?? "local"}
-            </Text>
-          </Box>
-        </TitledPanel>
-
-        <Box width={topGap} />
-
-        <TitledPanel title="Status" width={topActivityW} paddingY={1} height={14}>
-          <StatusPanel
-            userName={identity?.userName}
-            server={identity?.server}
-            configPath={identity?.configPath}
-            serverInfo={serverInfo}
-            clientVersion={VERSION}
-            syncing={state.syncing}
-          />
-        </TitledPanel>
-
-        <Box width={topGap} />
-
-        <TitledPanel title="Activity" width={topStatsW} paddingY={1} height={14}>
-          {/* Header: legend + totals — a one-line read of what the chart shows. */}
+        {/* ── left column: Server|Status header row + tall Todos list ─── */}
+        <Box flexDirection="column" width={leftColW}>
           <Box>
-            <Text color={color.muted} dimColor>▒</Text>
-            <Text color={color.muted}>{" Created "}</Text>
-            <Text color={color.accent}>{sum(createdSeries)}</Text>
-            <Text color={color.muted}>{"   "}</Text>
-            <Text color={color.accent}>█</Text>
-            <Text color={color.muted}>{" Done "}</Text>
-            <Text color={color.success}>{sum(doneSeries)}</Text>
-            <Text color={color.muted}>{`   · ${ACTIVITY_DAYS} days`}</Text>
-          </Box>
-          <Box marginTop={1}>
-            <DualBarChart
-              primary={doneSeries}
-              secondary={createdSeries}
-              rows={5}
-              ySteps={2}
-            />
-          </Box>
-          {/* X-axis ruler + endpoints. Width matches `rows*2 chars wide chart`
-              + 4 chars for the y-axis gutter. */}
-          <XAxis days={ACTIVITY_DAYS} />
-        </TitledPanel>
-      </Box>
+            <TitledPanel title="Server" width={serverW} paddingY={1} height={topRowH}>
+              <Logo />
+              <Box marginTop={1}>
+                <Text color={color.muted}>serving at </Text>
+                <Text color={color.accent2} wrap="truncate">
+                  {identity?.server ?? "local"}
+                </Text>
+              </Box>
+            </TitledPanel>
 
-      <Box height={1} />
+            <Box width={topGap} />
 
-      {/* ── row 2: todo list (60%) + 2 placeholder panels stacked (40%) ── */}
-      <Box>
-        <TitledPanel title="Todos" width={botListW} paddingY={1} focused>
+            <TitledPanel title="Status" width={statusW} paddingY={1} height={topRowH}>
+              <StatusPanel
+                userName={identity?.userName}
+                server={identity?.server}
+                configPath={identity?.configPath}
+                serverInfo={serverInfo}
+                clientVersion={VERSION}
+                syncing={state.syncing}
+              />
+            </TitledPanel>
+          </Box>
+
+          <Box height={rowGap} />
+
+          <TitledPanel title="Todos" width={leftColW} paddingY={1} height={todosH} focused>
           {/* Meta line — at-a-glance summary that survives even when the list
               scrolls offscreen on tiny terminals. */}
           <Box>
@@ -700,11 +711,11 @@ export function App({ api, projects, identity }: AppProps) {
                     todo={t}
                     nowMs={nowMs}
                     highlighted={listWindow.start + idx === state.cursor}
-                    width={botListW - 4}
+                    width={leftColW - 4}
                   />
                 ))}
                 {(listWindow.moreAbove > 0 || listWindow.moreBelow > 0) && (
-                  <Box width={botListW - 4}>
+                  <Box width={leftColW - 4}>
                     <Text color={color.muted} dimColor>
                       {listWindow.moreAbove > 0 ? `↑ ${listWindow.moreAbove} more` : ""}
                     </Text>
@@ -718,16 +729,60 @@ export function App({ api, projects, identity }: AppProps) {
             )}
           </Box>
         </TitledPanel>
+        </Box>
 
-        <Box width={botGap} />
+        <Box width={colGap} />
 
-        {/* Right column: cursored-todo info on top + a placeholder below until
-            we decide what lives there. */}
-        <Box flexDirection="column" width={botRightW}>
+        {/* Right column: a single tall Activity panel (chart on top, Recent
+            feed below the divider) sits at the top — free to exceed the
+            Server/Status header row. TodoInfo sits at the bottom-right. */}
+        <Box flexDirection="column" width={rightColW}>
+          <TitledPanel
+            title="Activity"
+            width={rightColW}
+            paddingY={1}
+            height={activityH}
+            borderTint={color.accent2}
+          >
+            {/* Header: legend + totals — a one-line read of what the chart shows. */}
+            <Box>
+              <Text color={color.muted} dimColor>▒</Text>
+              <Text color={color.muted}>{" Created "}</Text>
+              <Text color={color.accent}>{sum(createdSeries)}</Text>
+              <Text color={color.muted}>{"   "}</Text>
+              <Text color={color.accent}>█</Text>
+              <Text color={color.muted}>{" Done "}</Text>
+              <Text color={color.success}>{sum(doneSeries)}</Text>
+              <Text color={color.muted}>{`   · ${ACTIVITY_DAYS} days`}</Text>
+            </Box>
+            <Box marginTop={1}>
+              <DualBarChart
+                primary={doneSeries}
+                secondary={createdSeries}
+                rows={5}
+                ySteps={2}
+              />
+            </Box>
+            {/* X-axis ruler + endpoints. Width matches `rows*2 chars wide chart`
+                + 4 chars for the y-axis gutter. */}
+            <XAxis days={ACTIVITY_DAYS} />
+            {/* In-panel divider separating the trend chart from the live feed.
+                Keeps both sub-sections inside one TitledPanel so the right
+                column reads as a single Activity module. */}
+            <Box marginTop={1}>
+              <Text color={color.muted} dimColor>
+                {"─ Recent ".padEnd(Math.max(0, rightColW - 4), "─")}
+              </Text>
+            </Box>
+            <Box marginTop={1} flexGrow={1}>
+              <ActivityFeed events={state.events} nowMs={nowMs} />
+            </Box>
+          </TitledPanel>
+          <Box height={rowGap} />
           <TitledPanel
             title="Todo Info"
-            width={botRightW}
-            height={13}
+            width={rightColW}
+            height={todoInfoH}
             paddingY={1}
             borderTint={color.accent3}
           >
@@ -742,8 +797,6 @@ export function App({ api, projects, identity }: AppProps) {
               nowMs={nowMs}
             />
           </TitledPanel>
-          <Box height={1} />
-          <PlaceholderPanel title="Coming soon" width={botRightW} height={9} />
         </Box>
       </Box>
 
@@ -867,18 +920,6 @@ function TodoRow({
   );
 }
 
-function PlaceholderPanel({ title, width, height }: { title: string; width: number; height: number }) {
-  return (
-    <TitledPanel title={title} width={width} height={height} paddingY={1} borderTint={color.muted}>
-      <Box flexGrow={1} alignItems="center" justifyContent="center">
-        <Text color={color.muted} dimColor>
-          TBD
-        </Text>
-      </Box>
-    </TitledPanel>
-  );
-}
-
 const listHints: ReadonlyArray<readonly [string, string]> = [
   ["␣", "toggle"],
   ["i", "todo"],
@@ -955,17 +996,21 @@ function sum(xs: number[]): number {
 
 // X-axis ruler under the dual bar chart. `days × 2` cells matches the chart
 // width (each day is rendered as `▒█`); 4-cell leading gutter aligns with the
-// y-axis labels inside DualBarChart.
+// y-axis labels inside DualBarChart. Total row width is pinned to gutter +
+// chart so the right-edge "today" label lines up with today's bar instead of
+// drifting to the parent panel's right border.
 function XAxis({ days }: { days: number }) {
+  const gutter = 4;
   const chartWidth = days * 2;
+  const totalW = gutter + chartWidth;
   return (
-    <Box flexDirection="column">
-      <Box>
-        <Text color={color.muted}>{"    "}</Text>
+    <Box flexDirection="column" width={totalW}>
+      <Box width={totalW}>
+        <Text color={color.muted}>{" ".repeat(gutter)}</Text>
         <Text color={color.muted}>{"─".repeat(chartWidth)}</Text>
       </Box>
-      <Box>
-        <Text color={color.muted}>{"    "}</Text>
+      <Box width={totalW}>
+        <Text color={color.muted}>{" ".repeat(gutter)}</Text>
         <Text color={color.muted}>{`${days}d ago`}</Text>
         <Box flexGrow={1} />
         <Text color={color.muted}>today</Text>

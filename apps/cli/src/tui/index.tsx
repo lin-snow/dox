@@ -3,6 +3,7 @@ import { render } from "ink";
 
 import {
   type Config,
+  EventClient,
   ProjectClient,
   TodoClient,
   buildFetcher,
@@ -30,10 +31,12 @@ function Root({ initialConfig, initialReason }: RootProps) {
   const fetcher = buildFetcher(config, realIO());
   const api = new TodoClient(fetcher, config.server);
   const projects = new ProjectClient(fetcher, config.server);
+  const events = new EventClient(fetcher, config.server);
   return (
     <App
       api={api}
       projects={projects}
+      events={events}
       identity={{
         userName: config.userName,
         server: config.server,

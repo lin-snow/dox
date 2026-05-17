@@ -40,8 +40,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	user := handler.NewUser(q, secret)
 	proj := handler.NewProject(q)
-	inv := handler.NewInvite(q)
-	td := handler.NewTodo(q)
+	inv := handler.NewInvite(dbConn, q)
+	td := handler.NewTodo(dbConn, q)
+	ev := handler.NewEvent(q)
 
 	mux := runtime.NewServeMux()
 	// user.User implements both AuthService (public) and UserService (auth).
@@ -59,6 +60,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 	if err := doxv1.RegisterTodoServiceHandlerServer(ctx, mux, td); err != nil {
 		return fmt.Errorf("register todo: %w", err)
+	}
+	if err := doxv1.RegisterEventServiceHandlerServer(ctx, mux, ev); err != nil {
+		return fmt.Errorf("register event: %w", err)
 	}
 
 	srv := &http.Server{

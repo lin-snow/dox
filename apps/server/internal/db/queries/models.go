@@ -8,6 +8,17 @@ import (
 	"database/sql"
 )
 
+type Event struct {
+	ID          string
+	Verb        string
+	ActorID     string
+	ProjectID   string
+	TargetType  string
+	TargetID    string
+	TargetLabel string
+	CreatedAt   int64
+}
+
 type Invite struct {
 	CodeHash  string
 	IssuedBy  string

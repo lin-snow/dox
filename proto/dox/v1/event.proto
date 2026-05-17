@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package dox.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
+
+// Event is a single activity row visible to the caller. Emitted by the server
+// at mutation points (todo create / complete, project member join) and read by
+// clients via ListEvents. Read-only — no mutation RPCs.
+message Event {
+  // ULID, primary key.
+  string id = 1;
+  // Verb describing what happened. v1 values:
+  //   "todo_created" | "todo_completed" | "member_joined"
+  string verb = 2;
+  // The user who triggered the event.
+  string actor_id = 3;
+  // Snapshot of the actor's name at read time (joined server-side).
+  string actor_name = 4;
+  // The project the event happened in. Always set in v1.
+  string project_id = 5;
+  // Snapshot of the project's name at read time.
+  string project_name = 6;
+  // Snapshot of the project's color swatch.
+  string project_color = 7;
+  // Either "todo" or "project" — tells clients what target_id refers to.
+  string target_type = 8;
+  // ULID of the underlying todo or project.
+  string target_id = 9;
+  // Snapshot of the target's display label (todo title / project name) taken
+  // at write time, so renamed/deleted targets still render sensibly.
+  string target_label = 10;
+  // Event time, UTC unix milliseconds.
+  int64 created_at = 11;
+}
+
+// EventService surfaces the activity feed for the authenticated user.
+service EventService {
+  // ListEvents returns recent events from the caller's visible projects, newest
+  // first. Empty response when the caller has no project memberships.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (google.api.http) = {get: "/v1/events"};
+  }
+}
+
+message ListEventsRequest {
+  // Max events to return. Server clamps to [1, 50]; 0 falls back to 20.
+  uint32 limit = 1;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+}

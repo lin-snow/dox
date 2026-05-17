@@ -72,6 +72,34 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/events:
+        get:
+            tags:
+                - EventService
+            description: |-
+                ListEvents returns recent events from the caller's visible projects, newest
+                 first. Empty response when the caller has no project memberships.
+            operationId: EventService_ListEvents
+            parameters:
+                - name: limit
+                  in: query
+                  description: Max events to return. Server clamps to [1, 50]; 0 falls back to 20.
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListEventsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/invites:
         post:
             tags:
@@ -646,6 +674,50 @@ components:
         DeleteUserResponse:
             type: object
             properties: {}
+        Event:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ULID, primary key.
+                verb:
+                    type: string
+                    description: |-
+                        Verb describing what happened. v1 values:
+                           "todo_created" | "todo_completed" | "member_joined"
+                actorId:
+                    type: string
+                    description: The user who triggered the event.
+                actorName:
+                    type: string
+                    description: Snapshot of the actor's name at read time (joined server-side).
+                projectId:
+                    type: string
+                    description: The project the event happened in. Always set in v1.
+                projectName:
+                    type: string
+                    description: Snapshot of the project's name at read time.
+                projectColor:
+                    type: string
+                    description: Snapshot of the project's color swatch.
+                targetType:
+                    type: string
+                    description: Either "todo" or "project" — tells clients what target_id refers to.
+                targetId:
+                    type: string
+                    description: ULID of the underlying todo or project.
+                targetLabel:
+                    type: string
+                    description: |-
+                        Snapshot of the target's display label (todo title / project name) taken
+                         at write time, so renamed/deleted targets still render sensibly.
+                createdAt:
+                    type: string
+                    description: Event time, UTC unix milliseconds.
+            description: |-
+                Event is a single activity row visible to the caller. Emitted by the server
+                 at mutation points (todo create / complete, project member join) and read by
+                 clients via ListEvents. Read-only — no mutation RPCs.
         GoogleProtobufAny:
             type: object
             properties:
@@ -672,6 +744,13 @@ components:
                     type: string
                 expiresAt:
                     type: string
+        ListEventsResponse:
+            type: object
+            properties:
+                events:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Event'
         ListProjectMembersResponse:
             type: object
             properties:
@@ -948,6 +1027,8 @@ tags:
              invite code or registration_open=true.
            - Login authenticates an existing user with username + password and
              returns a JWT.
+    - name: EventService
+      description: EventService surfaces the activity feed for the authenticated user.
     - name: InviteService
       description: |-
         InviteService issues and accepts invitation codes. A server invite

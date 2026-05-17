@@ -34,7 +34,7 @@ func newTodoFixture(t *testing.T) (*handler.Todo, *queries.Queries, context.Cont
 	ctx := caller.With(context.Background(), caller.Caller{
 		UserID: user.ID, UserName: user.Name, Role: user.Role,
 	})
-	return handler.NewTodo(q), q, ctx
+	return handler.NewTodo(conn, q), q, ctx
 }
 
 func seedUser(t *testing.T, q *queries.Queries, name, role string) queries.User {

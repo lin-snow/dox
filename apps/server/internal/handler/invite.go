@@ -25,12 +25,14 @@ const defaultInviteTTL = 24 * time.Hour
 //     via Register; existing users redeem via AcceptInvite.
 type Invite struct {
 	doxv1.UnimplementedInviteServiceServer
+	db  *sql.DB
 	q   *queries.Queries
 	now func() int64
 }
 
-func NewInvite(q *queries.Queries) *Invite {
+func NewInvite(db *sql.DB, q *queries.Queries) *Invite {
 	return &Invite{
+		db:  db,
 		q:   q,
 		now: func() int64 { return time.Now().UTC().UnixMilli() },
 	}
@@ -97,6 +99,10 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		return nil, status.Error(codes.InvalidArgument, "code is required")
 	}
 	now := s.now()
+	// ConsumeInvite happens outside the tx so its sql.ErrNoRows surface stays a
+	// clean NotFound for the client. Once we know the row is real, the member
+	// insert + the member_joined event share a tx so the feed can't diverge
+	// from membership.
 	row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
 		Now:      now,
 		UsedAt:   sql.NullInt64{Int64: now, Valid: true},
@@ -113,16 +119,34 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		// Server invites have no project — they only make sense via Register.
 		return nil, status.Error(codes.FailedPrecondition, "server invites must be redeemed via Register on a fresh client")
 	}
-	if err := s.q.AddProjectMember(ctx, queries.AddProjectMemberParams{
-		ProjectID: row.ProjectID.String,
-		UserID:    c.UserID,
-		Role:      row.Role.String,
-		AddedAt:   now,
+	projectID := row.ProjectID.String
+	if err := runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		if err := q.AddProjectMember(ctx, queries.AddProjectMemberParams{
+			ProjectID: projectID,
+			UserID:    c.UserID,
+			Role:      row.Role.String,
+			AddedAt:   now,
+		}); err != nil {
+			return err
+		}
+		proj, err := q.GetProject(ctx, projectID)
+		if err != nil {
+			return err
+		}
+		return emitEvent(ctx, q, eventEmission{
+			Verb:        verbMemberJoined,
+			ActorID:     c.UserID,
+			ProjectID:   projectID,
+			TargetType:  targetTypeProject,
+			TargetID:    projectID,
+			TargetLabel: proj.Name,
+			At:          now,
+		})
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "add member: %v", err)
 	}
 	return &doxv1.AcceptInviteResponse{
-		ProjectId: row.ProjectID.String,
+		ProjectId: projectID,
 		Role:      row.Role.String,
 	}, nil
 }

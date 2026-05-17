@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { render } from "ink-testing-library";
 
-import type { Todo, TodoApi } from "@dox/core";
+import type { ActivityEvent, EventsApi, Todo, TodoApi } from "@dox/core";
 
 import { App } from "./App";
 
@@ -86,8 +86,8 @@ describe("App", () => {
     for (const inst of instances) inst.unmount();
   });
 
-  function mountApp(api: TodoApi) {
-    const inst = render(<App api={api} />);
+  function mountApp(api: TodoApi, events?: EventsApi) {
+    const inst = render(<App api={api} events={events} />);
     instances.push(inst);
     return inst;
   }
@@ -256,6 +256,40 @@ describe("App", () => {
     expect(frame).toContain("Todo");
     expect(frame).toContain("beta task");
     expect(frame).toContain("DESCRIPTION");
+  });
+
+  test("activity feed renders events from the api", async () => {
+    const { api } = makeFakeApi([]);
+    const event: ActivityEvent = {
+      id: "01EVENTSAMPLE0000000000000",
+      verb: "todo_completed",
+      actorId: "u1",
+      actorName: "alice",
+      projectId: "p1",
+      projectName: "API",
+      projectColor: "magenta",
+      targetType: "todo",
+      targetId: "01TODO0000000000000000000",
+      targetLabel: "fix login bug",
+      // ~30s ago so relativeTime renders a stable "30s" or so.
+      createdAt: String(Date.now() - 30_000),
+    };
+    const events: EventsApi = { list: async () => [event] };
+    const { lastFrame } = mountApp(api, events);
+    await flush();
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("alice");
+    expect(frame).toContain("fix login bug");
+  });
+
+  test("activity feed shows empty-state CTA without events", async () => {
+    const { api } = makeFakeApi([]);
+    const events: EventsApi = { list: async () => [] };
+    const { lastFrame } = mountApp(api, events);
+    await flush();
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("no activity yet");
+    expect(frame).toContain("invite teammates");
   });
 
   // With more todos than the viewport allows, the list slices to a window and
