@@ -3,16 +3,18 @@ import type { Project } from "@dox/core";
 
 import { color, icon } from "../theme";
 
-export type Filter = "inbox" | "all" | { type: "project"; id: string };
+// "inbox" = private todos with no project (project_id IS NULL on the server).
+// Surfaced to users as "Private" — see App.tsx tabs. Key stays "inbox" for
+// persistence stability.
+export type Filter = "inbox" | { type: "project"; id: string };
 
 export function filterKey(f: Filter): string {
-  if (f === "inbox" || f === "all") return f;
+  if (f === "inbox") return f;
   return `p:${f.id}`;
 }
 
 export function filterLabel(f: Filter, projects: Project[]): string {
-  if (f === "inbox") return "Inbox";
-  if (f === "all") return "All";
+  if (f === "inbox") return "Private";
   const p = projects.find((p) => p.id === f.id);
   return p?.name ?? "Project";
 }
@@ -22,7 +24,7 @@ interface SidebarProps {
   current: Filter;
   focused: boolean;
   cursor: number;
-  counts: { inbox: number; all: number; perProject: Record<string, number> };
+  counts: { inbox: number; perProject: Record<string, number> };
 }
 
 interface Row {
@@ -35,8 +37,7 @@ interface Row {
 
 export function Sidebar({ projects, current, focused, cursor, counts }: SidebarProps) {
   const rows: Row[] = [
-    { key: "inbox", label: "Inbox", count: counts.inbox },
-    { key: "all", label: "All", count: counts.all },
+    { key: "inbox", label: "Private", count: counts.inbox },
   ];
   if (projects.length > 0) {
     rows.push({ key: "__divider__", label: "", count: 0, divider: true });

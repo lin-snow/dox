@@ -195,4 +195,34 @@ describe("App", () => {
     await flush();
     expect(lastFrame() ?? "").not.toContain("keybindings");
   });
+
+  // Regression guard for the Inbox→Private rename. The tab key (filter literal)
+  // stays "inbox" but the visible label must read "Private" so users don't
+  // mistake the personal todo bucket for an auto-created project. "All" used to
+  // sit between Inbox and Done; both the new label and the absence of "All"
+  // are checked here.
+  test("Private tab is shown, All tab is gone", async () => {
+    const { api } = makeFakeApi([makeTodo({ title: "x" })]);
+    const { lastFrame } = mountApp(api);
+    await flush();
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("Private");
+    expect(frame).not.toMatch(/\bAll\b\s*\d/);
+  });
+
+  // With more todos than the viewport allows, the list slices to a window and
+  // shows a "↓ more" hint. Cursor starts at 0, so a high-index title must not
+  // be visible.
+  test("long lists are windowed with a more-below indicator", async () => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      makeTodo({ title: `task-${String(i).padStart(2, "0")}` }),
+    );
+    const { api } = makeFakeApi(many);
+    const { lastFrame } = mountApp(api);
+    await flush();
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("task-00");
+    expect(frame).not.toContain("task-39");
+    expect(frame).toMatch(/\d+ more ↓/);
+  });
 });

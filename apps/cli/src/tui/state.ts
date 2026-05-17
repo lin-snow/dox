@@ -76,7 +76,7 @@ export const initialState: State = {
   focus: "list",
   todos: [],
   projects: [],
-  filter: "all",
+  filter: "inbox",
   cursor: 0,
   sidebarCursor: 0,
   editingTitle: "",
@@ -91,16 +91,17 @@ export const initialState: State = {
   deletingProjectId: null,
 };
 
-// Inbox = todos with no project; project filter = todos matching projectId.
+// Private (filter key "inbox") = todos with no project; project filter = todos
+// matching projectId. There is no "all" filter — cycling moves only across
+// Private and per-project tabs.
 export function visibleTodos(state: State): Todo[] {
   const f = state.filter;
-  if (f === "all") return state.todos;
   if (f === "inbox") return state.todos.filter((t) => !t.projectId);
   return state.todos.filter((t) => t.projectId === f.id);
 }
 
 export function filterList(projects: Project[]): Filter[] {
-  return ["inbox", "all", ...projects.map((p) => ({ type: "project" as const, id: p.id }))];
+  return ["inbox", ...projects.map((p) => ({ type: "project" as const, id: p.id }))];
 }
 
 function clampCursor(cursor: number, length: number): number {
@@ -218,7 +219,7 @@ export function reducer(state: State, action: Action): State {
         typeof state.filter !== "string" &&
         state.filter.type === "project" &&
         state.filter.id === action.id;
-      const filter: Filter = wasActiveFilter ? "all" : state.filter;
+      const filter: Filter = wasActiveFilter ? "inbox" : state.filter;
       const next = {
         ...state,
         projects,

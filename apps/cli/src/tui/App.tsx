@@ -310,7 +310,6 @@ export function App({ api, projects, identity }: AppProps) {
   const botRightW = Math.max(30, usable - botListW - botGap);
 
   const activeTab = filterToTabKey(state.filter);
-  const showProjectColumn = state.filter === "all";
   const projectById = useMemo(
     () => new Map(state.projects.map((p) => [p.id, p])),
     [state.projects],
@@ -321,6 +320,17 @@ export function App({ api, projects, identity }: AppProps) {
   const nowMs = Date.now();
 
   const showSpinner = state.loading && state.todos.length === 0;
+
+  // ── Todos list viewport ───────────────────────────────────────────────────
+  // The right column below ("Todo Info" 13 + spacer 1 + placeholder 9) totals
+  // 23 rows. The Todos panel's chrome above the list eats: border-top 1 +
+  // paddingY-top 1 + meta 1 + marginTop 1 + tabs 1 + marginTop 1 = 6, plus
+  // paddingY-bottom 1 + border-bottom 1 = 2 below. That leaves 23 - 8 = 15
+  // rows for the list itself. Capping the rendered slice to that height keeps
+  // the bottom row's two columns aligned and stops a long todo list from
+  // pushing the footer off-screen.
+  const LIST_VIEWPORT_H = Math.max(5, 13 + 1 + 9 - 8);
+  const listWindow = sliceWindow(visible, state.cursor, LIST_VIEWPORT_H);
 
   // Full-screen settings view replaces the main grid when active. Kept as an
   // early return so we don't have to gate every grid sub-render below.
@@ -535,13 +545,27 @@ export function App({ api, projects, identity }: AppProps) {
           <Box marginTop={1}>
             <Tabs
               tabs={[
-                { key: "inbox", label: "Inbox", count: state.todos.filter((t) => !t.projectId).length },
-                { key: "all", label: "All", count: state.todos.length },
-                { key: "done", label: "Done", count: state.todos.filter((t) => t.done).length },
+                {
+                  key: "inbox",
+                  label: "Private",
+                  count: state.todos.filter((t) => !t.projectId).length,
+                  kind: "system",
+                  prefixIcon: icon.brand,
+                },
+                {
+                  key: "done",
+                  label: "Done",
+                  count: state.todos.filter((t) => t.done).length,
+                  kind: "system",
+                  prefixIcon: icon.brand,
+                },
                 ...state.projects.map((p) => ({
                   key: `p:${p.id}`,
                   label: p.name,
                   count: state.todos.filter((t) => t.projectId === p.id).length,
+                  kind: "project" as const,
+                  prefixIcon: icon.on,
+                  prefixColor: swatchColor(p.color),
                 })),
               ]}
               activeKey={activeTab}
@@ -555,20 +579,28 @@ export function App({ api, projects, identity }: AppProps) {
                 {"  "}nothing here — press <Text color={color.accent}>i</Text> to add a todo
               </Text>
             ) : (
-              visible.map((t, idx) => {
-                const proj = t.projectId ? projectById.get(t.projectId) ?? null : null;
-                return (
+              <>
+                {listWindow.items.map((t, idx) => (
                   <TodoRow
                     key={t.id}
                     todo={t}
-                    project={proj}
-                    showProject={showProjectColumn}
                     nowMs={nowMs}
-                    highlighted={idx === state.cursor}
+                    highlighted={listWindow.start + idx === state.cursor}
                     width={botListW - 4}
                   />
-                );
-              })
+                ))}
+                {(listWindow.moreAbove > 0 || listWindow.moreBelow > 0) && (
+                  <Box width={botListW - 4}>
+                    <Text color={color.muted} dimColor>
+                      {listWindow.moreAbove > 0 ? `↑ ${listWindow.moreAbove} more` : ""}
+                    </Text>
+                    <Box flexGrow={1} />
+                    <Text color={color.muted} dimColor>
+                      {listWindow.moreBelow > 0 ? `${listWindow.moreBelow} more ↓` : ""}
+                    </Text>
+                  </Box>
+                )}
+              </>
             )}
           </Box>
         </TitledPanel>
@@ -683,15 +715,11 @@ function tildifyPath(path: string): string {
 
 function TodoRow({
   todo,
-  project,
-  showProject,
   nowMs,
   highlighted,
   width,
 }: {
   todo: Todo;
-  project: Project | null;
-  showProject: boolean;
   nowMs: number;
   highlighted: boolean;
   width: number;
@@ -700,9 +728,7 @@ function TodoRow({
   const markColor = todo.done ? color.success : highlighted ? color.accent : color.muted;
   const bar = highlighted ? icon.selectBar : " ";
   const age = relativeTime(nowMs, todo.updatedAt);
-  // Right-side fixed cells so titles always truncate against the same gutter.
   const ageWidth = 4;
-  const projectWidth = showProject ? 12 : 0;
   return (
     <Box width={width}>
       <Text color={color.accent}>{bar}</Text>
@@ -720,18 +746,6 @@ function TodoRow({
           {todo.title}
         </Text>
       </Box>
-      {showProject && (
-        <Box width={projectWidth} justifyContent="flex-end">
-          {project ? (
-            <Text color={color.muted}>
-              <Text color={swatchColor(project.color)}>●</Text>
-              <Text> {project.name}</Text>
-            </Text>
-          ) : (
-            <Text color={color.muted} dimColor>● inbox</Text>
-          )}
-        </Box>
-      )}
       <Box width={ageWidth} justifyContent="flex-end">
         <Text color={color.muted}>{age}</Text>
       </Box>
@@ -761,12 +775,40 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
 ];
 
 function activeProjectId(filter: Filter): string | undefined {
-  if (filter === "inbox" || filter === "all") return undefined;
+  if (filter === "inbox") return undefined;
   return filter.id;
 }
 
 function filterToTabKey(filter: Filter): string {
   return filterKey(filter);
+}
+
+// Cursor-centered windowing for long lists. No separate scroll-offset state —
+// the window is derived from the cursor each render so j/k naturally drag the
+// viewport along once the cursor reaches the middle.
+//
+// Returns the visible slice along with the count of hidden items on each side,
+// so callers can render "↑ N more / N more ↓" hints.
+interface WindowSlice<T> {
+  items: T[];
+  start: number;
+  moreAbove: number;
+  moreBelow: number;
+}
+function sliceWindow<T>(items: T[], cursor: number, viewportH: number): WindowSlice<T> {
+  if (items.length <= viewportH) {
+    return { items, start: 0, moreAbove: 0, moreBelow: 0 };
+  }
+  const half = Math.floor(viewportH / 2);
+  const maxStart = items.length - viewportH;
+  const start = Math.max(0, Math.min(cursor - half, maxStart));
+  const slice = items.slice(start, start + viewportH);
+  return {
+    items: slice,
+    start,
+    moreAbove: start,
+    moreBelow: items.length - start - slice.length,
+  };
 }
 
 function deriveTotals(todos: Todo[]) {
