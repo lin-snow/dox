@@ -72,17 +72,3 @@ CREATE TABLE todos (
 CREATE INDEX idx_todos_project    ON todos(project_id);
 CREATE INDEX idx_todos_created_by ON todos(created_by);
 CREATE INDEX idx_todos_created_at ON todos(created_at DESC);
-
--- +goose Down
-DROP INDEX IF EXISTS idx_todos_created_at;
-DROP INDEX IF EXISTS idx_todos_created_by;
-DROP INDEX IF EXISTS idx_todos_project;
-DROP TABLE  IF EXISTS todos;
-DROP INDEX IF EXISTS idx_invites_project;
-DROP TABLE  IF EXISTS invites;
-DROP INDEX IF EXISTS idx_project_members_user;
-DROP TABLE  IF EXISTS project_members;
-DROP INDEX IF EXISTS idx_projects_owner;
-DROP TABLE  IF EXISTS projects;
-DROP TABLE  IF EXISTS settings;
-DROP TABLE  IF EXISTS users;
