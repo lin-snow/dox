@@ -12,6 +12,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     done: false,
     createdAt: "1715856000000",
     updatedAt: "1715856000000",
+    createdBy: "test-user",
     ...overrides,
   };
 }

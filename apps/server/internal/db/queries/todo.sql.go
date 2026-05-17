@@ -7,17 +7,20 @@ package queries
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createTodo = `-- name: CreateTodo :one
-INSERT INTO todos (id, title, done, created_at, updated_at)
-VALUES (?, ?, 0, ?, ?)
-RETURNING id, title, done, created_at, updated_at
+INSERT INTO todos (id, title, done, project_id, created_by, created_at, updated_at)
+VALUES (?, ?, 0, ?, ?, ?, ?)
+RETURNING id, title, done, project_id, created_by, created_at, updated_at
 `
 
 type CreateTodoParams struct {
 	ID        string
 	Title     string
+	ProjectID sql.NullString
+	CreatedBy string
 	CreatedAt int64
 	UpdatedAt int64
 }
@@ -26,6 +29,8 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 	row := q.db.QueryRowContext(ctx, createTodo,
 		arg.ID,
 		arg.Title,
+		arg.ProjectID,
+		arg.CreatedBy,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)
@@ -34,6 +39,8 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.ProjectID,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -41,8 +48,7 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (Todo, e
 }
 
 const deleteTodo = `-- name: DeleteTodo :execrows
-DELETE FROM todos
-WHERE id = ?
+DELETE FROM todos WHERE id = ?
 `
 
 func (q *Queries) DeleteTodo(ctx context.Context, id string) (int64, error) {
@@ -54,15 +60,25 @@ func (q *Queries) DeleteTodo(ctx context.Context, id string) (int64, error) {
 }
 
 const findTodoIDsByPrefix = `-- name: FindTodoIDsByPrefix :many
-SELECT id FROM todos
-WHERE id LIKE CAST(?1 AS TEXT) || '%'
-ORDER BY id
+SELECT t.id FROM todos t
+WHERE t.id LIKE CAST(?1 AS TEXT) || '%'
+  AND (
+        (t.project_id IS NULL AND t.created_by = ?2)
+     OR EXISTS (SELECT 1 FROM projects p WHERE p.id = t.project_id AND p.owner_id = ?2)
+     OR EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = t.project_id AND m.user_id = ?2)
+  )
+ORDER BY t.id
 LIMIT 2
 `
 
-// CAST forces sqlc to type prefix as non-null string instead of sql.NullString.
-func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, prefix string) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, findTodoIDsByPrefix, prefix)
+type FindTodoIDsByPrefixParams struct {
+	Prefix string
+	UserID string
+}
+
+// Restricted to the caller's visible todos so prefix collisions don't leak existence.
+func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, arg FindTodoIDsByPrefixParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, findTodoIDsByPrefix, arg.Prefix, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +101,7 @@ func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, prefix string) ([]str
 }
 
 const getTodo = `-- name: GetTodo :one
-SELECT id, title, done, created_at, updated_at
+SELECT id, title, done, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE id = ?
 LIMIT 1
@@ -98,20 +114,23 @@ func (q *Queries) GetTodo(ctx context.Context, id string) (Todo, error) {
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.ProjectID,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const listTodos = `-- name: ListTodos :many
-SELECT id, title, done, created_at, updated_at
+const listInboxTodos = `-- name: ListInboxTodos :many
+SELECT id, title, done, project_id, created_by, created_at, updated_at
 FROM todos
+WHERE project_id IS NULL AND created_by = ?1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListTodos(ctx context.Context) ([]Todo, error) {
-	rows, err := q.db.QueryContext(ctx, listTodos)
+func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, listInboxTodos, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +142,94 @@ func (q *Queries) ListTodos(ctx context.Context) ([]Todo, error) {
 			&i.ID,
 			&i.Title,
 			&i.Done,
+			&i.ProjectID,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTodosForUser = `-- name: ListTodosForUser :many
+SELECT t.id, t.title, t.done, t.project_id, t.created_by, t.created_at, t.updated_at
+FROM todos t
+WHERE (t.project_id IS NULL AND t.created_by = ?1)
+   OR EXISTS (
+        SELECT 1 FROM projects p
+        WHERE p.id = t.project_id AND p.owner_id = ?1
+   )
+   OR EXISTS (
+        SELECT 1 FROM project_members m
+        WHERE m.project_id = t.project_id AND m.user_id = ?1
+   )
+ORDER BY t.created_at DESC
+`
+
+// Everything visible to the caller: their Inbox + todos in projects they own or are a member of.
+func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, listTodosForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Todo{}
+	for rows.Next() {
+		var i Todo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Done,
+			&i.ProjectID,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTodosInProject = `-- name: ListTodosInProject :many
+SELECT id, title, done, project_id, created_by, created_at, updated_at
+FROM todos
+WHERE project_id = ?1
+ORDER BY created_at DESC
+`
+
+// Caller must have already verified project visibility via authz.
+func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullString) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, listTodosInProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Todo{}
+	for rows.Next() {
+		var i Todo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Done,
+			&i.ProjectID,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -143,7 +250,7 @@ const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos
 SET title = ?, done = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, title, done, created_at, updated_at
+RETURNING id, title, done, project_id, created_by, created_at, updated_at
 `
 
 type UpdateTodoParams struct {
@@ -165,6 +272,8 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		&i.ID,
 		&i.Title,
 		&i.Done,
+		&i.ProjectID,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

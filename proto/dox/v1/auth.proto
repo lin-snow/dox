@@ -6,18 +6,44 @@ import "google/api/annotations.proto";
 
 option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
 
-// AuthService is the only public surface (no Authorization header required).
-// All other RPCs require a bearer token issued via RedeemPairingCode.
+// AuthService hosts the two public (unauthenticated) RPCs:
+//   - Register creates a user. The first-ever Register on an empty server makes
+//     the caller the owner. Subsequent Registers require either a valid invite
+//     code or registration_open=true.
+//   - RedeemPairingCode is for an existing user adding another device to their
+//     own account (no new user is created).
 service AuthService {
-  // RedeemPairingCode trades a one-time pairing code for a per-device bearer
-  // token. The code is invalidated on success and rejected if expired or
-  // already consumed.
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+
   rpc RedeemPairingCode(RedeemPairingCodeRequest) returns (RedeemPairingCodeResponse) {
     option (google.api.http) = {
       post: "/v1/auth/redeem"
       body: "*"
     };
   }
+}
+
+message RegisterRequest {
+  // Display name for the new user. Must be unique across the server.
+  string user_name = 1;
+  // Name for the first device (e.g. "laptop", "phone").
+  string device_name = 2;
+  // Required when registration is closed and the users table is non-empty.
+  optional string invite_code = 3;
+}
+
+message RegisterResponse {
+  string token = 1;
+  string user_id = 2;
+  string user_name = 3;
+  string role = 4;
+  string device_id = 5;
+  string device_name = 6;
 }
 
 message RedeemPairingCodeRequest {
@@ -28,4 +54,6 @@ message RedeemPairingCodeResponse {
   string token = 1;
   string device_id = 2;
   string device_name = 3;
+  string user_id = 4;
+  string user_name = 5;
 }

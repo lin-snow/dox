@@ -2,31 +2,40 @@ package auth
 
 import (
 	"context"
-	"crypto/subtle"
 	"net/http"
 	"strings"
 
-	"github.com/lin-snow/dox/apps/server/internal/pair"
+	"github.com/lin-snow/dox/apps/server/internal/authctx"
 )
 
-// publicPaths skip authentication. /v1/auth/redeem is the bootstrap entry point
-// for fresh devices; everything else requires a bearer token.
+// publicPaths skip authentication. Register and RedeemPairingCode are the only
+// two entry points reachable without a bearer token; everything else requires
+// a valid device token.
 var publicPaths = map[string]bool{
-	"/v1/auth/redeem": true,
+	"/v1/auth/register": true,
+	"/v1/auth/redeem":   true,
+}
+
+// CallerInfo is what the verifier returns on a successful device-token lookup.
+// It carries everything middleware needs to populate the request context.
+type CallerInfo struct {
+	DeviceID string
+	UserID   string
+	UserName string
+	Role     string
 }
 
 // DeviceVerifier looks up a device by its token's SHA-256 hash and pings its
 // last_seen_at. Implementations live next to the database layer.
 type DeviceVerifier interface {
-	VerifyDeviceToken(ctx context.Context, tokenHash string) (deviceID string, ok bool)
+	VerifyDeviceToken(ctx context.Context, tokenHash string) (CallerInfo, bool)
 	TouchDevice(ctx context.Context, deviceID string)
 }
 
-// Middleware validates Authorization: Bearer <token> against either the env
-// bootstrap token (admin override) or a per-device token from the
-// device_tokens table.
-func Middleware(bootstrapToken string, devices DeviceVerifier) func(http.Handler) http.Handler {
-	expectedBootstrap := []byte("Bearer " + bootstrapToken)
+// Middleware validates Authorization: Bearer <token> against the device_tokens
+// table and injects the resolved Caller into the request context. Public paths
+// (Register, RedeemPairingCode) skip authentication entirely.
+func Middleware(devices DeviceVerifier) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if publicPaths[r.URL.Path] {
@@ -35,28 +44,24 @@ func Middleware(bootstrapToken string, devices DeviceVerifier) func(http.Handler
 			}
 
 			header := r.Header.Get("Authorization")
-			if header == "" {
-				unauthorized(w)
-				return
-			}
-
-			if subtle.ConstantTimeCompare([]byte(header), expectedBootstrap) == 1 {
-				next.ServeHTTP(w, r)
-				return
-			}
-
 			token, ok := strings.CutPrefix(header, "Bearer ")
 			if !ok || token == "" {
 				unauthorized(w)
 				return
 			}
-			id, ok := devices.VerifyDeviceToken(r.Context(), pair.HashToken(token))
+			info, ok := devices.VerifyDeviceToken(r.Context(), HashToken(token))
 			if !ok {
 				unauthorized(w)
 				return
 			}
-			devices.TouchDevice(r.Context(), id)
-			next.ServeHTTP(w, r)
+			devices.TouchDevice(r.Context(), info.DeviceID)
+			ctx := authctx.With(r.Context(), authctx.Caller{
+				UserID:   info.UserID,
+				UserName: info.UserName,
+				Role:     info.Role,
+				DeviceID: info.DeviceID,
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

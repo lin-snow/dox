@@ -11,6 +11,8 @@ sql:
         emit_interface: false
         emit_empty_slices: true
         overrides:
-          # SQLite has no native bool; map the done column from INTEGER → bool.
+          # SQLite has no native bool; map INTEGER → bool.
           - column: "todos.done"
+            go_type: "bool"
+          - column: "projects.archived"
             go_type: "bool"

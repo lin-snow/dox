@@ -2,6 +2,9 @@
 import { Command } from "commander";
 
 import * as auth from "./cli/auth";
+import * as device from "./cli/device";
+import * as project from "./cli/project";
+import * as server from "./cli/server";
 import * as todo from "./cli/todo";
 
 const args = process.argv.slice(2);
@@ -13,79 +16,6 @@ if (args.length === 0 && process.stdout.isTTY) {
   process.exit(0);
 }
 
-type CommandSpec = {
-  name: string;
-  description: string;
-  alias?: string;
-  requiredOption?: [flag: string, description: string];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  action: (this: Command, ...args: any[]) => Promise<void>;
-};
-
-// Each entry maps 1:1 to a `program.command(...)`. Handlers receive
-// Commander's parsed positionals followed by `this` bound to the Command
-// instance, so `this.optsWithGlobals()` picks up the top-level --json flag.
-const commands: CommandSpec[] = [
-  {
-    name: "login",
-    description: "Authenticate to a dox server",
-    requiredOption: ["--server <url>", "server URL, e.g. http://localhost:8080"],
-    action: auth.login,
-  },
-  {
-    name: "list",
-    description: "List all todos, newest first",
-    alias: "ls",
-    action: async function (this: Command) {
-      await todo.list(this.optsWithGlobals());
-    },
-  },
-  {
-    name: "add <title>",
-    description: "Create a new todo",
-    action: async function (this: Command, title: string) {
-      await todo.add(title, this.optsWithGlobals());
-    },
-  },
-  {
-    name: "get <id>",
-    description: "Show a single todo by id",
-    action: async function (this: Command, id: string) {
-      await todo.get(id, this.optsWithGlobals());
-    },
-  },
-  {
-    name: "done <id>",
-    description: "Mark a todo as done",
-    action: async function (this: Command, id: string) {
-      await todo.done(id, this.optsWithGlobals());
-    },
-  },
-  {
-    name: "undone <id>",
-    description: "Mark a todo as not done",
-    action: async function (this: Command, id: string) {
-      await todo.undone(id, this.optsWithGlobals());
-    },
-  },
-  {
-    name: "edit <id>",
-    description: "Edit a todo's title",
-    requiredOption: ["--title <text>", "new title"],
-    action: async function (this: Command, id: string, opts: { title: string }) {
-      await todo.edit(id, opts.title, this.optsWithGlobals());
-    },
-  },
-  {
-    name: "rm <id>",
-    description: "Delete a todo permanently",
-    alias: "del",
-    action: async function (this: Command, id: string) {
-      await todo.rm(id, this.optsWithGlobals());
-    },
-  },
-];
-
 const program = new Command();
 program
   .name("dox")
@@ -93,11 +23,193 @@ program
   .version("0.0.0")
   .option("--json", "output JSON for machine consumption");
 
-for (const spec of commands) {
-  const cmd = program.command(spec.name).description(spec.description);
-  if (spec.alias) cmd.alias(spec.alias);
-  if (spec.requiredOption) cmd.requiredOption(...spec.requiredOption);
-  cmd.action(spec.action);
-}
+// ── auth ───────────────────────────────────────────────────────────────────
+program
+  .command("register")
+  .description("Create an account on a dox server (first user becomes the owner)")
+  .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
+  .option("--name <username>", "username")
+  .option("--device <name>", "device name")
+  .option("--invite <code>", "invite code (required if registration is closed)")
+  .action(auth.registerCmd);
+
+program
+  .command("login")
+  .description("Pair this device with an existing account (redeem a code from `dox device pair`)")
+  .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
+  .action(auth.login);
+
+program
+  .command("accept <code>")
+  .description("Accept an invite (joins a project, or registers + joins if not logged in)")
+  .option("--server <url>", "server URL (only needed if not logged in)")
+  .action(auth.acceptInviteCmd);
+
+// ── todos ──────────────────────────────────────────────────────────────────
+program
+  .command("list")
+  .alias("ls")
+  .description("List visible todos (Inbox + all projects you can see)")
+  .option("--project <id>", "filter to a project, 'inbox', or 'all'")
+  .action(function (this: Command) {
+    return todo.list(this.optsWithGlobals());
+  });
+
+program
+  .command("add <title>")
+  .description("Create a new todo")
+  .option("--project <id>", "place in a specific project (default: Inbox)")
+  .action(function (this: Command, title: string) {
+    return todo.add(title, this.optsWithGlobals());
+  });
+
+program
+  .command("get <id>")
+  .description("Show a single todo by id (or unique prefix)")
+  .action(function (this: Command, id: string) {
+    return todo.get(id, this.optsWithGlobals());
+  });
+
+program
+  .command("done <id>")
+  .description("Mark a todo as done")
+  .action(function (this: Command, id: string) {
+    return todo.done(id, this.optsWithGlobals());
+  });
+
+program
+  .command("undone <id>")
+  .description("Mark a todo as not done")
+  .action(function (this: Command, id: string) {
+    return todo.undone(id, this.optsWithGlobals());
+  });
+
+program
+  .command("edit <id>")
+  .description("Edit a todo's title")
+  .requiredOption("--title <text>", "new title")
+  .action(function (this: Command, id: string, opts: { title: string }) {
+    return todo.edit(id, opts.title, this.optsWithGlobals());
+  });
+
+program
+  .command("rm <id>")
+  .alias("del")
+  .description("Delete a todo permanently")
+  .action(function (this: Command, id: string) {
+    return todo.rm(id, this.optsWithGlobals());
+  });
+
+// ── projects ───────────────────────────────────────────────────────────────
+const proj = program.command("project").alias("p").description("Manage projects");
+proj
+  .command("list")
+  .alias("ls")
+  .description("List projects you can see")
+  .action(function (this: Command) {
+    return project.list(this.optsWithGlobals());
+  });
+proj
+  .command("create <name>")
+  .description("Create a project (you become its owner)")
+  .option("--description <text>")
+  .option("--color <code>")
+  .action(function (this: Command, name: string) {
+    return project.create(name, this.optsWithGlobals());
+  });
+proj
+  .command("rename <id> <name>")
+  .description("Rename a project (owner only)")
+  .action(function (this: Command, id: string, name: string) {
+    return project.rename(id, name, this.optsWithGlobals());
+  });
+proj
+  .command("archive <id>")
+  .description("Archive a project (owner only)")
+  .action(function (this: Command, id: string) {
+    return project.archive(id, this.optsWithGlobals());
+  });
+proj
+  .command("unarchive <id>")
+  .description("Unarchive a project (owner only)")
+  .action(function (this: Command, id: string) {
+    return project.unarchive(id, this.optsWithGlobals());
+  });
+proj
+  .command("rm <id>")
+  .description("Delete a project and all its todos (owner only)")
+  .action(function (this: Command, id: string) {
+    return project.remove(id, this.optsWithGlobals());
+  });
+proj
+  .command("invite <id>")
+  .description("Issue an invite code to add someone to the project")
+  .option("--role <role>", "editor or viewer", "editor")
+  .action(function (this: Command, id: string) {
+    return project.invite(id, this.optsWithGlobals());
+  });
+proj
+  .command("members <id>")
+  .description("List project members (excludes owner)")
+  .action(function (this: Command, id: string) {
+    return project.members(id, this.optsWithGlobals());
+  });
+proj
+  .command("member-rm <projectId> <userId>")
+  .description("Remove a member from a project (owner only)")
+  .action(function (this: Command, projectId: string, userId: string) {
+    return project.removeMember(projectId, userId, this.optsWithGlobals());
+  });
+
+// ── devices ────────────────────────────────────────────────────────────────
+const dev = program.command("device").description("Manage your devices");
+dev
+  .command("pair")
+  .description("Issue a pairing code to add another device to your account")
+  .requiredOption("--name <device>", "device name")
+  .option("--ttl-ms <ms>", "code lifetime in milliseconds", (v) => Number(v))
+  .action(function (this: Command) {
+    return device.pair(this.optsWithGlobals());
+  });
+dev
+  .command("list")
+  .description("List your devices")
+  .action(function (this: Command) {
+    return device.list(this.optsWithGlobals());
+  });
+dev
+  .command("revoke <id>")
+  .description("Revoke one of your devices")
+  .action(function (this: Command, id: string) {
+    return device.revoke(id, this.optsWithGlobals());
+  });
+
+// ── server (owner-only) ────────────────────────────────────────────────────
+const srv = program.command("server").description("Server-wide operations (owner-only)");
+srv
+  .command("me")
+  .description("Show the currently logged-in user")
+  .action(function (this: Command) {
+    return server.me(this.optsWithGlobals());
+  });
+srv
+  .command("users")
+  .description("List all users")
+  .action(function (this: Command) {
+    return server.listUsers(this.optsWithGlobals());
+  });
+srv
+  .command("invite")
+  .description("Issue a server-level invite code (brings a new user onto the server)")
+  .option("--ttl-ms <ms>", "code lifetime in milliseconds", (v) => Number(v))
+  .action(function (this: Command) {
+    return server.inviteServer(this.optsWithGlobals());
+  });
+srv
+  .command("set-registration <bool>")
+  .description("Toggle open registration: 'true' to allow anyone, 'false' for invite-only")
+  .action(function (this: Command, value: string) {
+    return server.setRegistrationOpen(value, this.optsWithGlobals());
+  });
 
 await program.parseAsync(process.argv);

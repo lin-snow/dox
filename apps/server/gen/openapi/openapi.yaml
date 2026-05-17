@@ -10,10 +10,6 @@ paths:
         post:
             tags:
                 - AuthService
-            description: |-
-                RedeemPairingCode trades a one-time pairing code for a per-device bearer
-                 token. The code is invalidated on success and rejected if expired or
-                 already consumed.
             operationId: AuthService_RedeemPairingCode
             requestBody:
                 content:
@@ -34,12 +30,390 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/auth/register:
+        post:
+            tags:
+                - AuthService
+            operationId: AuthService_Register
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RegisterRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RegisterResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/invites:
+        post:
+            tags:
+                - InviteService
+            operationId: InviteService_CreateInvite
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateInviteRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Invite'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/invites/accept:
+        post:
+            tags:
+                - InviteService
+            operationId: InviteService_AcceptInvite
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AcceptInviteRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AcceptInviteResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/me:
+        get:
+            tags:
+                - UserService
+            operationId: UserService_GetMe
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/me/devices:
+        get:
+            tags:
+                - UserService
+            operationId: UserService_ListMyDevices
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListMyDevicesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/me/devices/pair:
+        post:
+            tags:
+                - UserService
+            operationId: UserService_CreatePairingCode
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreatePairingCodeRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreatePairingCodeResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/me/devices/{deviceId}:
+        delete:
+            tags:
+                - UserService
+            operationId: UserService_RevokeMyDevice
+            parameters:
+                - name: deviceId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RevokeMyDeviceResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/projects:
+        get:
+            tags:
+                - ProjectService
+            operationId: ProjectService_ListProjects
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListProjectsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        post:
+            tags:
+                - ProjectService
+            operationId: ProjectService_CreateProject
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateProjectRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Project'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/projects/{id}:
+        get:
+            tags:
+                - ProjectService
+            operationId: ProjectService_GetProject
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Project'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        delete:
+            tags:
+                - ProjectService
+            operationId: ProjectService_DeleteProject
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteProjectResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - ProjectService
+            operationId: ProjectService_UpdateProject
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateProjectRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Project'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/projects/{projectId}/members:
+        get:
+            tags:
+                - ProjectService
+            operationId: ProjectService_ListProjectMembers
+            parameters:
+                - name: projectId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListProjectMembersResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/projects/{projectId}/members/{userId}:
+        delete:
+            tags:
+                - ProjectService
+            operationId: ProjectService_RemoveProjectMember
+            parameters:
+                - name: projectId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                - name: userId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RemoveProjectMemberResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/settings:
+        get:
+            tags:
+                - UserService
+            operationId: UserService_GetServerSettings
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+        patch:
+            tags:
+                - UserService
+            operationId: UserService_UpdateServerSettings
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateServerSettingsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerSettings'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/todos:
         get:
             tags:
                 - TodoService
-            description: ListTodos returns all todos, newest first.
+            description: |-
+                ListTodos returns todos visible to the caller. With no project_id filter
+                 it returns the caller's Inbox plus every project they own or are a member
+                 of. project_id == "inbox" filters to Inbox only.
             operationId: TodoService_ListTodos
+            parameters:
+                - name: projectId
+                  in: query
+                  description: |-
+                    Filter the listing. Unset = everything visible to caller. "inbox" = Inbox
+                     only. A project id = that project only (caller must be owner or member).
+                  schema:
+                    type: string
             responses:
                 "200":
                     description: OK
@@ -56,7 +430,6 @@ paths:
         post:
             tags:
                 - TodoService
-            description: CreateTodo creates a new todo and returns it with server-generated fields.
             operationId: TodoService_CreateTodo
             requestBody:
                 content:
@@ -81,7 +454,6 @@ paths:
         get:
             tags:
                 - TodoService
-            description: GetTodo returns a single todo by id.
             operationId: TodoService_GetTodo
             parameters:
                 - name: id
@@ -105,9 +477,6 @@ paths:
         delete:
             tags:
                 - TodoService
-            description: |-
-                DeleteTodo permanently deletes a todo (hard delete — no tombstones since
-                 server is the single source of truth in thin-client mode).
             operationId: TodoService_DeleteTodo
             parameters:
                 - name: id
@@ -131,9 +500,6 @@ paths:
         patch:
             tags:
                 - TodoService
-            description: |-
-                UpdateTodo applies a partial update to a todo. Fields absent in the request
-                 are left unchanged.
             operationId: TodoService_UpdateTodo
             parameters:
                 - name: id
@@ -160,16 +526,131 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/users:
+        get:
+            tags:
+                - UserService
+            operationId: UserService_ListUsers
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListUsersResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/users/{id}:
+        delete:
+            tags:
+                - UserService
+            operationId: UserService_DeleteUser
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteUserResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
 components:
     schemas:
+        AcceptInviteRequest:
+            type: object
+            properties:
+                code:
+                    type: string
+        AcceptInviteResponse:
+            type: object
+            properties:
+                projectId:
+                    type: string
+                    description: |-
+                        The project the caller joined; empty if the code was a server invite,
+                         which AcceptInvite rejects (server invites are only redeemable via Register).
+                role:
+                    type: string
+        CreateInviteRequest:
+            type: object
+            properties:
+                projectId:
+                    type: string
+                    description: Unset = server-level invite (owner only). Set = project invite.
+                role:
+                    type: string
+                    description: Required iff project_id is set. "editor" or "viewer".
+                ttlMs:
+                    type: string
+                    description: Code lifetime in milliseconds. 0 → 24h.
+        CreatePairingCodeRequest:
+            type: object
+            properties:
+                deviceName:
+                    type: string
+                ttlMs:
+                    type: string
+                    description: Code lifetime in milliseconds. 0 → 60_000.
+        CreatePairingCodeResponse:
+            type: object
+            properties:
+                code:
+                    type: string
+                expiresAt:
+                    type: string
+        CreateProjectRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                description:
+                    type: string
+                color:
+                    type: string
         CreateTodoRequest:
             type: object
             properties:
                 title:
                     type: string
+                projectId:
+                    type: string
+                    description: Unset = create in Inbox (private to caller).
+        DeleteProjectResponse:
+            type: object
+            properties: {}
         DeleteTodoResponse:
             type: object
             properties: {}
+        DeleteUserResponse:
+            type: object
+            properties: {}
+        Device:
+            type: object
+            properties:
+                id:
+                    type: string
+                userId:
+                    type: string
+                name:
+                    type: string
+                createdAt:
+                    type: string
+                lastSeenAt:
+                    type: string
         GoogleProtobufAny:
             type: object
             properties:
@@ -178,6 +659,45 @@ components:
                     description: The type of the serialized message.
             additionalProperties: true
             description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+        Invite:
+            type: object
+            properties:
+                code:
+                    type: string
+                    description: Plaintext code. Returned only when the invite is created; stored hashed.
+                issuedBy:
+                    type: string
+                projectId:
+                    type: string
+                    description: Empty for server-level invites.
+                role:
+                    type: string
+                    description: Empty for server-level invites; otherwise "editor" or "viewer".
+                createdAt:
+                    type: string
+                expiresAt:
+                    type: string
+        ListMyDevicesResponse:
+            type: object
+            properties:
+                devices:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Device'
+        ListProjectMembersResponse:
+            type: object
+            properties:
+                members:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ProjectMember'
+        ListProjectsResponse:
+            type: object
+            properties:
+                projects:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Project'
         ListTodosResponse:
             type: object
             properties:
@@ -185,6 +705,45 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Todo'
+        ListUsersResponse:
+            type: object
+            properties:
+                users:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/User'
+        Project:
+            type: object
+            properties:
+                id:
+                    type: string
+                ownerId:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                color:
+                    type: string
+                archived:
+                    type: boolean
+                sortOrder:
+                    type: integer
+                    format: int32
+                createdAt:
+                    type: string
+                updatedAt:
+                    type: string
+        ProjectMember:
+            type: object
+            properties:
+                userId:
+                    type: string
+                role:
+                    type: string
+                    description: '"editor" or "viewer".'
+                addedAt:
+                    type: string
         RedeemPairingCodeRequest:
             type: object
             properties:
@@ -199,6 +758,48 @@ components:
                     type: string
                 deviceName:
                     type: string
+                userId:
+                    type: string
+                userName:
+                    type: string
+        RegisterRequest:
+            type: object
+            properties:
+                userName:
+                    type: string
+                    description: Display name for the new user. Must be unique across the server.
+                deviceName:
+                    type: string
+                    description: Name for the first device (e.g. "laptop", "phone").
+                inviteCode:
+                    type: string
+                    description: Required when registration is closed and the users table is non-empty.
+        RegisterResponse:
+            type: object
+            properties:
+                token:
+                    type: string
+                userId:
+                    type: string
+                userName:
+                    type: string
+                role:
+                    type: string
+                deviceId:
+                    type: string
+                deviceName:
+                    type: string
+        RemoveProjectMemberResponse:
+            type: object
+            properties: {}
+        RevokeMyDeviceResponse:
+            type: object
+            properties: {}
+        ServerSettings:
+            type: object
+            properties:
+                registrationOpen:
+                    type: boolean
         Status:
             type: object
             properties:
@@ -233,7 +834,34 @@ components:
                 updatedAt:
                     type: string
                     description: Last update time, UTC unix milliseconds.
-            description: Todo is a single todo item.
+                projectId:
+                    type: string
+                    description: Project the todo belongs to. Unset = Inbox (private to created_by).
+                createdBy:
+                    type: string
+                    description: User who created the todo.
+            description: Todo is a single todo item, owned by a user and optionally scoped to a project.
+        UpdateProjectRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                description:
+                    type: string
+                color:
+                    type: string
+                archived:
+                    type: boolean
+                sortOrder:
+                    type: integer
+                    format: int32
+        UpdateServerSettingsRequest:
+            type: object
+            properties:
+                registrationOpen:
+                    type: boolean
         UpdateTodoRequest:
             type: object
             properties:
@@ -243,10 +871,41 @@ components:
                     type: string
                 done:
                     type: boolean
+        User:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                role:
+                    type: string
+                    description: '"owner" or "member".'
+                createdAt:
+                    type: string
 tags:
     - name: AuthService
       description: |-
-        AuthService is the only public surface (no Authorization header required).
-         All other RPCs require a bearer token issued via RedeemPairingCode.
+        AuthService hosts the two public (unauthenticated) RPCs:
+           - Register creates a user. The first-ever Register on an empty server makes
+             the caller the owner. Subsequent Registers require either a valid invite
+             code or registration_open=true.
+           - RedeemPairingCode is for an existing user adding another device to their
+             own account (no new user is created).
+    - name: InviteService
+      description: |-
+        InviteService issues and accepts invitation codes. A server invite
+         (project_id unset) is owner-only and brings a new user onto the server via
+         AuthService.Register. A project invite (project_id set) is project-owner-only
+         and either brings a new user onto the server + into the project (via
+         Register) or just adds an existing user to the project (via AcceptInvite).
+    - name: ProjectService
+      description: |-
+        ProjectService manages projects. All mutations are owner-only; members can
+         only read project metadata and (if editor) mutate todos within the project.
     - name: TodoService
-      description: TodoService manages todos for the authenticated device.
+      description: TodoService manages todos for the authenticated user.
+    - name: UserService
+      description: |-
+        UserService covers user introspection, server-wide settings (owner-only),
+         and the caller's own device management.

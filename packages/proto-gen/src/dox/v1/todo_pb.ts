@@ -11,10 +11,10 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/todo.proto.
  */
 export const file_dox_v1_todo: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIlcKBFRvZG8SCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEZG9uZRgDIAEoCBISCgpjcmVhdGVkX2F0GAQgASgDEhIKCnVwZGF0ZWRfYXQYBSABKAMiEgoQTGlzdFRvZG9zUmVxdWVzdCIwChFMaXN0VG9kb3NSZXNwb25zZRIbCgV0b2RvcxgBIAMoCzIMLmRveC52MS5Ub2RvIhwKDkdldFRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJIiIKEUNyZWF0ZVRvZG9SZXF1ZXN0Eg0KBXRpdGxlGAEgASgJIlkKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBQggKBl90aXRsZUIHCgVfZG9uZSIfChFEZWxldGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUb2RvUmVzcG9uc2UypwMKC1RvZG9TZXJ2aWNlElMKCUxpc3RUb2RvcxIYLmRveC52MS5MaXN0VG9kb3NSZXF1ZXN0GhkuZG94LnYxLkxpc3RUb2Rvc1Jlc3BvbnNlIhGC0+STAgsSCS92MS90b2RvcxJHCgdHZXRUb2RvEhYuZG94LnYxLkdldFRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFoLT5JMCEBIOL3YxL3RvZG9zL3tpZH0SSwoKQ3JlYXRlVG9kbxIZLmRveC52MS5DcmVhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhSC0+STAg46ASoiCS92MS90b2RvcxJQCgpVcGRhdGVUb2RvEhkuZG94LnYxLlVwZGF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iGYLT5JMCEzoBKjIOL3YxL3RvZG9zL3tpZH0SWwoKRGVsZXRlVG9kbxIZLmRveC52MS5EZWxldGVUb2RvUmVxdWVzdBoaLmRveC52MS5EZWxldGVUb2RvUmVzcG9uc2UiFoLT5JMCECoOL3YxL3RvZG9zL3tpZH1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIpMBCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJQg0KC19wcm9qZWN0X2lkIjoKEExpc3RUb2Rvc1JlcXVlc3QSFwoKcHJvamVjdF9pZBgBIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAkiSgoRQ3JlYXRlVG9kb1JlcXVlc3QSDQoFdGl0bGUYASABKAkSFwoKcHJvamVjdF9pZBgCIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIlkKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBQggKBl90aXRsZUIHCgVfZG9uZSIfChFEZWxldGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCSIUChJEZWxldGVUb2RvUmVzcG9uc2UypwMKC1RvZG9TZXJ2aWNlElMKCUxpc3RUb2RvcxIYLmRveC52MS5MaXN0VG9kb3NSZXF1ZXN0GhkuZG94LnYxLkxpc3RUb2Rvc1Jlc3BvbnNlIhGC0+STAgsSCS92MS90b2RvcxJHCgdHZXRUb2RvEhYuZG94LnYxLkdldFRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFoLT5JMCEBIOL3YxL3RvZG9zL3tpZH0SSwoKQ3JlYXRlVG9kbxIZLmRveC52MS5DcmVhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhSC0+STAg46ASoiCS92MS90b2RvcxJQCgpVcGRhdGVUb2RvEhkuZG94LnYxLlVwZGF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iGYLT5JMCEzoBKjIOL3YxL3RvZG9zL3tpZH0SWwoKRGVsZXRlVG9kbxIZLmRveC52MS5EZWxldGVUb2RvUmVxdWVzdBoaLmRveC52MS5EZWxldGVUb2RvUmVzcG9uc2UiFoLT5JMCECoOL3YxL3RvZG9zL3tpZH1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
 
 /**
- * Todo is a single todo item.
+ * Todo is a single todo item, owned by a user and optionally scoped to a project.
  *
  * @generated from message dox.v1.Todo
  */
@@ -53,6 +53,20 @@ export type Todo = Message<"dox.v1.Todo"> & {
    * @generated from field: int64 updated_at = 5;
    */
   updatedAt: bigint;
+
+  /**
+   * Project the todo belongs to. Unset = Inbox (private to created_by).
+   *
+   * @generated from field: optional string project_id = 6;
+   */
+  projectId?: string | undefined;
+
+  /**
+   * User who created the todo.
+   *
+   * @generated from field: string created_by = 7;
+   */
+  createdBy: string;
 };
 
 /**
@@ -66,6 +80,13 @@ export const TodoSchema: GenMessage<Todo> = /*@__PURE__*/
  * @generated from message dox.v1.ListTodosRequest
  */
 export type ListTodosRequest = Message<"dox.v1.ListTodosRequest"> & {
+  /**
+   * Filter the listing. Unset = everything visible to caller. "inbox" = Inbox
+   * only. A project id = that project only (caller must be owner or member).
+   *
+   * @generated from field: optional string project_id = 1;
+   */
+  projectId?: string | undefined;
 };
 
 /**
@@ -117,6 +138,13 @@ export type CreateTodoRequest = Message<"dox.v1.CreateTodoRequest"> & {
    * @generated from field: string title = 1;
    */
   title: string;
+
+  /**
+   * Unset = create in Inbox (private to caller).
+   *
+   * @generated from field: optional string project_id = 2;
+   */
+  projectId?: string | undefined;
 };
 
 /**
@@ -184,13 +212,15 @@ export const DeleteTodoResponseSchema: GenMessage<DeleteTodoResponse> = /*@__PUR
   messageDesc(file_dox_v1_todo, 7);
 
 /**
- * TodoService manages todos for the authenticated device.
+ * TodoService manages todos for the authenticated user.
  *
  * @generated from service dox.v1.TodoService
  */
 export const TodoService: GenService<{
   /**
-   * ListTodos returns all todos, newest first.
+   * ListTodos returns todos visible to the caller. With no project_id filter
+   * it returns the caller's Inbox plus every project they own or are a member
+   * of. project_id == "inbox" filters to Inbox only.
    *
    * @generated from rpc dox.v1.TodoService.ListTodos
    */
@@ -200,8 +230,6 @@ export const TodoService: GenService<{
     output: typeof ListTodosResponseSchema;
   },
   /**
-   * GetTodo returns a single todo by id.
-   *
    * @generated from rpc dox.v1.TodoService.GetTodo
    */
   getTodo: {
@@ -210,8 +238,6 @@ export const TodoService: GenService<{
     output: typeof TodoSchema;
   },
   /**
-   * CreateTodo creates a new todo and returns it with server-generated fields.
-   *
    * @generated from rpc dox.v1.TodoService.CreateTodo
    */
   createTodo: {
@@ -220,9 +246,6 @@ export const TodoService: GenService<{
     output: typeof TodoSchema;
   },
   /**
-   * UpdateTodo applies a partial update to a todo. Fields absent in the request
-   * are left unchanged.
-   *
    * @generated from rpc dox.v1.TodoService.UpdateTodo
    */
   updateTodo: {
@@ -231,9 +254,6 @@ export const TodoService: GenService<{
     output: typeof TodoSchema;
   },
   /**
-   * DeleteTodo permanently deletes a todo (hard delete — no tombstones since
-   * server is the single source of truth in thin-client mode).
-   *
    * @generated from rpc dox.v1.TodoService.DeleteTodo
    */
   deleteTodo: {

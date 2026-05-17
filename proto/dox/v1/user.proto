@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package dox.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
+
+message User {
+  string id = 1;
+  string name = 2;
+  // "owner" or "member".
+  string role = 3;
+  int64 created_at = 4;
+}
+
+message Device {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  int64 created_at = 4;
+  int64 last_seen_at = 5;
+}
+
+message ServerSettings {
+  bool registration_open = 1;
+}
+
+// UserService covers user introspection, server-wide settings (owner-only),
+// and the caller's own device management.
+service UserService {
+  rpc GetMe(GetMeRequest) returns (User) {
+    option (google.api.http) = {get: "/v1/me"};
+  }
+
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {get: "/v1/users"};
+  }
+
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {
+    option (google.api.http) = {delete: "/v1/users/{id}"};
+  }
+
+  rpc GetServerSettings(GetServerSettingsRequest) returns (ServerSettings) {
+    option (google.api.http) = {get: "/v1/settings"};
+  }
+
+  rpc UpdateServerSettings(UpdateServerSettingsRequest) returns (ServerSettings) {
+    option (google.api.http) = {
+      patch: "/v1/settings"
+      body: "*"
+    };
+  }
+
+  rpc ListMyDevices(ListMyDevicesRequest) returns (ListMyDevicesResponse) {
+    option (google.api.http) = {get: "/v1/me/devices"};
+  }
+
+  rpc CreatePairingCode(CreatePairingCodeRequest) returns (CreatePairingCodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/me/devices/pair"
+      body: "*"
+    };
+  }
+
+  rpc RevokeMyDevice(RevokeMyDeviceRequest) returns (RevokeMyDeviceResponse) {
+    option (google.api.http) = {delete: "/v1/me/devices/{device_id}"};
+  }
+}
+
+message GetMeRequest {}
+
+message ListUsersRequest {}
+message ListUsersResponse {
+  repeated User users = 1;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+message DeleteUserResponse {}
+
+message GetServerSettingsRequest {}
+
+message UpdateServerSettingsRequest {
+  optional bool registration_open = 1;
+}
+
+message ListMyDevicesRequest {}
+message ListMyDevicesResponse {
+  repeated Device devices = 1;
+}
+
+message CreatePairingCodeRequest {
+  string device_name = 1;
+  // Code lifetime in milliseconds. 0 → 60_000.
+  int64 ttl_ms = 2;
+}
+message CreatePairingCodeResponse {
+  string code = 1;
+  int64 expires_at = 2;
+}
+
+message RevokeMyDeviceRequest {
+  string device_id = 1;
+}
+message RevokeMyDeviceResponse {}

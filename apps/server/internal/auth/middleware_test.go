@@ -7,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/lin-snow/dox/apps/server/internal/auth"
-	"github.com/lin-snow/dox/apps/server/internal/pair"
+	"github.com/lin-snow/dox/apps/server/internal/authctx"
 )
 
 type fakeDevices struct {
-	hashToID map[string]string
-	touched  []string
+	hashToInfo map[string]auth.CallerInfo
+	touched    []string
 }
 
-func (f *fakeDevices) VerifyDeviceToken(_ context.Context, hash string) (string, bool) {
-	id, ok := f.hashToID[hash]
-	return id, ok
+func (f *fakeDevices) VerifyDeviceToken(_ context.Context, hash string) (auth.CallerInfo, bool) {
+	info, ok := f.hashToInfo[hash]
+	return info, ok
 }
 
 func (f *fakeDevices) TouchDevice(_ context.Context, id string) {
@@ -25,53 +25,64 @@ func (f *fakeDevices) TouchDevice(_ context.Context, id string) {
 }
 
 func TestMiddleware(t *testing.T) {
-	const bootstrap = "test-token-with-enough-entropy-12345"
-	deviceToken := "device-token-abc"
-
+	const deviceToken = "device-token-abc"
+	want := auth.CallerInfo{
+		DeviceID: "device-1",
+		UserID:   "user-1",
+		UserName: "alice",
+		Role:     authctx.RoleOwner,
+	}
 	devices := &fakeDevices{
-		hashToID: map[string]string{
-			pair.HashToken(deviceToken): "device-1",
-		},
+		hashToInfo: map[string]auth.CallerInfo{auth.HashToken(deviceToken): want},
 	}
 
-	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var seenCaller authctx.Caller
+	upstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenCaller, _ = authctx.From(r.Context())
 		w.WriteHeader(http.StatusOK)
 	})
-	handler := auth.Middleware(bootstrap, devices)(ok)
+	handler := auth.Middleware(devices)(upstream)
 
 	tests := []struct {
 		name       string
+		method     string
 		path       string
 		authHeader string
 		wantStatus int
 	}{
-		{"bootstrap valid", "/v1/todos", "Bearer " + bootstrap, http.StatusOK},
-		{"device token valid", "/v1/todos", "Bearer " + deviceToken, http.StatusOK},
-		{"missing header", "/v1/todos", "", http.StatusUnauthorized},
-		{"unknown token", "/v1/todos", "Bearer nope", http.StatusUnauthorized},
-		{"wrong scheme", "/v1/todos", "Basic " + bootstrap, http.StatusUnauthorized},
-		{"empty bearer", "/v1/todos", "Bearer ", http.StatusUnauthorized},
-		{"public redeem with no header", "/v1/auth/redeem", "", http.StatusOK},
-		{"public redeem with bogus token", "/v1/auth/redeem", "Bearer nope", http.StatusOK},
+		{"public register", "POST", "/v1/auth/register", "", http.StatusOK},
+		{"public redeem", "POST", "/v1/auth/redeem", "", http.StatusOK},
+		{"protected with valid token", "GET", "/v1/todos", "Bearer " + deviceToken, http.StatusOK},
+		{"protected missing header", "GET", "/v1/todos", "", http.StatusUnauthorized},
+		{"protected unknown token", "GET", "/v1/todos", "Bearer nope", http.StatusUnauthorized},
+		{"protected wrong scheme", "GET", "/v1/todos", "Basic anything", http.StatusUnauthorized},
+		{"protected empty bearer", "GET", "/v1/todos", "Bearer ", http.StatusUnauthorized},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			seenCaller = authctx.Caller{}
+			req := httptest.NewRequest(tt.method, tt.path, nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
 			}
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 			if rec.Code != tt.wantStatus {
-				t.Errorf("want %d, got %d", tt.wantStatus, rec.Code)
+				t.Errorf("want status %d, got %d", tt.wantStatus, rec.Code)
 			}
 		})
 	}
 
-	// Device-token requests should bump last_seen_at; bootstrap should not
-	// (we don't track the admin override).
-	if len(devices.touched) != 1 || devices.touched[0] != "device-1" {
-		t.Errorf("want touched=[device-1], got %v", devices.touched)
+	// One last protected request to verify the caller-context is propagated.
+	req := httptest.NewRequest("GET", "/v1/todos", nil)
+	req.Header.Set("Authorization", "Bearer "+deviceToken)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if seenCaller.UserID != want.UserID || seenCaller.Role != want.Role {
+		t.Errorf("caller not propagated: got %+v", seenCaller)
+	}
+	if len(devices.touched) == 0 || devices.touched[len(devices.touched)-1] != want.DeviceID {
+		t.Errorf("device not touched: %v", devices.touched)
 	}
 }

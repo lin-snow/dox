@@ -30,19 +30,15 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// TodoService manages todos for the authenticated device.
+// TodoService manages todos for the authenticated user.
 type TodoServiceClient interface {
-	// ListTodos returns all todos, newest first.
+	// ListTodos returns todos visible to the caller. With no project_id filter
+	// it returns the caller's Inbox plus every project they own or are a member
+	// of. project_id == "inbox" filters to Inbox only.
 	ListTodos(ctx context.Context, in *ListTodosRequest, opts ...grpc.CallOption) (*ListTodosResponse, error)
-	// GetTodo returns a single todo by id.
 	GetTodo(ctx context.Context, in *GetTodoRequest, opts ...grpc.CallOption) (*Todo, error)
-	// CreateTodo creates a new todo and returns it with server-generated fields.
 	CreateTodo(ctx context.Context, in *CreateTodoRequest, opts ...grpc.CallOption) (*Todo, error)
-	// UpdateTodo applies a partial update to a todo. Fields absent in the request
-	// are left unchanged.
 	UpdateTodo(ctx context.Context, in *UpdateTodoRequest, opts ...grpc.CallOption) (*Todo, error)
-	// DeleteTodo permanently deletes a todo (hard delete — no tombstones since
-	// server is the single source of truth in thin-client mode).
 	DeleteTodo(ctx context.Context, in *DeleteTodoRequest, opts ...grpc.CallOption) (*DeleteTodoResponse, error)
 }
 
@@ -108,19 +104,15 @@ func (c *todoServiceClient) DeleteTodo(ctx context.Context, in *DeleteTodoReques
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility.
 //
-// TodoService manages todos for the authenticated device.
+// TodoService manages todos for the authenticated user.
 type TodoServiceServer interface {
-	// ListTodos returns all todos, newest first.
+	// ListTodos returns todos visible to the caller. With no project_id filter
+	// it returns the caller's Inbox plus every project they own or are a member
+	// of. project_id == "inbox" filters to Inbox only.
 	ListTodos(context.Context, *ListTodosRequest) (*ListTodosResponse, error)
-	// GetTodo returns a single todo by id.
 	GetTodo(context.Context, *GetTodoRequest) (*Todo, error)
-	// CreateTodo creates a new todo and returns it with server-generated fields.
 	CreateTodo(context.Context, *CreateTodoRequest) (*Todo, error)
-	// UpdateTodo applies a partial update to a todo. Fields absent in the request
-	// are left unchanged.
 	UpdateTodo(context.Context, *UpdateTodoRequest) (*Todo, error)
-	// DeleteTodo permanently deletes a todo (hard delete — no tombstones since
-	// server is the single source of truth in thin-client mode).
 	DeleteTodo(context.Context, *DeleteTodoRequest) (*DeleteTodoResponse, error)
 	mustEmbedUnimplementedTodoServiceServer()
 }

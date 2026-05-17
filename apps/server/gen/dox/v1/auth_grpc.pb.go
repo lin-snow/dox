@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AuthService_Register_FullMethodName          = "/dox.v1.AuthService/Register"
 	AuthService_RedeemPairingCode_FullMethodName = "/dox.v1.AuthService/RedeemPairingCode"
 )
 
@@ -26,12 +27,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AuthService is the only public surface (no Authorization header required).
-// All other RPCs require a bearer token issued via RedeemPairingCode.
+// AuthService hosts the two public (unauthenticated) RPCs:
+//   - Register creates a user. The first-ever Register on an empty server makes
+//     the caller the owner. Subsequent Registers require either a valid invite
+//     code or registration_open=true.
+//   - RedeemPairingCode is for an existing user adding another device to their
+//     own account (no new user is created).
 type AuthServiceClient interface {
-	// RedeemPairingCode trades a one-time pairing code for a per-device bearer
-	// token. The code is invalidated on success and rejected if expired or
-	// already consumed.
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	RedeemPairingCode(ctx context.Context, in *RedeemPairingCodeRequest, opts ...grpc.CallOption) (*RedeemPairingCodeResponse, error)
 }
 
@@ -41,6 +44,16 @@ type authServiceClient struct {
 
 func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
+}
+
+func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, AuthService_Register_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authServiceClient) RedeemPairingCode(ctx context.Context, in *RedeemPairingCodeRequest, opts ...grpc.CallOption) (*RedeemPairingCodeResponse, error) {
@@ -57,12 +70,14 @@ func (c *authServiceClient) RedeemPairingCode(ctx context.Context, in *RedeemPai
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 //
-// AuthService is the only public surface (no Authorization header required).
-// All other RPCs require a bearer token issued via RedeemPairingCode.
+// AuthService hosts the two public (unauthenticated) RPCs:
+//   - Register creates a user. The first-ever Register on an empty server makes
+//     the caller the owner. Subsequent Registers require either a valid invite
+//     code or registration_open=true.
+//   - RedeemPairingCode is for an existing user adding another device to their
+//     own account (no new user is created).
 type AuthServiceServer interface {
-	// RedeemPairingCode trades a one-time pairing code for a per-device bearer
-	// token. The code is invalidated on success and rejected if expired or
-	// already consumed.
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	RedeemPairingCode(context.Context, *RedeemPairingCodeRequest) (*RedeemPairingCodeResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
@@ -74,6 +89,9 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
+func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
+}
 func (UnimplementedAuthServiceServer) RedeemPairingCode(context.Context, *RedeemPairingCodeRequest) (*RedeemPairingCodeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RedeemPairingCode not implemented")
 }
@@ -96,6 +114,24 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AuthService_ServiceDesc, srv)
+}
+
+func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Register_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuthService_RedeemPairingCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -123,6 +159,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dox.v1.AuthService",
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Register",
+			Handler:    _AuthService_Register_Handler,
+		},
 		{
 			MethodName: "RedeemPairingCode",
 			Handler:    _AuthService_RedeemPairingCode_Handler,

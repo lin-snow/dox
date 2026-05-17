@@ -1,8 +1,18 @@
 import { withContext, type GlobalOpts } from "./context";
 
-export const list = (opts: GlobalOpts) =>
-  withContext(opts, async ({ api, output }) => {
-    const todos = await api.listTodos();
+interface TodoOpts extends GlobalOpts {
+  project?: string;
+}
+
+function resolveFilter(opts: TodoOpts, defaultProject?: string): string | undefined {
+  const raw = opts.project ?? defaultProject;
+  if (!raw || raw === "all") return undefined;
+  return raw;
+}
+
+export const list = (opts: TodoOpts) =>
+  withContext(opts, async ({ api, output, defaultProject }) => {
+    const todos = await api.listTodos(resolveFilter(opts, defaultProject));
     output.todos(todos);
   });
 
@@ -12,9 +22,10 @@ export const get = (id: string, opts: GlobalOpts) =>
     output.todo(todo);
   });
 
-export const add = (title: string, opts: GlobalOpts) =>
-  withContext(opts, async ({ api, output }) => {
-    const todo = await api.createTodo(title);
+export const add = (title: string, opts: TodoOpts) =>
+  withContext(opts, async ({ api, output, defaultProject }) => {
+    const project = resolveFilter(opts, defaultProject);
+    const todo = await api.createTodo(title, { projectId: project === "inbox" ? undefined : project });
     output.todo(todo);
   });
 

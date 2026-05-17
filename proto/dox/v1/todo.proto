@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 
 option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
 
-// Todo is a single todo item.
+// Todo is a single todo item, owned by a user and optionally scoped to a project.
 message Todo {
   // Server-generated ULID, primary key.
   string id = 1;
@@ -18,21 +18,25 @@ message Todo {
   int64 created_at = 4;
   // Last update time, UTC unix milliseconds.
   int64 updated_at = 5;
+  // Project the todo belongs to. Unset = Inbox (private to created_by).
+  optional string project_id = 6;
+  // User who created the todo.
+  string created_by = 7;
 }
 
-// TodoService manages todos for the authenticated device.
+// TodoService manages todos for the authenticated user.
 service TodoService {
-  // ListTodos returns all todos, newest first.
+  // ListTodos returns todos visible to the caller. With no project_id filter
+  // it returns the caller's Inbox plus every project they own or are a member
+  // of. project_id == "inbox" filters to Inbox only.
   rpc ListTodos(ListTodosRequest) returns (ListTodosResponse) {
     option (google.api.http) = {get: "/v1/todos"};
   }
 
-  // GetTodo returns a single todo by id.
   rpc GetTodo(GetTodoRequest) returns (Todo) {
     option (google.api.http) = {get: "/v1/todos/{id}"};
   }
 
-  // CreateTodo creates a new todo and returns it with server-generated fields.
   rpc CreateTodo(CreateTodoRequest) returns (Todo) {
     option (google.api.http) = {
       post: "/v1/todos"
@@ -40,8 +44,6 @@ service TodoService {
     };
   }
 
-  // UpdateTodo applies a partial update to a todo. Fields absent in the request
-  // are left unchanged.
   rpc UpdateTodo(UpdateTodoRequest) returns (Todo) {
     option (google.api.http) = {
       patch: "/v1/todos/{id}"
@@ -49,14 +51,16 @@ service TodoService {
     };
   }
 
-  // DeleteTodo permanently deletes a todo (hard delete — no tombstones since
-  // server is the single source of truth in thin-client mode).
   rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse) {
     option (google.api.http) = {delete: "/v1/todos/{id}"};
   }
 }
 
-message ListTodosRequest {}
+message ListTodosRequest {
+  // Filter the listing. Unset = everything visible to caller. "inbox" = Inbox
+  // only. A project id = that project only (caller must be owner or member).
+  optional string project_id = 1;
+}
 
 message ListTodosResponse {
   repeated Todo todos = 1;
@@ -68,6 +72,8 @@ message GetTodoRequest {
 
 message CreateTodoRequest {
   string title = 1;
+  // Unset = create in Inbox (private to caller).
+  optional string project_id = 2;
 }
 
 message UpdateTodoRequest {

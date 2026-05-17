@@ -11,7 +11,82 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/auth.proto.
  */
 export const file_dox_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxIigKGFJlZGVlbVBhaXJpbmdDb2RlUmVxdWVzdBIMCgRjb2RlGAEgASgJIlIKGVJlZGVlbVBhaXJpbmdDb2RlUmVzcG9uc2USDQoFdG9rZW4YASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhMKC2RldmljZV9uYW1lGAMgASgJMoMBCgtBdXRoU2VydmljZRJ0ChFSZWRlZW1QYWlyaW5nQ29kZRIgLmRveC52MS5SZWRlZW1QYWlyaW5nQ29kZVJlcXVlc3QaIS5kb3gudjEuUmVkZWVtUGFpcmluZ0NvZGVSZXNwb25zZSIagtPkkwIUOgEqIg8vdjEvYXV0aC9yZWRlZW1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxImMKD1JlZ2lzdGVyUmVxdWVzdBIRCgl1c2VyX25hbWUYASABKAkSEwoLZGV2aWNlX25hbWUYAiABKAkSGAoLaW52aXRlX2NvZGUYAyABKAlIAIgBAUIOCgxfaW52aXRlX2NvZGUiewoQUmVnaXN0ZXJSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhEKCXVzZXJfbmFtZRgDIAEoCRIMCgRyb2xlGAQgASgJEhEKCWRldmljZV9pZBgFIAEoCRITCgtkZXZpY2VfbmFtZRgGIAEoCSIoChhSZWRlZW1QYWlyaW5nQ29kZVJlcXVlc3QSDAoEY29kZRgBIAEoCSJ2ChlSZWRlZW1QYWlyaW5nQ29kZVJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhEKCWRldmljZV9pZBgCIAEoCRITCgtkZXZpY2VfbmFtZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhEKCXVzZXJfbmFtZRgFIAEoCTLgAQoLQXV0aFNlcnZpY2USWwoIUmVnaXN0ZXISFy5kb3gudjEuUmVnaXN0ZXJSZXF1ZXN0GhguZG94LnYxLlJlZ2lzdGVyUmVzcG9uc2UiHILT5JMCFjoBKiIRL3YxL2F1dGgvcmVnaXN0ZXISdAoRUmVkZWVtUGFpcmluZ0NvZGUSIC5kb3gudjEuUmVkZWVtUGFpcmluZ0NvZGVSZXF1ZXN0GiEuZG94LnYxLlJlZGVlbVBhaXJpbmdDb2RlUmVzcG9uc2UiGoLT5JMCFDoBKiIPL3YxL2F1dGgvcmVkZWVtQjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
+
+/**
+ * @generated from message dox.v1.RegisterRequest
+ */
+export type RegisterRequest = Message<"dox.v1.RegisterRequest"> & {
+  /**
+   * Display name for the new user. Must be unique across the server.
+   *
+   * @generated from field: string user_name = 1;
+   */
+  userName: string;
+
+  /**
+   * Name for the first device (e.g. "laptop", "phone").
+   *
+   * @generated from field: string device_name = 2;
+   */
+  deviceName: string;
+
+  /**
+   * Required when registration is closed and the users table is non-empty.
+   *
+   * @generated from field: optional string invite_code = 3;
+   */
+  inviteCode?: string | undefined;
+};
+
+/**
+ * Describes the message dox.v1.RegisterRequest.
+ * Use `create(RegisterRequestSchema)` to create a new message.
+ */
+export const RegisterRequestSchema: GenMessage<RegisterRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 0);
+
+/**
+ * @generated from message dox.v1.RegisterResponse
+ */
+export type RegisterResponse = Message<"dox.v1.RegisterResponse"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string user_name = 3;
+   */
+  userName: string;
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role: string;
+
+  /**
+   * @generated from field: string device_id = 5;
+   */
+  deviceId: string;
+
+  /**
+   * @generated from field: string device_name = 6;
+   */
+  deviceName: string;
+};
+
+/**
+ * Describes the message dox.v1.RegisterResponse.
+ * Use `create(RegisterResponseSchema)` to create a new message.
+ */
+export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 1);
 
 /**
  * @generated from message dox.v1.RedeemPairingCodeRequest
@@ -28,7 +103,7 @@ export type RedeemPairingCodeRequest = Message<"dox.v1.RedeemPairingCodeRequest"
  * Use `create(RedeemPairingCodeRequestSchema)` to create a new message.
  */
 export const RedeemPairingCodeRequestSchema: GenMessage<RedeemPairingCodeRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 0);
+  messageDesc(file_dox_v1_auth, 2);
 
 /**
  * @generated from message dox.v1.RedeemPairingCodeResponse
@@ -48,6 +123,16 @@ export type RedeemPairingCodeResponse = Message<"dox.v1.RedeemPairingCodeRespons
    * @generated from field: string device_name = 3;
    */
   deviceName: string;
+
+  /**
+   * @generated from field: string user_id = 4;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string user_name = 5;
+   */
+  userName: string;
 };
 
 /**
@@ -55,20 +140,28 @@ export type RedeemPairingCodeResponse = Message<"dox.v1.RedeemPairingCodeRespons
  * Use `create(RedeemPairingCodeResponseSchema)` to create a new message.
  */
 export const RedeemPairingCodeResponseSchema: GenMessage<RedeemPairingCodeResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 1);
+  messageDesc(file_dox_v1_auth, 3);
 
 /**
- * AuthService is the only public surface (no Authorization header required).
- * All other RPCs require a bearer token issued via RedeemPairingCode.
+ * AuthService hosts the two public (unauthenticated) RPCs:
+ *   - Register creates a user. The first-ever Register on an empty server makes
+ *     the caller the owner. Subsequent Registers require either a valid invite
+ *     code or registration_open=true.
+ *   - RedeemPairingCode is for an existing user adding another device to their
+ *     own account (no new user is created).
  *
  * @generated from service dox.v1.AuthService
  */
 export const AuthService: GenService<{
   /**
-   * RedeemPairingCode trades a one-time pairing code for a per-device bearer
-   * token. The code is invalidated on success and rejected if expired or
-   * already consumed.
-   *
+   * @generated from rpc dox.v1.AuthService.Register
+   */
+  register: {
+    methodKind: "unary";
+    input: typeof RegisterRequestSchema;
+    output: typeof RegisterResponseSchema;
+  },
+  /**
    * @generated from rpc dox.v1.AuthService.RedeemPairingCode
    */
   redeemPairingCode: {

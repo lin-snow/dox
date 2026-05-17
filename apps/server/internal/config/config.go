@@ -1,17 +1,14 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 )
 
 type Config struct {
-	BootstrapToken string
-	DBPath         string
-	ListenAddr     string
-	LogLevel       slog.Level
+	DBPath     string
+	ListenAddr string
+	LogLevel   slog.Level
 }
 
 // Logger returns a JSON slog logger configured at cfg.LogLevel, writing to
@@ -22,15 +19,8 @@ func (cfg *Config) Logger() *slog.Logger {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		BootstrapToken: os.Getenv("DOX_BOOTSTRAP_TOKEN"),
-		DBPath:         getenv("DOX_DB_PATH", "./dox.db"),
-		ListenAddr:     getenv("DOX_LISTEN_ADDR", ":8080"),
-	}
-	if cfg.BootstrapToken == "" {
-		return nil, errors.New("DOX_BOOTSTRAP_TOKEN is required")
-	}
-	if len(cfg.BootstrapToken) < 32 {
-		return nil, fmt.Errorf("DOX_BOOTSTRAP_TOKEN must be at least 32 chars, got %d", len(cfg.BootstrapToken))
+		DBPath:     getenv("DOX_DB_PATH", "./dox.db"),
+		ListenAddr: getenv("DOX_LISTEN_ADDR", ":8080"),
 	}
 
 	switch os.Getenv("DOX_LOG_LEVEL") {

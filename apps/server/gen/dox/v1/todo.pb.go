@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Todo is a single todo item.
+// Todo is a single todo item, owned by a user and optionally scoped to a project.
 type Todo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Server-generated ULID, primary key.
@@ -34,7 +34,11 @@ type Todo struct {
 	// Creation time, UTC unix milliseconds.
 	CreatedAt int64 `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// Last update time, UTC unix milliseconds.
-	UpdatedAt     int64 `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt int64 `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Project the todo belongs to. Unset = Inbox (private to created_by).
+	ProjectId *string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
+	// User who created the todo.
+	CreatedBy     string `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -104,8 +108,25 @@ func (x *Todo) GetUpdatedAt() int64 {
 	return 0
 }
 
+func (x *Todo) GetProjectId() string {
+	if x != nil && x.ProjectId != nil {
+		return *x.ProjectId
+	}
+	return ""
+}
+
+func (x *Todo) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
 type ListTodosRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Filter the listing. Unset = everything visible to caller. "inbox" = Inbox
+	// only. A project id = that project only (caller must be owner or member).
+	ProjectId     *string `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,6 +159,13 @@ func (x *ListTodosRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListTodosRequest.ProtoReflect.Descriptor instead.
 func (*ListTodosRequest) Descriptor() ([]byte, []int) {
 	return file_dox_v1_todo_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListTodosRequest) GetProjectId() string {
+	if x != nil && x.ProjectId != nil {
+		return *x.ProjectId
+	}
+	return ""
 }
 
 type ListTodosResponse struct {
@@ -229,8 +257,10 @@ func (x *GetTodoRequest) GetId() string {
 }
 
 type CreateTodoRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Title         string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Title string                 `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Unset = create in Inbox (private to caller).
+	ProjectId     *string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -268,6 +298,13 @@ func (*CreateTodoRequest) Descriptor() ([]byte, []int) {
 func (x *CreateTodoRequest) GetTitle() string {
 	if x != nil {
 		return x.Title
+	}
+	return ""
+}
+
+func (x *CreateTodoRequest) GetProjectId() string {
+	if x != nil && x.ProjectId != nil {
+		return *x.ProjectId
 	}
 	return ""
 }
@@ -416,7 +453,7 @@ var File_dox_v1_todo_proto protoreflect.FileDescriptor
 
 const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"~\n" +
+	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\xd0\x01\n" +
 	"\x04Todo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -424,14 +461,25 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\x12\n" +
-	"\x10ListTodosRequest\"7\n" +
+	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\x12\"\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\a \x01(\tR\tcreatedByB\r\n" +
+	"\v_project_id\"E\n" +
+	"\x10ListTodosRequest\x12\"\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
+	"\v_project_id\"7\n" +
 	"\x11ListTodosResponse\x12\"\n" +
 	"\x05todos\x18\x01 \x03(\v2\f.dox.v1.TodoR\x05todos\" \n" +
 	"\x0eGetTodoRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\")\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\\\n" +
 	"\x11CreateTodoRequest\x12\x14\n" +
-	"\x05title\x18\x01 \x01(\tR\x05title\"j\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\"\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
+	"\v_project_id\"j\n" +
 	"\x11UpdateTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x17\n" +
@@ -498,6 +546,9 @@ func file_dox_v1_todo_proto_init() {
 	if File_dox_v1_todo_proto != nil {
 		return
 	}
+	file_dox_v1_todo_proto_msgTypes[0].OneofWrappers = []any{}
+	file_dox_v1_todo_proto_msgTypes[1].OneofWrappers = []any{}
+	file_dox_v1_todo_proto_msgTypes[4].OneofWrappers = []any{}
 	file_dox_v1_todo_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

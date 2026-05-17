@@ -4,25 +4,75 @@
 
 package queries
 
+import (
+	"database/sql"
+)
+
 type DeviceToken struct {
 	ID         string
+	UserID     string
 	Name       string
 	TokenHash  string
 	CreatedAt  int64
 	LastSeenAt int64
 }
 
+type Invite struct {
+	CodeHash  string
+	IssuedBy  string
+	ProjectID sql.NullString
+	Role      sql.NullString
+	CreatedAt int64
+	ExpiresAt int64
+	UsedAt    sql.NullInt64
+	UsedBy    sql.NullString
+}
+
 type PairingCode struct {
 	Code      string
+	UserID    string
 	Name      string
 	ExpiresAt int64
 	Used      int64
+}
+
+type Project struct {
+	ID          string
+	OwnerID     string
+	Name        string
+	Description sql.NullString
+	Color       sql.NullString
+	Archived    bool
+	SortOrder   int64
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+type ProjectMember struct {
+	ProjectID string
+	UserID    string
+	Role      string
+	AddedAt   int64
+}
+
+type Setting struct {
+	Key   string
+	Value string
 }
 
 type Todo struct {
 	ID        string
 	Title     string
 	Done      bool
+	ProjectID sql.NullString
+	CreatedBy string
 	CreatedAt int64
 	UpdatedAt int64
+}
+
+type User struct {
+	ID        string
+	Name      string
+	Role      string
+	CreatedAt int64
 }

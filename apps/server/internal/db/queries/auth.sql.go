@@ -15,7 +15,7 @@ SET used = 1
 WHERE code = ?1
   AND used = 0
   AND expires_at >= ?2
-RETURNING name
+RETURNING user_id, name
 `
 
 type ConsumePairingCodeParams struct {
@@ -23,22 +23,28 @@ type ConsumePairingCodeParams struct {
 	Now  int64
 }
 
-// Atomically marks the code as used and returns its name if it was still valid.
+type ConsumePairingCodeRow struct {
+	UserID string
+	Name   string
+}
+
+// Atomically marks the code used and returns the bound user_id + device name.
 // Returns no row if the code is missing, expired, or already consumed.
-func (q *Queries) ConsumePairingCode(ctx context.Context, arg ConsumePairingCodeParams) (string, error) {
+func (q *Queries) ConsumePairingCode(ctx context.Context, arg ConsumePairingCodeParams) (ConsumePairingCodeRow, error) {
 	row := q.db.QueryRowContext(ctx, consumePairingCode, arg.Code, arg.Now)
-	var name string
-	err := row.Scan(&name)
-	return name, err
+	var i ConsumePairingCodeRow
+	err := row.Scan(&i.UserID, &i.Name)
+	return i, err
 }
 
 const createDeviceToken = `-- name: CreateDeviceToken :exec
-INSERT INTO device_tokens (id, name, token_hash, created_at, last_seen_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO device_tokens (id, user_id, name, token_hash, created_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type CreateDeviceTokenParams struct {
 	ID         string
+	UserID     string
 	Name       string
 	TokenHash  string
 	CreatedAt  int64
@@ -48,6 +54,7 @@ type CreateDeviceTokenParams struct {
 func (q *Queries) CreateDeviceToken(ctx context.Context, arg CreateDeviceTokenParams) error {
 	_, err := q.db.ExecContext(ctx, createDeviceToken,
 		arg.ID,
+		arg.UserID,
 		arg.Name,
 		arg.TokenHash,
 		arg.CreatedAt,
@@ -57,28 +64,54 @@ func (q *Queries) CreateDeviceToken(ctx context.Context, arg CreateDeviceTokenPa
 }
 
 const createPairingCode = `-- name: CreatePairingCode :exec
-INSERT INTO pairing_codes (code, name, expires_at, used)
-VALUES (?, ?, ?, 0)
+INSERT INTO pairing_codes (code, user_id, name, expires_at, used)
+VALUES (?, ?, ?, ?, 0)
 `
 
 type CreatePairingCodeParams struct {
 	Code      string
+	UserID    string
 	Name      string
 	ExpiresAt int64
 }
 
 func (q *Queries) CreatePairingCode(ctx context.Context, arg CreatePairingCodeParams) error {
-	_, err := q.db.ExecContext(ctx, createPairingCode, arg.Code, arg.Name, arg.ExpiresAt)
+	_, err := q.db.ExecContext(ctx, createPairingCode,
+		arg.Code,
+		arg.UserID,
+		arg.Name,
+		arg.ExpiresAt,
+	)
 	return err
 }
 
-const deleteDeviceToken = `-- name: DeleteDeviceToken :execrows
+const deleteDeviceTokenByID = `-- name: DeleteDeviceTokenByID :execrows
 DELETE FROM device_tokens
 WHERE id = ?
 `
 
-func (q *Queries) DeleteDeviceToken(ctx context.Context, id string) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteDeviceToken, id)
+// Admin-level unscoped delete (used by `dox-server device revoke`).
+func (q *Queries) DeleteDeviceTokenByID(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteDeviceTokenByID, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const deleteDeviceTokenForUser = `-- name: DeleteDeviceTokenForUser :execrows
+DELETE FROM device_tokens
+WHERE id = ? AND user_id = ?
+`
+
+type DeleteDeviceTokenForUserParams struct {
+	ID     string
+	UserID string
+}
+
+// Scoped delete: caller can only revoke their own devices.
+func (q *Queries) DeleteDeviceTokenForUser(ctx context.Context, arg DeleteDeviceTokenForUserParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteDeviceTokenForUser, arg.ID, arg.UserID)
 	if err != nil {
 		return 0, err
 	}
@@ -99,33 +132,97 @@ func (q *Queries) DeleteExpiredPairingCodes(ctx context.Context, expiresAt int64
 }
 
 const findDeviceByTokenHash = `-- name: FindDeviceByTokenHash :one
-SELECT id, name, token_hash, created_at, last_seen_at
-FROM device_tokens
-WHERE token_hash = ?
+SELECT d.id, d.user_id, d.name, d.token_hash, d.created_at, d.last_seen_at, u.role AS user_role
+FROM device_tokens d
+JOIN users u ON u.id = d.user_id
+WHERE d.token_hash = ?
 LIMIT 1
 `
 
-func (q *Queries) FindDeviceByTokenHash(ctx context.Context, tokenHash string) (DeviceToken, error) {
+type FindDeviceByTokenHashRow struct {
+	ID         string
+	UserID     string
+	Name       string
+	TokenHash  string
+	CreatedAt  int64
+	LastSeenAt int64
+	UserRole   string
+}
+
+// JOIN users so middleware can resolve caller (user_id + role) in one query.
+func (q *Queries) FindDeviceByTokenHash(ctx context.Context, tokenHash string) (FindDeviceByTokenHashRow, error) {
 	row := q.db.QueryRowContext(ctx, findDeviceByTokenHash, tokenHash)
-	var i DeviceToken
+	var i FindDeviceByTokenHashRow
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.Name,
 		&i.TokenHash,
 		&i.CreatedAt,
 		&i.LastSeenAt,
+		&i.UserRole,
 	)
 	return i, err
 }
 
-const listDeviceTokens = `-- name: ListDeviceTokens :many
-SELECT id, name, token_hash, created_at, last_seen_at
+const listAllDeviceTokens = `-- name: ListAllDeviceTokens :many
+SELECT d.id, d.user_id, d.name, d.token_hash, d.created_at, d.last_seen_at, u.name AS user_name
+FROM device_tokens d
+JOIN users u ON u.id = d.user_id
+ORDER BY d.created_at DESC
+`
+
+type ListAllDeviceTokensRow struct {
+	ID         string
+	UserID     string
+	Name       string
+	TokenHash  string
+	CreatedAt  int64
+	LastSeenAt int64
+	UserName   string
+}
+
+// Admin-only listing used by `dox-server device list`.
+func (q *Queries) ListAllDeviceTokens(ctx context.Context) ([]ListAllDeviceTokensRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAllDeviceTokens)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAllDeviceTokensRow{}
+	for rows.Next() {
+		var i ListAllDeviceTokensRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.TokenHash,
+			&i.CreatedAt,
+			&i.LastSeenAt,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDeviceTokensForUser = `-- name: ListDeviceTokensForUser :many
+SELECT id, user_id, name, token_hash, created_at, last_seen_at
 FROM device_tokens
+WHERE user_id = ?
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListDeviceTokens(ctx context.Context) ([]DeviceToken, error) {
-	rows, err := q.db.QueryContext(ctx, listDeviceTokens)
+func (q *Queries) ListDeviceTokensForUser(ctx context.Context, userID string) ([]DeviceToken, error) {
+	rows, err := q.db.QueryContext(ctx, listDeviceTokensForUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +232,7 @@ func (q *Queries) ListDeviceTokens(ctx context.Context) ([]DeviceToken, error) {
 		var i DeviceToken
 		if err := rows.Scan(
 			&i.ID,
+			&i.UserID,
 			&i.Name,
 			&i.TokenHash,
 			&i.CreatedAt,
