@@ -75,6 +75,25 @@ async function flush() {
   }
 }
 
+// Wait until `predicate` returns true. Use anywhere the assertion depends on
+// React having committed a state change — useInput → dispatch → re-render is
+// async, and the number of microtasks / scheduler turns to settle varies with
+// machine load. setTimeout(0) yields to the full macrotask queue (including
+// React's MessageChannel-based scheduler on Node), which is more reliable
+// than setImmediate alone for flushing React 19's deferred work.
+async function flushUntil(
+  predicate: () => boolean,
+  attempts = 200,
+): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    if (predicate()) return;
+    await new Promise<void>((r) => setTimeout(r, 0));
+  }
+  throw new Error(
+    `flushUntil: predicate never became true within ${attempts} ticks`,
+  );
+}
+
 // Selection marker rendered on the focused row by TodoList — kept here so any
 // future glyph change touches one spot in the tests.
 const SELECT_BAR = "▎";
@@ -121,17 +140,25 @@ describe("App", () => {
     const b = makeTodo({ title: "beta" });
     const { api } = makeFakeApi([a, b]);
     const { lastFrame, stdin } = mountApp(api);
-    await flush();
-    stdin.write("j");
-    await flush();
     // Match the list-row pattern explicitly: `▎ ○ <title>` or `  ○ <title>`.
     // Title also appears in the Todo Details pane as "Title: <title>", which
     // would otherwise shadow the row we care about.
-    const lines = (lastFrame() ?? "").split("\n");
-    const alphaRow = lines.find((l) => /[▎ ]\s*[○✓]\s+alpha/.test(l)) ?? "";
-    const betaRow = lines.find((l) => /[▎ ]\s*[○✓]\s+beta/.test(l)) ?? "";
-    expect(betaRow.includes(SELECT_BAR)).toBe(true);
-    expect(alphaRow.includes(SELECT_BAR)).toBe(false);
+    const rowOf = (title: string, frame: string) =>
+      frame
+        .split("\n")
+        .find((l) => new RegExp(`[▎ ]\\s*[○✓]\\s+${title}`).test(l)) ?? "";
+    // Wait for the initial render to commit AND useInput to subscribe before
+    // sending the keypress — without confirming "alpha selected" first, a
+    // stdin.write fired between commit and useEffect would be silently
+    // dropped by ink and the cursor would never move.
+    await flushUntil(() =>
+      rowOf("alpha", lastFrame() ?? "").includes(SELECT_BAR),
+    );
+    stdin.write("j");
+    await flushUntil(() =>
+      rowOf("beta", lastFrame() ?? "").includes(SELECT_BAR),
+    );
+    expect(rowOf("alpha", lastFrame() ?? "").includes(SELECT_BAR)).toBe(false);
   });
 
   test("space toggles done on the cursored todo", async () => {

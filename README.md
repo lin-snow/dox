@@ -36,8 +36,15 @@ services:
 
 ## Use
 
-Run `dox`. The TUI handles onboarding (register · login · accept invite) and
-everything after.
+Install the client, then run it:
+
+```bash
+npm install -g @l1nsn0w/dox     # or: bun add -g @l1nsn0w/dox
+dox
+```
+
+The TUI handles onboarding (register · login · accept invite) and everything
+after.
 
 ## Stack
 
