@@ -8,12 +8,13 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 )
 
-// publicPaths skip authentication. Register and RedeemPairingCode are the only
-// two entry points reachable without a bearer token; everything else requires
-// a valid device token.
+// publicPaths skip authentication. ServerInfo, Register, and RedeemPairingCode
+// are the only entry points reachable without a bearer token; everything else
+// requires a valid device token.
 var publicPaths = map[string]bool{
-	"/v1/auth/register": true,
-	"/v1/auth/redeem":   true,
+	"/v1/auth/server-info": true,
+	"/v1/auth/register":    true,
+	"/v1/auth/redeem":      true,
 }
 
 // DeviceVerifier looks up a device by its token's SHA-256 hash, returning the

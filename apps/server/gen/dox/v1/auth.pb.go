@@ -22,6 +22,99 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ServerInfoRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerInfoRequest) Reset() {
+	*x = ServerInfoRequest{}
+	mi := &file_dox_v1_auth_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerInfoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerInfoRequest) ProtoMessage() {}
+
+func (x *ServerInfoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_auth_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerInfoRequest.ProtoReflect.Descriptor instead.
+func (*ServerInfoRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{0}
+}
+
+type ServerInfoResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True once the server has at least one registered user. When false, the next
+	// Register call promotes the caller to owner regardless of invite/registration
+	// policy.
+	HasUsers bool `protobuf:"varint,1,opt,name=has_users,json=hasUsers,proto3" json:"has_users,omitempty"`
+	// Mirrors the registration_open server setting. When true, Register works
+	// without an invite code (only meaningful once has_users is true).
+	RegistrationOpen bool `protobuf:"varint,2,opt,name=registration_open,json=registrationOpen,proto3" json:"registration_open,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ServerInfoResponse) Reset() {
+	*x = ServerInfoResponse{}
+	mi := &file_dox_v1_auth_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerInfoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerInfoResponse) ProtoMessage() {}
+
+func (x *ServerInfoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_auth_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerInfoResponse.ProtoReflect.Descriptor instead.
+func (*ServerInfoResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ServerInfoResponse) GetHasUsers() bool {
+	if x != nil {
+		return x.HasUsers
+	}
+	return false
+}
+
+func (x *ServerInfoResponse) GetRegistrationOpen() bool {
+	if x != nil {
+		return x.RegistrationOpen
+	}
+	return false
+}
+
 type RegisterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Display name for the new user. Must be unique across the server.
@@ -36,7 +129,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_dox_v1_auth_proto_msgTypes[0]
+	mi := &file_dox_v1_auth_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +141,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_auth_proto_msgTypes[0]
+	mi := &file_dox_v1_auth_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +154,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_auth_proto_rawDescGZIP(), []int{0}
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisterRequest) GetUserName() string {
@@ -99,7 +192,7 @@ type RegisterResponse struct {
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_dox_v1_auth_proto_msgTypes[1]
+	mi := &file_dox_v1_auth_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +204,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_auth_proto_msgTypes[1]
+	mi := &file_dox_v1_auth_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +217,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_auth_proto_rawDescGZIP(), []int{1}
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RegisterResponse) GetToken() string {
@@ -178,7 +271,7 @@ type RedeemPairingCodeRequest struct {
 
 func (x *RedeemPairingCodeRequest) Reset() {
 	*x = RedeemPairingCodeRequest{}
-	mi := &file_dox_v1_auth_proto_msgTypes[2]
+	mi := &file_dox_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -190,7 +283,7 @@ func (x *RedeemPairingCodeRequest) String() string {
 func (*RedeemPairingCodeRequest) ProtoMessage() {}
 
 func (x *RedeemPairingCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_auth_proto_msgTypes[2]
+	mi := &file_dox_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -203,7 +296,7 @@ func (x *RedeemPairingCodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeemPairingCodeRequest.ProtoReflect.Descriptor instead.
 func (*RedeemPairingCodeRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RedeemPairingCodeRequest) GetCode() string {
@@ -226,7 +319,7 @@ type RedeemPairingCodeResponse struct {
 
 func (x *RedeemPairingCodeResponse) Reset() {
 	*x = RedeemPairingCodeResponse{}
-	mi := &file_dox_v1_auth_proto_msgTypes[3]
+	mi := &file_dox_v1_auth_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +331,7 @@ func (x *RedeemPairingCodeResponse) String() string {
 func (*RedeemPairingCodeResponse) ProtoMessage() {}
 
 func (x *RedeemPairingCodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_auth_proto_msgTypes[3]
+	mi := &file_dox_v1_auth_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +344,7 @@ func (x *RedeemPairingCodeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeemPairingCodeResponse.ProtoReflect.Descriptor instead.
 func (*RedeemPairingCodeResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_dox_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RedeemPairingCodeResponse) GetToken() string {
@@ -293,7 +386,11 @@ var File_dox_v1_auth_proto protoreflect.FileDescriptor
 
 const file_dox_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x11dox/v1/auth.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x85\x01\n" +
+	"\x11dox/v1/auth.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x13\n" +
+	"\x11ServerInfoRequest\"^\n" +
+	"\x12ServerInfoResponse\x12\x1b\n" +
+	"\thas_users\x18\x01 \x01(\bR\bhasUsers\x12+\n" +
+	"\x11registration_open\x18\x02 \x01(\bR\x10registrationOpen\"\x85\x01\n" +
 	"\x0fRegisterRequest\x12\x1b\n" +
 	"\tuser_name\x18\x01 \x01(\tR\buserName\x12\x1f\n" +
 	"\vdevice_name\x18\x02 \x01(\tR\n" +
@@ -317,8 +414,10 @@ const file_dox_v1_auth_proto_rawDesc = "" +
 	"\vdevice_name\x18\x03 \x01(\tR\n" +
 	"deviceName\x12\x17\n" +
 	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x1b\n" +
-	"\tuser_name\x18\x05 \x01(\tR\buserName2\xe0\x01\n" +
-	"\vAuthService\x12[\n" +
+	"\tuser_name\x18\x05 \x01(\tR\buserName2\xc3\x02\n" +
+	"\vAuthService\x12a\n" +
+	"\n" +
+	"ServerInfo\x12\x19.dox.v1.ServerInfoRequest\x1a\x1a.dox.v1.ServerInfoResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/auth/server-info\x12[\n" +
 	"\bRegister\x12\x17.dox.v1.RegisterRequest\x1a\x18.dox.v1.RegisterResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12t\n" +
 	"\x11RedeemPairingCode\x12 .dox.v1.RedeemPairingCodeRequest\x1a!.dox.v1.RedeemPairingCodeResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/auth/redeemB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
@@ -334,20 +433,24 @@ func file_dox_v1_auth_proto_rawDescGZIP() []byte {
 	return file_dox_v1_auth_proto_rawDescData
 }
 
-var file_dox_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_dox_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_dox_v1_auth_proto_goTypes = []any{
-	(*RegisterRequest)(nil),           // 0: dox.v1.RegisterRequest
-	(*RegisterResponse)(nil),          // 1: dox.v1.RegisterResponse
-	(*RedeemPairingCodeRequest)(nil),  // 2: dox.v1.RedeemPairingCodeRequest
-	(*RedeemPairingCodeResponse)(nil), // 3: dox.v1.RedeemPairingCodeResponse
+	(*ServerInfoRequest)(nil),         // 0: dox.v1.ServerInfoRequest
+	(*ServerInfoResponse)(nil),        // 1: dox.v1.ServerInfoResponse
+	(*RegisterRequest)(nil),           // 2: dox.v1.RegisterRequest
+	(*RegisterResponse)(nil),          // 3: dox.v1.RegisterResponse
+	(*RedeemPairingCodeRequest)(nil),  // 4: dox.v1.RedeemPairingCodeRequest
+	(*RedeemPairingCodeResponse)(nil), // 5: dox.v1.RedeemPairingCodeResponse
 }
 var file_dox_v1_auth_proto_depIdxs = []int32{
-	0, // 0: dox.v1.AuthService.Register:input_type -> dox.v1.RegisterRequest
-	2, // 1: dox.v1.AuthService.RedeemPairingCode:input_type -> dox.v1.RedeemPairingCodeRequest
-	1, // 2: dox.v1.AuthService.Register:output_type -> dox.v1.RegisterResponse
-	3, // 3: dox.v1.AuthService.RedeemPairingCode:output_type -> dox.v1.RedeemPairingCodeResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	0, // 0: dox.v1.AuthService.ServerInfo:input_type -> dox.v1.ServerInfoRequest
+	2, // 1: dox.v1.AuthService.Register:input_type -> dox.v1.RegisterRequest
+	4, // 2: dox.v1.AuthService.RedeemPairingCode:input_type -> dox.v1.RedeemPairingCodeRequest
+	1, // 3: dox.v1.AuthService.ServerInfo:output_type -> dox.v1.ServerInfoResponse
+	3, // 4: dox.v1.AuthService.Register:output_type -> dox.v1.RegisterResponse
+	5, // 5: dox.v1.AuthService.RedeemPairingCode:output_type -> dox.v1.RedeemPairingCodeResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -358,14 +461,14 @@ func file_dox_v1_auth_proto_init() {
 	if File_dox_v1_auth_proto != nil {
 		return
 	}
-	file_dox_v1_auth_proto_msgTypes[0].OneofWrappers = []any{}
+	file_dox_v1_auth_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dox_v1_auth_proto_rawDesc), len(file_dox_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

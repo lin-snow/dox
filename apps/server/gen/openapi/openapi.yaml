@@ -54,6 +54,24 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/auth/server-info:
+        get:
+            tags:
+                - AuthService
+            operationId: AuthService_ServerInfo
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ServerInfoResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/invites:
         post:
             tags:
@@ -795,6 +813,20 @@ components:
         RevokeMyDeviceResponse:
             type: object
             properties: {}
+        ServerInfoResponse:
+            type: object
+            properties:
+                hasUsers:
+                    type: boolean
+                    description: |-
+                        True once the server has at least one registered user. When false, the next
+                         Register call promotes the caller to owner regardless of invite/registration
+                         policy.
+                registrationOpen:
+                    type: boolean
+                    description: |-
+                        Mirrors the registration_open server setting. When true, Register works
+                         without an invite code (only meaningful once has_users is true).
         ServerSettings:
             type: object
             properties:
@@ -886,7 +918,10 @@ components:
 tags:
     - name: AuthService
       description: |-
-        AuthService hosts the two public (unauthenticated) RPCs:
+        AuthService hosts the public (unauthenticated) RPCs:
+           - ServerInfo lets a client probe the server before logging in, so the
+             onboarding UI can pick the right branch (first-user / open registration /
+             invite-required) without exposing concepts to the user.
            - Register creates a user. The first-ever Register on an empty server makes
              the caller the owner. Subsequent Registers require either a valid invite
              code or registration_open=true.

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
@@ -24,6 +26,9 @@ var pragmas = []string{
 // Open opens the SQLite database, applies pragmas, and runs goose migrations.
 // SQLite serializes writes, so the pool is capped at 1 connection.
 func Open(path string) (*sql.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return nil, fmt.Errorf("create data dir: %w", err)
+	}
 	conn, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)

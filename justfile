@@ -41,7 +41,7 @@ server-dev:
         echo ">>> Generated dev token: $DOX_BOOTSTRAP_TOKEN" >&2
         echo ">>> Use this with: bun run apps/cli/src/index.ts login --server http://localhost:8080" >&2
     fi
-    export DOX_DB_PATH="${DOX_DB_PATH:-./dev.db}"
+    export DOX_DB_PATH="${DOX_DB_PATH:-./data/dev.db}"
     export DOX_LISTEN_ADDR="${DOX_LISTEN_ADDR:-:8080}"
     cd apps/server && go run ./cmd/dox-server
 

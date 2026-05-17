@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AuthService_ServerInfo_FullMethodName        = "/dox.v1.AuthService/ServerInfo"
 	AuthService_Register_FullMethodName          = "/dox.v1.AuthService/Register"
 	AuthService_RedeemPairingCode_FullMethodName = "/dox.v1.AuthService/RedeemPairingCode"
 )
@@ -27,13 +28,17 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AuthService hosts the two public (unauthenticated) RPCs:
+// AuthService hosts the public (unauthenticated) RPCs:
+//   - ServerInfo lets a client probe the server before logging in, so the
+//     onboarding UI can pick the right branch (first-user / open registration /
+//     invite-required) without exposing concepts to the user.
 //   - Register creates a user. The first-ever Register on an empty server makes
 //     the caller the owner. Subsequent Registers require either a valid invite
 //     code or registration_open=true.
 //   - RedeemPairingCode is for an existing user adding another device to their
 //     own account (no new user is created).
 type AuthServiceClient interface {
+	ServerInfo(ctx context.Context, in *ServerInfoRequest, opts ...grpc.CallOption) (*ServerInfoResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	RedeemPairingCode(ctx context.Context, in *RedeemPairingCodeRequest, opts ...grpc.CallOption) (*RedeemPairingCodeResponse, error)
 }
@@ -44,6 +49,16 @@ type authServiceClient struct {
 
 func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
+}
+
+func (c *authServiceClient) ServerInfo(ctx context.Context, in *ServerInfoRequest, opts ...grpc.CallOption) (*ServerInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ServerInfoResponse)
+	err := c.cc.Invoke(ctx, AuthService_ServerInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
@@ -70,13 +85,17 @@ func (c *authServiceClient) RedeemPairingCode(ctx context.Context, in *RedeemPai
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 //
-// AuthService hosts the two public (unauthenticated) RPCs:
+// AuthService hosts the public (unauthenticated) RPCs:
+//   - ServerInfo lets a client probe the server before logging in, so the
+//     onboarding UI can pick the right branch (first-user / open registration /
+//     invite-required) without exposing concepts to the user.
 //   - Register creates a user. The first-ever Register on an empty server makes
 //     the caller the owner. Subsequent Registers require either a valid invite
 //     code or registration_open=true.
 //   - RedeemPairingCode is for an existing user adding another device to their
 //     own account (no new user is created).
 type AuthServiceServer interface {
+	ServerInfo(context.Context, *ServerInfoRequest) (*ServerInfoResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	RedeemPairingCode(context.Context, *RedeemPairingCodeRequest) (*RedeemPairingCodeResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
@@ -89,6 +108,9 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
+func (UnimplementedAuthServiceServer) ServerInfo(context.Context, *ServerInfoRequest) (*ServerInfoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ServerInfo not implemented")
+}
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
 }
@@ -114,6 +136,24 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AuthService_ServiceDesc, srv)
+}
+
+func _AuthService_ServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServerInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ServerInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ServerInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ServerInfo(ctx, req.(*ServerInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -159,6 +199,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dox.v1.AuthService",
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ServerInfo",
+			Handler:    _AuthService_ServerInfo_Handler,
+		},
 		{
 			MethodName: "Register",
 			Handler:    _AuthService_Register_Handler,

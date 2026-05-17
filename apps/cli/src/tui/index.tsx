@@ -1,19 +1,51 @@
+import { useState } from "react";
 import { render } from "ink";
 
-import { TodoClient, buildFetcher, loadConfig, realIO } from "@dox/core";
+import {
+  type Config,
+  TodoClient,
+  buildFetcher,
+  checkToken,
+  loadConfig,
+  realIO,
+} from "@dox/core";
 
 import { App } from "./App";
+import { Onboarding, type OnboardingReason } from "./components/Onboarding";
+
+interface RootProps {
+  initialConfig: Config | null;
+  initialReason: OnboardingReason;
+}
+
+// Root swaps between Onboarding and App in-place: once Onboarding writes a
+// fresh config we re-render with App, no restart.
+function Root({ initialConfig, initialReason }: RootProps) {
+  const [config, setConfig] = useState<Config | null>(initialConfig);
+  if (!config) {
+    return <Onboarding reason={initialReason} onDone={setConfig} />;
+  }
+  const fetcher = buildFetcher(config, realIO());
+  const api = new TodoClient(fetcher, config.server);
+  return <App api={api} />;
+}
 
 export async function runTui(): Promise<void> {
-  const io = realIO();
   const cfg = await loadConfig();
-  if (!cfg) {
-    io.stderr.write("dox: not logged in. Run 'dox login --server <url>' first.\n");
-    process.exit(1);
+  let initialConfig: Config | null = cfg;
+  let initialReason: OnboardingReason = "fresh";
+
+  if (cfg) {
+    // Validate before mounting App so a revoked/stale token routes the user to
+    // onboarding instead of dead-ending at a permanent "unauthorized" banner.
+    // Transient failures (network, 5xx) fall through and let App surface them.
+    const status = await checkToken(cfg, realIO());
+    if (status === "revoked") {
+      initialConfig = null;
+      initialReason = "reauth";
+    }
   }
 
-  const fetcher = buildFetcher(cfg, io);
-  const api = new TodoClient(fetcher, cfg.server);
-  const app = render(<App api={api} />);
+  const app = render(<Root initialConfig={initialConfig} initialReason={initialReason} />);
   await app.waitUntilExit();
 }

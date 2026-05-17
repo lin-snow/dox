@@ -6,13 +6,20 @@ import "google/api/annotations.proto";
 
 option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
 
-// AuthService hosts the two public (unauthenticated) RPCs:
+// AuthService hosts the public (unauthenticated) RPCs:
+//   - ServerInfo lets a client probe the server before logging in, so the
+//     onboarding UI can pick the right branch (first-user / open registration /
+//     invite-required) without exposing concepts to the user.
 //   - Register creates a user. The first-ever Register on an empty server makes
 //     the caller the owner. Subsequent Registers require either a valid invite
 //     code or registration_open=true.
 //   - RedeemPairingCode is for an existing user adding another device to their
 //     own account (no new user is created).
 service AuthService {
+  rpc ServerInfo(ServerInfoRequest) returns (ServerInfoResponse) {
+    option (google.api.http) = {get: "/v1/auth/server-info"};
+  }
+
   rpc Register(RegisterRequest) returns (RegisterResponse) {
     option (google.api.http) = {
       post: "/v1/auth/register"
@@ -26,6 +33,17 @@ service AuthService {
       body: "*"
     };
   }
+}
+
+message ServerInfoRequest {}
+message ServerInfoResponse {
+  // True once the server has at least one registered user. When false, the next
+  // Register call promotes the caller to owner regardless of invite/registration
+  // policy.
+  bool has_users = 1;
+  // Mirrors the registration_open server setting. When true, Register works
+  // without an invite code (only meaningful once has_users is true).
+  bool registration_open = 2;
 }
 
 message RegisterRequest {

@@ -50,6 +50,7 @@ func TestMiddleware(t *testing.T) {
 		authHeader string
 		wantStatus int
 	}{
+		{"public server-info", "GET", "/v1/auth/server-info", "", http.StatusOK},
 		{"public register", "POST", "/v1/auth/register", "", http.StatusOK},
 		{"public redeem", "POST", "/v1/auth/redeem", "", http.StatusOK},
 		{"protected with valid token", "GET", "/v1/todos", "Bearer " + deviceToken, http.StatusOK},

@@ -48,6 +48,24 @@ func NewUser(q *queries.Queries) *User {
 // AuthService — public RPCs (no Bearer required)
 // ============================================================
 
+// ServerInfo exposes just enough server state for a pre-login UI to pick the
+// right onboarding branch: whether the server has any users (first registrant
+// becomes owner) and whether open registration is enabled.
+func (s *User) ServerInfo(ctx context.Context, _ *doxv1.ServerInfoRequest) (*doxv1.ServerInfoResponse, error) {
+	count, err := s.q.CountUsers(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "count users: %v", err)
+	}
+	open, err := registrationOpen(ctx, s.q)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load settings: %v", err)
+	}
+	return &doxv1.ServerInfoResponse{
+		HasUsers:         count > 0,
+		RegistrationOpen: open,
+	}, nil
+}
+
 // Register creates a new user and their first device. The first-ever caller
 // becomes the owner. Subsequent callers need an invite code, or
 // registration_open=true.

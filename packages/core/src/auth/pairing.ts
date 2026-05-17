@@ -1,4 +1,47 @@
-import { ApiError, type Fetcher } from "../http";
+import type { Config } from "../config";
+import { ApiError, buildFetcher, type Fetcher } from "../http";
+import type { IO } from "../io";
+
+export type TokenStatus = "valid" | "revoked" | "unreachable";
+
+// checkToken probes /v1/me with the saved token so the TUI can distinguish
+// "config is stale, prompt for re-login" from "server is down, surface a
+// transient error". A 401/403 means the device record was revoked or the DB
+// rotated; anything else (network failure, 5xx) is treated as transient.
+export async function checkToken(cfg: Config, io: IO): Promise<TokenStatus> {
+  const fetcher = buildFetcher(cfg, io);
+  try {
+    await fetcher(new Request(`${cfg.server}/v1/me`));
+    return "valid";
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return "revoked";
+    }
+    return "unreachable";
+  }
+}
+
+export interface ServerInfo {
+  // Once true, Register requires an invite (or open registration). When false,
+  // the next Register call promotes the caller to owner.
+  hasUsers: boolean;
+  registrationOpen: boolean;
+}
+
+// fetchServerInfo probes a server before login so the onboarding flow can pick
+// the right branch (first-user / open / invite-required) without asking the
+// user to understand those concepts. Public endpoint, no auth header.
+export async function fetchServerInfo(serverUrl: string): Promise<ServerInfo> {
+  const res = await fetch(`${serverUrl}/v1/auth/server-info`);
+  if (!res.ok) {
+    throw new ApiError(res.status, await res.text());
+  }
+  const body = (await res.json()) as { hasUsers?: boolean; registrationOpen?: boolean };
+  return {
+    hasUsers: Boolean(body.hasUsers),
+    registrationOpen: Boolean(body.registrationOpen),
+  };
+}
 
 export interface PairingResult {
   token: string;

@@ -11,7 +11,49 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/auth.proto.
  */
 export const file_dox_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxImMKD1JlZ2lzdGVyUmVxdWVzdBIRCgl1c2VyX25hbWUYASABKAkSEwoLZGV2aWNlX25hbWUYAiABKAkSGAoLaW52aXRlX2NvZGUYAyABKAlIAIgBAUIOCgxfaW52aXRlX2NvZGUiewoQUmVnaXN0ZXJSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhEKCXVzZXJfbmFtZRgDIAEoCRIMCgRyb2xlGAQgASgJEhEKCWRldmljZV9pZBgFIAEoCRITCgtkZXZpY2VfbmFtZRgGIAEoCSIoChhSZWRlZW1QYWlyaW5nQ29kZVJlcXVlc3QSDAoEY29kZRgBIAEoCSJ2ChlSZWRlZW1QYWlyaW5nQ29kZVJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhEKCWRldmljZV9pZBgCIAEoCRITCgtkZXZpY2VfbmFtZRgDIAEoCRIPCgd1c2VyX2lkGAQgASgJEhEKCXVzZXJfbmFtZRgFIAEoCTLgAQoLQXV0aFNlcnZpY2USWwoIUmVnaXN0ZXISFy5kb3gudjEuUmVnaXN0ZXJSZXF1ZXN0GhguZG94LnYxLlJlZ2lzdGVyUmVzcG9uc2UiHILT5JMCFjoBKiIRL3YxL2F1dGgvcmVnaXN0ZXISdAoRUmVkZWVtUGFpcmluZ0NvZGUSIC5kb3gudjEuUmVkZWVtUGFpcmluZ0NvZGVSZXF1ZXN0GiEuZG94LnYxLlJlZGVlbVBhaXJpbmdDb2RlUmVzcG9uc2UiGoLT5JMCFDoBKiIPL3YxL2F1dGgvcmVkZWVtQjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvYXV0aC5wcm90bxIGZG94LnYxIhMKEVNlcnZlckluZm9SZXF1ZXN0IkIKElNlcnZlckluZm9SZXNwb25zZRIRCgloYXNfdXNlcnMYASABKAgSGQoRcmVnaXN0cmF0aW9uX29wZW4YAiABKAgiYwoPUmVnaXN0ZXJSZXF1ZXN0EhEKCXVzZXJfbmFtZRgBIAEoCRITCgtkZXZpY2VfbmFtZRgCIAEoCRIYCgtpbnZpdGVfY29kZRgDIAEoCUgAiAEBQg4KDF9pbnZpdGVfY29kZSJ7ChBSZWdpc3RlclJlc3BvbnNlEg0KBXRva2VuGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSEQoJdXNlcl9uYW1lGAMgASgJEgwKBHJvbGUYBCABKAkSEQoJZGV2aWNlX2lkGAUgASgJEhMKC2RldmljZV9uYW1lGAYgASgJIigKGFJlZGVlbVBhaXJpbmdDb2RlUmVxdWVzdBIMCgRjb2RlGAEgASgJInYKGVJlZGVlbVBhaXJpbmdDb2RlUmVzcG9uc2USDQoFdG9rZW4YASABKAkSEQoJZGV2aWNlX2lkGAIgASgJEhMKC2RldmljZV9uYW1lGAMgASgJEg8KB3VzZXJfaWQYBCABKAkSEQoJdXNlcl9uYW1lGAUgASgJMsMCCgtBdXRoU2VydmljZRJhCgpTZXJ2ZXJJbmZvEhkuZG94LnYxLlNlcnZlckluZm9SZXF1ZXN0GhouZG94LnYxLlNlcnZlckluZm9SZXNwb25zZSIcgtPkkwIWEhQvdjEvYXV0aC9zZXJ2ZXItaW5mbxJbCghSZWdpc3RlchIXLmRveC52MS5SZWdpc3RlclJlcXVlc3QaGC5kb3gudjEuUmVnaXN0ZXJSZXNwb25zZSIcgtPkkwIWOgEqIhEvdjEvYXV0aC9yZWdpc3RlchJ0ChFSZWRlZW1QYWlyaW5nQ29kZRIgLmRveC52MS5SZWRlZW1QYWlyaW5nQ29kZVJlcXVlc3QaIS5kb3gudjEuUmVkZWVtUGFpcmluZ0NvZGVSZXNwb25zZSIagtPkkwIUOgEqIg8vdjEvYXV0aC9yZWRlZW1CNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+
+/**
+ * @generated from message dox.v1.ServerInfoRequest
+ */
+export type ServerInfoRequest = Message<"dox.v1.ServerInfoRequest"> & {
+};
+
+/**
+ * Describes the message dox.v1.ServerInfoRequest.
+ * Use `create(ServerInfoRequestSchema)` to create a new message.
+ */
+export const ServerInfoRequestSchema: GenMessage<ServerInfoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 0);
+
+/**
+ * @generated from message dox.v1.ServerInfoResponse
+ */
+export type ServerInfoResponse = Message<"dox.v1.ServerInfoResponse"> & {
+  /**
+   * True once the server has at least one registered user. When false, the next
+   * Register call promotes the caller to owner regardless of invite/registration
+   * policy.
+   *
+   * @generated from field: bool has_users = 1;
+   */
+  hasUsers: boolean;
+
+  /**
+   * Mirrors the registration_open server setting. When true, Register works
+   * without an invite code (only meaningful once has_users is true).
+   *
+   * @generated from field: bool registration_open = 2;
+   */
+  registrationOpen: boolean;
+};
+
+/**
+ * Describes the message dox.v1.ServerInfoResponse.
+ * Use `create(ServerInfoResponseSchema)` to create a new message.
+ */
+export const ServerInfoResponseSchema: GenMessage<ServerInfoResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_auth, 1);
 
 /**
  * @generated from message dox.v1.RegisterRequest
@@ -44,7 +86,7 @@ export type RegisterRequest = Message<"dox.v1.RegisterRequest"> & {
  * Use `create(RegisterRequestSchema)` to create a new message.
  */
 export const RegisterRequestSchema: GenMessage<RegisterRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 0);
+  messageDesc(file_dox_v1_auth, 2);
 
 /**
  * @generated from message dox.v1.RegisterResponse
@@ -86,7 +128,7 @@ export type RegisterResponse = Message<"dox.v1.RegisterResponse"> & {
  * Use `create(RegisterResponseSchema)` to create a new message.
  */
 export const RegisterResponseSchema: GenMessage<RegisterResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 1);
+  messageDesc(file_dox_v1_auth, 3);
 
 /**
  * @generated from message dox.v1.RedeemPairingCodeRequest
@@ -103,7 +145,7 @@ export type RedeemPairingCodeRequest = Message<"dox.v1.RedeemPairingCodeRequest"
  * Use `create(RedeemPairingCodeRequestSchema)` to create a new message.
  */
 export const RedeemPairingCodeRequestSchema: GenMessage<RedeemPairingCodeRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 2);
+  messageDesc(file_dox_v1_auth, 4);
 
 /**
  * @generated from message dox.v1.RedeemPairingCodeResponse
@@ -140,10 +182,13 @@ export type RedeemPairingCodeResponse = Message<"dox.v1.RedeemPairingCodeRespons
  * Use `create(RedeemPairingCodeResponseSchema)` to create a new message.
  */
 export const RedeemPairingCodeResponseSchema: GenMessage<RedeemPairingCodeResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_auth, 3);
+  messageDesc(file_dox_v1_auth, 5);
 
 /**
- * AuthService hosts the two public (unauthenticated) RPCs:
+ * AuthService hosts the public (unauthenticated) RPCs:
+ *   - ServerInfo lets a client probe the server before logging in, so the
+ *     onboarding UI can pick the right branch (first-user / open registration /
+ *     invite-required) without exposing concepts to the user.
  *   - Register creates a user. The first-ever Register on an empty server makes
  *     the caller the owner. Subsequent Registers require either a valid invite
  *     code or registration_open=true.
@@ -153,6 +198,14 @@ export const RedeemPairingCodeResponseSchema: GenMessage<RedeemPairingCodeRespon
  * @generated from service dox.v1.AuthService
  */
 export const AuthService: GenService<{
+  /**
+   * @generated from rpc dox.v1.AuthService.ServerInfo
+   */
+  serverInfo: {
+    methodKind: "unary";
+    input: typeof ServerInfoRequestSchema;
+    output: typeof ServerInfoResponseSchema;
+  },
   /**
    * @generated from rpc dox.v1.AuthService.Register
    */

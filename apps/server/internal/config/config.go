@@ -19,7 +19,7 @@ func (cfg *Config) Logger() *slog.Logger {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		DBPath:     getenv("DOX_DB_PATH", "./dox.db"),
+		DBPath:     getenv("DOX_DB_PATH", "./data/dox.db"),
 		ListenAddr: getenv("DOX_LISTEN_ADDR", ":8080"),
 	}
 
