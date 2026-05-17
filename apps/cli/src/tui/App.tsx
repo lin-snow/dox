@@ -37,12 +37,7 @@ import { useTerminalSize } from "./hooks";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
-import {
-  filterList,
-  initialState,
-  reducer,
-  visibleTodos,
-} from "./state";
+import { filterList, initialState, reducer, visibleTodos } from "./state";
 import type { Filter } from "./components/layout/Sidebar";
 import { filterKey } from "./components/layout/Sidebar";
 
@@ -55,7 +50,11 @@ const ACTIVITY_DAYS = 14;
 
 interface ProjectsApi {
   list(): Promise<Project[]>;
-  create(args: { name: string; description?: string; color?: string }): Promise<Project>;
+  create(args: {
+    name: string;
+    description?: string;
+    color?: string;
+  }): Promise<Project>;
   remove(id: string): Promise<void>;
   // Optional so the test harness can keep its slim fake; the real ProjectClient
   // implements it.
@@ -68,13 +67,27 @@ interface AppProps {
   events?: EventsApi;
   users?: UserClient;
   invites?: InviteClient;
-  identity?: { userId?: string; userName?: string; role?: string; server?: string; configPath?: string };
+  identity?: {
+    userId?: string;
+    userName?: string;
+    role?: string;
+    server?: string;
+    configPath?: string;
+  };
   // Called after sign-out clears local credentials. Parent routes back to the
   // onboarding flow on the same process — no exit needed.
   onSignedOut?: () => void;
 }
 
-export function App({ api, projects, events, users, invites, identity, onSignedOut }: AppProps) {
+export function App({
+  api,
+  projects,
+  events,
+  users,
+  invites,
+  identity,
+  onSignedOut,
+}: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const { exit } = useApp();
@@ -88,7 +101,8 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         projects ? projects.list() : Promise.resolve<Project[]>([]),
       ]);
       dispatch({ type: "TODOS_LOADED", todos });
-      if (projects) dispatch({ type: "PROJECTS_LOADED", projects: projectList });
+      if (projects)
+        dispatch({ type: "PROJECTS_LOADED", projects: projectList });
     } catch (err) {
       dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
     } finally {
@@ -118,7 +132,10 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
   useEffect(() => {
     if (!events) return;
     void refreshEvents();
-    const timer = setInterval(() => void refreshEvents(), EVENTS_POLL_INTERVAL_MS);
+    const timer = setInterval(
+      () => void refreshEvents(),
+      EVENTS_POLL_INTERVAL_MS,
+    );
     return () => clearInterval(timer);
   }, [events, refreshEvents]);
 
@@ -362,25 +379,37 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         return;
       }
       if (state.error) dispatch({ type: "CLEAR_ERROR" });
-      if (input === "j" || key.downArrow) return dispatch({ type: "CURSOR_DOWN" });
+      if (input === "j" || key.downArrow)
+        return dispatch({ type: "CURSOR_DOWN" });
       if (input === "k" || key.upArrow) return dispatch({ type: "CURSOR_UP" });
       if (input === "g") return dispatch({ type: "CURSOR_FIRST" });
       if (input === "G") return dispatch({ type: "CURSOR_LAST" });
-      if (key.tab || input === "h" || input === "l" || key.leftArrow || key.rightArrow) {
+      if (
+        key.tab ||
+        input === "h" ||
+        input === "l" ||
+        key.leftArrow ||
+        key.rightArrow
+      ) {
         const dir = input === "h" || key.leftArrow ? -1 : 1;
         return dispatch({ type: "FILTER_CYCLE", direction: dir as 1 | -1 });
       }
       if (input === "r") return void refresh();
 
-      if (input === "i" || input === "a") return dispatch({ type: "ENTER_ADD" });
-      if (input === "p" && projects) return dispatch({ type: "ENTER_PROJECT_ADD" });
+      if (input === "i" || input === "a")
+        return dispatch({ type: "ENTER_ADD" });
+      if (input === "p" && projects)
+        return dispatch({ type: "ENTER_PROJECT_ADD" });
       if (
         input === "D" &&
         projects &&
         typeof state.filter !== "string" &&
         state.filter.type === "project"
       ) {
-        return dispatch({ type: "ENTER_PROJECT_DELETE_CONFIRM", id: state.filter.id });
+        return dispatch({
+          type: "ENTER_PROJECT_DELETE_CONFIRM",
+          id: state.filter.id,
+        });
       }
       if (
         input === "m" &&
@@ -388,7 +417,10 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         typeof state.filter !== "string" &&
         state.filter.type === "project"
       ) {
-        return dispatch({ type: "ENTER_PROJECT_MANAGE", projectId: state.filter.id });
+        return dispatch({
+          type: "ENTER_PROJECT_MANAGE",
+          projectId: state.filter.id,
+        });
       }
 
       const current = visible[state.cursor];
@@ -404,7 +436,9 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
       if (input === " ") {
         void (async () => {
           try {
-            const updated = await api.updateTodo(current.id, { done: !current.done });
+            const updated = await api.updateTodo(current.id, {
+              done: !current.done,
+            });
             dispatch({ type: "TODO_UPDATED", todo: updated });
           } catch (err) {
             dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
@@ -420,7 +454,11 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
           }
         })();
       } else if (input === "e") {
-        void enterEditWithFullTodo(current.id, current.title, current.description);
+        void enterEditWithFullTodo(
+          current.id,
+          current.title,
+          current.description,
+        );
       }
     },
     { isActive: state.mode === "list" },
@@ -547,22 +585,42 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
   // early return so we don't have to gate every grid sub-render below.
   if (state.mode === "settings") {
     const settingsTabs = buildSettingsTabs({
-      identity: { userName: identity?.userName, server: identity?.server, role: identity?.role },
+      identity: {
+        userName: identity?.userName,
+        server: identity?.server,
+        role: identity?.role,
+      },
       server: state.settingsServer,
       serverLoaded: state.settingsServerLoaded,
       outgoing: state.settingsOutgoing,
       outgoingLoaded: state.settingsOutgoingLoaded,
       on: {
-        editServerName: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "serverName" } }),
+        editServerName: () =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "serverName" } }),
         editServerDescription: () =>
-          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "serverDescription" } }),
+          dispatch({
+            type: "SETTINGS_EDIT",
+            editing: { kind: "serverDescription" },
+          }),
         toggleRegistration: (next) =>
-          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "registrationToggle", next } }),
-        changePassword: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "changePassword" } }),
-        signOut: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "signOut" } }),
-        redeemCode: () => dispatch({ type: "SETTINGS_EDIT", editing: { kind: "redeemCode" } }),
+          dispatch({
+            type: "SETTINGS_EDIT",
+            editing: { kind: "registrationToggle", next },
+          }),
+        changePassword: () =>
+          dispatch({
+            type: "SETTINGS_EDIT",
+            editing: { kind: "changePassword" },
+          }),
+        signOut: () =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "signOut" } }),
+        redeemCode: () =>
+          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "redeemCode" } }),
         revokeInvite: (codeHash) =>
-          dispatch({ type: "SETTINGS_EDIT", editing: { kind: "revokeInvite", codeHash } }),
+          dispatch({
+            type: "SETTINGS_EDIT",
+            editing: { kind: "revokeInvite", codeHash },
+          }),
       },
     });
 
@@ -594,7 +652,7 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
   if (state.mode === "add" || state.mode === "edit") {
     const editingTodo =
       state.mode === "edit" && state.editingId
-        ? state.todos.find((t) => t.id === state.editingId) ?? null
+        ? (state.todos.find((t) => t.id === state.editingId) ?? null)
         : null;
     return (
       <TodoEditorView
@@ -634,8 +692,14 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
   }
 
   if (state.mode === "projectManage") {
-    const proj = state.manageProjectId ? projectById.get(state.manageProjectId) ?? null : null;
-    const isOwner = !!(proj && identity?.userId && proj.ownerId === identity.userId);
+    const proj = state.manageProjectId
+      ? (projectById.get(state.manageProjectId) ?? null)
+      : null;
+    const isOwner = !!(
+      proj &&
+      identity?.userId &&
+      proj.ownerId === identity.userId
+    );
     return (
       <ProjectManageView
         project={proj}
@@ -647,7 +711,9 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         nowMs={nowMs}
         isOwner={isOwner}
         onClose={() => dispatch({ type: "EXIT_PROJECT_MANAGE" })}
-        onOpenInvitePicker={() => dispatch({ type: "MANAGE_EDIT", editing: { kind: "invitePicker" } })}
+        onOpenInvitePicker={() =>
+          dispatch({ type: "MANAGE_EDIT", editing: { kind: "invitePicker" } })
+        }
         onPickInviteRole={(role) => {
           if (!invites || !proj) return;
           dispatch({ type: "MANAGE_BUSY", busy: true });
@@ -704,7 +770,7 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
 
   if (state.mode === "searchDetail") {
     const current = state.searchDetailTodoId
-      ? state.todos.find((t) => t.id === state.searchDetailTodoId) ?? null
+      ? (state.todos.find((t) => t.id === state.searchDetailTodoId) ?? null)
       : null;
     if (!current) {
       // Row vanished (deleted from another client, or cleared by a filter);
@@ -712,7 +778,9 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
       dispatch({ type: "SEARCH_CLOSE_DETAIL" });
       return null;
     }
-    const proj = current.projectId ? projectById.get(current.projectId) ?? null : null;
+    const proj = current.projectId
+      ? (projectById.get(current.projectId) ?? null)
+      : null;
     return (
       <TodoDetailView
         todo={current}
@@ -723,14 +791,22 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         onToggleDone={() => {
           void (async () => {
             try {
-              const updated = await api.updateTodo(current.id, { done: !current.done });
+              const updated = await api.updateTodo(current.id, {
+                done: !current.done,
+              });
               dispatch({ type: "TODO_UPDATED", todo: updated });
             } catch (err) {
               dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
             }
           })();
         }}
-        onEdit={() => void enterEditWithFullTodo(current.id, current.title, current.description)}
+        onEdit={() =>
+          void enterEditWithFullTodo(
+            current.id,
+            current.title,
+            current.description,
+          )
+        }
         onDelete={() => {
           void (async () => {
             try {
@@ -753,7 +829,9 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
       dispatch({ type: "CLOSE_TODO_DETAIL" });
       return null;
     }
-    const proj = current.projectId ? projectById.get(current.projectId) ?? null : null;
+    const proj = current.projectId
+      ? (projectById.get(current.projectId) ?? null)
+      : null;
     return (
       <TodoDetailView
         todo={current}
@@ -764,14 +842,22 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         onToggleDone={() => {
           void (async () => {
             try {
-              const updated = await api.updateTodo(current.id, { done: !current.done });
+              const updated = await api.updateTodo(current.id, {
+                done: !current.done,
+              });
               dispatch({ type: "TODO_UPDATED", todo: updated });
             } catch (err) {
               dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
             }
           })();
         }}
-        onEdit={() => void enterEditWithFullTodo(current.id, current.title, current.description)}
+        onEdit={() =>
+          void enterEditWithFullTodo(
+            current.id,
+            current.title,
+            current.description,
+          )
+        }
         onDelete={() => {
           void (async () => {
             try {
@@ -802,7 +888,8 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
       : null;
     const name = target?.name ?? "this project";
     const todoCount = state.deletingProjectId
-      ? state.todos.filter((t) => t.projectId === state.deletingProjectId).length
+      ? state.todos.filter((t) => t.projectId === state.deletingProjectId)
+          .length
       : 0;
     return (
       <ConfirmDialog
@@ -812,7 +899,11 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         message={
           <>
             <Text wrap="wrap">
-              Delete project <Text color={color.accent} bold>{name}</Text>?
+              Delete project{" "}
+              <Text color={color.accent} bold>
+                {name}
+              </Text>
+              ?
             </Text>
             <Box marginTop={1}>
               <Text color={color.muted} wrap="wrap">
@@ -833,7 +924,12 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
         {/* ── left column: Server|Status header row + tall Todos list ─── */}
         <Box flexDirection="column" width={leftColW}>
           <Box>
-            <TitledPanel title="Server" width={serverW} paddingY={1} height={topRowH}>
+            <TitledPanel
+              title="Server"
+              width={serverW}
+              paddingY={1}
+              height={topRowH}
+            >
               <Logo />
               <Box marginTop={1}>
                 <Text color={color.muted}>serving at </Text>
@@ -845,7 +941,12 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
 
             <Box width={topGap} />
 
-            <TitledPanel title="Status" width={statusW} paddingY={1} height={topRowH}>
+            <TitledPanel
+              title="Status"
+              width={statusW}
+              paddingY={1}
+              height={topRowH}
+            >
               <StatusPanel
                 userName={identity?.userName}
                 server={identity?.server}
@@ -859,85 +960,109 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
 
           <Box height={rowGap} />
 
-          <TitledPanel title="Todos" width={leftColW} paddingY={1} height={todosH} focused>
-          {/* Meta line — at-a-glance summary that survives even when the list
+          <TitledPanel
+            title="Todos"
+            width={leftColW}
+            paddingY={1}
+            height={todosH}
+            focused
+          >
+            {/* Meta line — at-a-glance summary that survives even when the list
               scrolls offscreen on tiny terminals. */}
-          <Box>
-            <Text color={color.accent} bold>{totalCount}</Text>
-            <Text color={color.muted}>{" todos  "}</Text>
-            <Text color={color.muted} dimColor>{icon.dot}</Text>
-            <Text color={color.muted}>{"  "}</Text>
-            <Text color={color.success} bold>{doneCount}</Text>
-            <Text color={color.muted}>{" done  "}</Text>
-            <Text color={color.muted} dimColor>{icon.dot}</Text>
-            <Text color={color.muted}>{"  "}</Text>
-            <Text color={color.accent2} bold>{openCount}</Text>
-            <Text color={color.muted}>{" open"}</Text>
-            <Box flexGrow={1} />
-            <Text color={color.muted} dimColor>sorted by updated</Text>
-          </Box>
-          <Box marginTop={1}>
-            <Tabs
-              tabs={[
-                {
-                  key: "inbox",
-                  label: "Private",
-                  count: state.todos.filter((t) => !t.projectId).length,
-                  kind: "system",
-                  prefixIcon: icon.brand,
-                },
-                {
-                  key: "done",
-                  label: "Done",
-                  count: state.todos.filter((t) => t.done).length,
-                  kind: "system",
-                  prefixIcon: icon.brand,
-                },
-                ...state.projects.map((p) => ({
-                  key: `p:${p.id}`,
-                  label: p.name,
-                  count: state.todos.filter((t) => t.projectId === p.id).length,
-                  kind: "project" as const,
-                  prefixIcon: icon.on,
-                  prefixColor: swatchColor(p.color),
-                })),
-              ]}
-              activeKey={activeTab}
-            />
-          </Box>
-          <Box marginTop={1} flexDirection="column">
-            {showSpinner ? (
-              <Spinner label="Loading todos…" />
-            ) : visible.length === 0 ? (
-              <Text color={color.muted} dimColor>
-                {"  "}nothing here — press <Text color={color.accent}>i</Text> to add a todo
+            <Box>
+              <Text color={color.accent} bold>
+                {totalCount}
               </Text>
-            ) : (
-              <>
-                {listWindow.items.map((t, idx) => (
-                  <TodoRow
-                    key={t.id}
-                    todo={t}
-                    nowMs={nowMs}
-                    highlighted={listWindow.start + idx === state.cursor}
-                    width={leftColW - 4}
-                  />
-                ))}
-                {(listWindow.moreAbove > 0 || listWindow.moreBelow > 0) && (
-                  <Box width={leftColW - 4}>
-                    <Text color={color.muted} dimColor>
-                      {listWindow.moreAbove > 0 ? `↑ ${listWindow.moreAbove} more` : ""}
-                    </Text>
-                    <Box flexGrow={1} />
-                    <Text color={color.muted} dimColor>
-                      {listWindow.moreBelow > 0 ? `${listWindow.moreBelow} more ↓` : ""}
-                    </Text>
-                  </Box>
-                )}
-              </>
-            )}
-          </Box>
-        </TitledPanel>
+              <Text color={color.muted}>{" todos  "}</Text>
+              <Text color={color.muted} dimColor>
+                {icon.dot}
+              </Text>
+              <Text color={color.muted}>{"  "}</Text>
+              <Text color={color.success} bold>
+                {doneCount}
+              </Text>
+              <Text color={color.muted}>{" done  "}</Text>
+              <Text color={color.muted} dimColor>
+                {icon.dot}
+              </Text>
+              <Text color={color.muted}>{"  "}</Text>
+              <Text color={color.accent2} bold>
+                {openCount}
+              </Text>
+              <Text color={color.muted}>{" open"}</Text>
+              <Box flexGrow={1} />
+              <Text color={color.muted} dimColor>
+                sorted by updated
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Tabs
+                tabs={[
+                  {
+                    key: "inbox",
+                    label: "Private",
+                    count: state.todos.filter((t) => !t.projectId).length,
+                    kind: "system",
+                    prefixIcon: icon.brand,
+                  },
+                  {
+                    key: "done",
+                    label: "Done",
+                    count: state.todos.filter((t) => t.done).length,
+                    kind: "system",
+                    prefixIcon: icon.brand,
+                  },
+                  ...state.projects.map((p) => ({
+                    key: `p:${p.id}`,
+                    label: p.name,
+                    count: state.todos.filter((t) => t.projectId === p.id)
+                      .length,
+                    kind: "project" as const,
+                    prefixIcon: icon.on,
+                    prefixColor: swatchColor(p.color),
+                  })),
+                ]}
+                activeKey={activeTab}
+              />
+            </Box>
+            <Box marginTop={1} flexDirection="column">
+              {showSpinner ? (
+                <Spinner label="Loading todos…" />
+              ) : visible.length === 0 ? (
+                <Text color={color.muted} dimColor>
+                  {"  "}nothing here — press <Text color={color.accent}>i</Text>{" "}
+                  to add a todo
+                </Text>
+              ) : (
+                <>
+                  {listWindow.items.map((t, idx) => (
+                    <TodoRow
+                      key={t.id}
+                      todo={t}
+                      nowMs={nowMs}
+                      highlighted={listWindow.start + idx === state.cursor}
+                      width={leftColW - 4}
+                    />
+                  ))}
+                  {(listWindow.moreAbove > 0 || listWindow.moreBelow > 0) && (
+                    <Box width={leftColW - 4}>
+                      <Text color={color.muted} dimColor>
+                        {listWindow.moreAbove > 0
+                          ? `↑ ${listWindow.moreAbove} more`
+                          : ""}
+                      </Text>
+                      <Box flexGrow={1} />
+                      <Text color={color.muted} dimColor>
+                        {listWindow.moreBelow > 0
+                          ? `${listWindow.moreBelow} more ↓`
+                          : ""}
+                      </Text>
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+          </TitledPanel>
         </Box>
 
         <Box width={colGap} />
@@ -955,7 +1080,9 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
           >
             {/* Header: legend + totals — a one-line read of what the chart shows. */}
             <Box>
-              <Text color={color.muted} dimColor>▒</Text>
+              <Text color={color.muted} dimColor>
+                ▒
+              </Text>
               <Text color={color.muted}>{" Created "}</Text>
               <Text color={color.accent}>{sum(createdSeries)}</Text>
               <Text color={color.muted}>{"   "}</Text>
@@ -999,7 +1126,7 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
               todo={visible[state.cursor] ?? null}
               project={
                 visible[state.cursor]?.projectId
-                  ? projectById.get(visible[state.cursor]!.projectId!) ?? null
+                  ? (projectById.get(visible[state.cursor]!.projectId!) ?? null)
                   : null
               }
               ownerName={identity?.userName}
@@ -1015,12 +1142,7 @@ export function App({ api, projects, events, users, invites, identity, onSignedO
 
       {state.helpOpen && <HelpOverlay />}
 
-      <Footer
-        mode="normal"
-        version={VERSION}
-        hints={listHints}
-        outerPadX={1}
-      />
+      <Footer mode="normal" version={VERSION} hints={listHints} outerPadX={1} />
     </Box>
   );
 }
@@ -1045,12 +1167,20 @@ function StatusPanel({
   const rows: ReadonlyArray<readonly [string, string, string | undefined]> = [
     ["user", userName ?? "—", color.accent2],
     ["host", server ? stripScheme(server) : "local", color.accent2],
-    ["srv", serverInfo?.version || (serverInfo ? "unknown" : "—"), color.accent],
+    [
+      "srv",
+      serverInfo?.version || (serverInfo ? "unknown" : "—"),
+      color.accent,
+    ],
     ["sha", serverInfo?.commit || (serverInfo ? "unknown" : "—"), color.accent],
     ["cli", clientVersion, color.accent],
     ["cfg", configPath ? tildifyPath(configPath) : "—", color.muted],
   ];
-  const connTint = serverInfo ? color.success : server ? color.warn : color.muted;
+  const connTint = serverInfo
+    ? color.success
+    : server
+      ? color.warn
+      : color.muted;
   const connLabel = serverInfo ? "connected" : server ? "probing…" : "local";
   return (
     <Box flexDirection="column">
@@ -1067,9 +1197,7 @@ function StatusPanel({
       <Box marginTop={1}>
         <Text color={connTint}>{icon.on} </Text>
         <Text color={connTint}>{connLabel}</Text>
-        {syncing && (
-          <Text color={color.muted}>{`  ${icon.dot} syncing`}</Text>
-        )}
+        {syncing && <Text color={color.muted}>{`  ${icon.dot} syncing`}</Text>}
       </Box>
     </Box>
   );
@@ -1103,7 +1231,11 @@ function TodoRow({
   width: number;
 }) {
   const mark = todo.done ? icon.done : icon.open;
-  const markColor = todo.done ? color.success : highlighted ? color.accent : color.muted;
+  const markColor = todo.done
+    ? color.success
+    : highlighted
+      ? color.accent
+      : color.muted;
   const bar = highlighted ? icon.selectBar : " ";
   const age = relativeTime(nowMs, todo.updatedAt);
   const ageWidth = 4;
@@ -1163,7 +1295,11 @@ interface WindowSlice<T> {
   moreAbove: number;
   moreBelow: number;
 }
-function sliceWindow<T>(items: T[], cursor: number, viewportH: number): WindowSlice<T> {
+function sliceWindow<T>(
+  items: T[],
+  cursor: number,
+  viewportH: number,
+): WindowSlice<T> {
   if (items.length <= viewportH) {
     return { items, start: 0, moreAbove: 0, moreBelow: 0 };
   }
@@ -1192,7 +1328,10 @@ function deriveTotals(todos: Todo[]) {
 function bucketByDay(todos: Todo[]): Record<string, number> {
   const out: Record<string, number> = {};
   for (const t of todos) {
-    const ms = typeof t.createdAt === "string" ? Number(t.createdAt) : Number(t.createdAt ?? 0);
+    const ms =
+      typeof t.createdAt === "string"
+        ? Number(t.createdAt)
+        : Number(t.createdAt ?? 0);
     if (!Number.isFinite(ms) || ms <= 0) continue;
     const day = new Date(ms).toISOString().slice(0, 10);
     out[day] = (out[day] ?? 0) + 1;
@@ -1231,7 +1370,11 @@ function XAxis({ days }: { days: number }) {
   );
 }
 
-function activityByDay(todos: Todo[], days: number, kind: "created" | "done"): number[] {
+function activityByDay(
+  todos: Todo[],
+  days: number,
+  kind: "created" | "done",
+): number[] {
   const today = startOfDay(Date.now());
   const buckets = new Array(days).fill(0);
   for (const t of todos) {

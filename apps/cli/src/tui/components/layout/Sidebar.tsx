@@ -35,10 +35,14 @@ interface Row {
   divider?: boolean;
 }
 
-export function Sidebar({ projects, current, focused, cursor, counts }: SidebarProps) {
-  const rows: Row[] = [
-    { key: "inbox", label: "Private", count: counts.inbox },
-  ];
+export function Sidebar({
+  projects,
+  current,
+  focused,
+  cursor,
+  counts,
+}: SidebarProps) {
+  const rows: Row[] = [{ key: "inbox", label: "Private", count: counts.inbox }];
   if (projects.length > 0) {
     rows.push({ key: "__divider__", label: "", count: 0, divider: true });
     for (const p of projects) {
@@ -93,8 +97,16 @@ function SidebarRow({
   // Cursor draws the bar; the selected (committed) filter is bolded. When both
   // overlap the row uses accent for the bar so focus is obvious.
   const bar = cursored ? icon.selectBar : selected ? icon.selectBar : " ";
-  const barColor = cursored ? color.accent : selected ? color.muted : color.muted;
-  const labelColor = cursored ? color.accent : selected ? undefined : color.muted;
+  const barColor = cursored
+    ? color.accent
+    : selected
+      ? color.muted
+      : color.muted;
+  const labelColor = cursored
+    ? color.accent
+    : selected
+      ? undefined
+      : color.muted;
   return (
     <Box>
       <Text color={barColor}>{bar}</Text>
@@ -102,7 +114,7 @@ function SidebarRow({
       {row.swatch ? (
         <Text color={swatchColor(row.swatch)}>● </Text>
       ) : (
-        <Text>  </Text>
+        <Text> </Text>
       )}
       <Text color={labelColor} bold={selected}>
         {row.label}

@@ -1,0 +1,142 @@
+name: release
+
+# Cut a release: cross-compile dox-server binaries, attach them as tarballs
+# to a draft GitHub Release, and push a multi-arch image to Docker Hub.
+# Fires on push of a `v*` tag, or manually via workflow_dispatch.
+#
+# Required repo config:
+#   variables: DOCKERHUB_USERNAME
+#   secrets:   DOCKERHUB_TOKEN  (Docker Hub access token, read+write)
+#
+# To cut a release:
+#   just release v0.1.0          (preferred)
+#   git tag v0.1.0 && git push origin v0.1.0
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed by softprops/action-gh-release
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: apps/server/go.sum
+
+      - name: Build dox-server
+        working-directory: apps/server
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p bin
+          go build -trimpath \
+            -ldflags="-s -w \
+              -X github.com/lin-snow/dox/apps/server/internal/version.version=${VERSION} \
+              -X github.com/lin-snow/dox/apps/server/internal/version.commit=${COMMIT} \
+              -X github.com/lin-snow/dox/apps/server/internal/version.date=${BUILD_DATE} \
+              -X github.com/lin-snow/dox/apps/server/internal/version.builtBy=github-actions" \
+            -o bin/dox-server-${GOOS}-${GOARCH} \
+            ./cmd/dox-server
+
+      - uses: actions/upload-artifact@v8
+        with:
+          name: dox-server-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: apps/server/bin/dox-server-${{ matrix.goos }}-${{ matrix.goarch }}
+          if-no-files-found: error
+
+  prepare-release:
+    name: Prepare GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: dox-server-*
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: Package tarballs
+        working-directory: ./artifacts
+        run: |
+          set -euo pipefail
+          for bin in dox-server-linux-*; do
+            [ -f "$bin" ] || continue
+            chmod +x "$bin"
+            tar -czf "${bin}.tar.gz" "$bin"
+          done
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ./artifacts/*.tar.gz
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+
+  build-docker:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: dox-server-*
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: docker.io/${{ vars.DOCKERHUB_USERNAME }}/dox
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

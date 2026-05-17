@@ -13,14 +13,23 @@ export const list = (opts: GlobalOpts) =>
   withContext(opts, async ({ projects, output }) => {
     const rows = await projects.list();
     output.ok(
-      rows.map((p) => `${p.id.slice(0, 8)}  ${p.archived ? "[archived] " : ""}${p.name}`).join("\n") || "(no projects)",
+      rows
+        .map(
+          (p) =>
+            `${p.id.slice(0, 8)}  ${p.archived ? "[archived] " : ""}${p.name}`,
+        )
+        .join("\n") || "(no projects)",
       { projects: rows },
     );
   });
 
 export const create = (name: string, opts: CreateOpts) =>
   withContext(opts, async ({ projects, output }) => {
-    const p = await projects.create({ name, description: opts.description, color: opts.color });
+    const p = await projects.create({
+      name,
+      description: opts.description,
+      color: opts.color,
+    });
     output.ok(`Created ${p.name} (${p.id.slice(0, 8)})`, { project: p });
   });
 
@@ -62,13 +71,20 @@ export const members = (id: string, opts: GlobalOpts) =>
   withContext(opts, async ({ projects, output }) => {
     const rows = await projects.listMembers(id);
     output.ok(
-      rows.map((m) => `${m.userId}  ${m.role}`).join("\n") || "(no extra members; owner only)",
+      rows.map((m) => `${m.userId}  ${m.role}`).join("\n") ||
+        "(no extra members; owner only)",
       { members: rows },
     );
   });
 
-export const removeMember = (projectId: string, userId: string, opts: GlobalOpts) =>
+export const removeMember = (
+  projectId: string,
+  userId: string,
+  opts: GlobalOpts,
+) =>
   withContext(opts, async ({ projects, output }) => {
     await projects.removeMember(projectId, userId);
-    output.ok(`Removed ${userId} from project ${projectId}`, { removed: userId });
+    output.ok(`Removed ${userId} from project ${projectId}`, {
+      removed: userId,
+    });
   });

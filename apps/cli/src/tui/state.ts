@@ -1,4 +1,11 @@
-import type { ActivityEvent, OutgoingInvite, Project, ProjectMember, ServerSettings, Todo } from "@dox/core";
+import type {
+  ActivityEvent,
+  OutgoingInvite,
+  Project,
+  ProjectMember,
+  ServerSettings,
+  Todo,
+} from "@dox/core";
 
 import type { Filter } from "./components/layout/Sidebar";
 import { filterKey } from "./components/layout/Sidebar";
@@ -108,7 +115,12 @@ export type Action =
   | { type: "FILTER_SET"; filter: Filter }
   | { type: "FILTER_CYCLE"; direction: 1 | -1 }
   | { type: "ENTER_ADD" }
-  | { type: "ENTER_EDIT"; id: string; initialTitle: string; initialDescription: string }
+  | {
+      type: "ENTER_EDIT";
+      id: string;
+      initialTitle: string;
+      initialDescription: string;
+    }
   | { type: "ENTER_PROJECT_ADD" }
   | { type: "PROJECT_ADDED"; project: Project }
   | { type: "ENTER_PROJECT_DELETE_CONFIRM"; id: string }
@@ -195,7 +207,10 @@ export function visibleTodos(state: State): Todo[] {
 }
 
 export function filterList(projects: Project[]): Filter[] {
-  return ["inbox", ...projects.map((p) => ({ type: "project" as const, id: p.id }))];
+  return [
+    "inbox",
+    ...projects.map((p) => ({ type: "project" as const, id: p.id })),
+  ];
 }
 
 function clampCursor(cursor: number, length: number): number {
@@ -206,8 +221,16 @@ function clampCursor(cursor: number, length: number): number {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "TODOS_LOADED": {
-      const next = { ...state, todos: action.todos, loading: false, error: null };
-      return { ...next, cursor: clampCursor(state.cursor, visibleTodos(next).length) };
+      const next = {
+        ...state,
+        todos: action.todos,
+        loading: false,
+        error: null,
+      };
+      return {
+        ...next,
+        cursor: clampCursor(state.cursor, visibleTodos(next).length),
+      };
     }
     case "PROJECTS_LOADED":
       return { ...state, projects: action.projects };
@@ -223,13 +246,19 @@ export function reducer(state: State, action: Action): State {
       return { ...state, error: null };
     case "CURSOR_UP":
       if (state.focus === "sidebar") {
-        return { ...state, sidebarCursor: Math.max(0, state.sidebarCursor - 1) };
+        return {
+          ...state,
+          sidebarCursor: Math.max(0, state.sidebarCursor - 1),
+        };
       }
       return { ...state, cursor: Math.max(0, state.cursor - 1) };
     case "CURSOR_DOWN": {
       if (state.focus === "sidebar") {
         const max = Math.max(0, filterList(state.projects).length - 1);
-        return { ...state, sidebarCursor: Math.min(max, state.sidebarCursor + 1) };
+        return {
+          ...state,
+          sidebarCursor: Math.min(max, state.sidebarCursor + 1),
+        };
       }
       const max = Math.max(0, visibleTodos(state).length - 1);
       return { ...state, cursor: Math.min(max, state.cursor + 1) };
@@ -354,17 +383,35 @@ export function reducer(state: State, action: Action): State {
         settingsBusy: false,
       };
     case "CLOSE_SETTINGS":
-      return { ...state, mode: "list", settingsEditing: null, settingsError: null };
+      return {
+        ...state,
+        mode: "list",
+        settingsEditing: null,
+        settingsError: null,
+      };
     case "SETTINGS_TAB":
       // Resetting the cursor on tab change matches the image: the new tab's
       // first item is always pre-selected.
-      return { ...state, settingsTab: action.tab, settingsCursor: 0, settingsError: null };
+      return {
+        ...state,
+        settingsTab: action.tab,
+        settingsCursor: 0,
+        settingsError: null,
+      };
     case "SETTINGS_CURSOR":
       return { ...state, settingsCursor: action.index };
     case "SETTINGS_SERVER_SET":
-      return { ...state, settingsServer: action.settings, settingsServerLoaded: true };
+      return {
+        ...state,
+        settingsServer: action.settings,
+        settingsServerLoaded: true,
+      };
     case "SETTINGS_OUTGOING_SET":
-      return { ...state, settingsOutgoing: action.invites, settingsOutgoingLoaded: true };
+      return {
+        ...state,
+        settingsOutgoing: action.invites,
+        settingsOutgoingLoaded: true,
+      };
     case "SETTINGS_EDIT":
       return { ...state, settingsEditing: action.editing, settingsError: null };
     case "SETTINGS_BUSY":
@@ -392,7 +439,11 @@ export function reducer(state: State, action: Action): State {
         manageError: null,
       };
     case "MANAGE_MEMBERS_SET":
-      return { ...state, manageMembers: action.members, manageMembersLoaded: true };
+      return {
+        ...state,
+        manageMembers: action.members,
+        manageMembersLoaded: true,
+      };
     case "MANAGE_EDIT":
       return { ...state, manageEditing: action.editing, manageError: null };
     case "MANAGE_BUSY":
@@ -471,7 +522,10 @@ export function reducer(state: State, action: Action): State {
     case "TODO_DELETED": {
       const todos = state.todos.filter((t) => t.id !== action.id);
       const next = { ...state, todos };
-      return { ...next, cursor: clampCursor(state.cursor, visibleTodos(next).length) };
+      return {
+        ...next,
+        cursor: clampCursor(state.cursor, visibleTodos(next).length),
+      };
     }
     case "OPEN_ABOUT":
       return { ...state, mode: "about", helpOpen: false, error: null };

@@ -43,6 +43,8 @@ export function keyHint(key: string, label: string): string {
 }
 
 // Join key hints with a thin separator.
-export function keyHints(pairs: ReadonlyArray<readonly [string, string]>): string {
+export function keyHints(
+  pairs: ReadonlyArray<readonly [string, string]>,
+): string {
   return pairs.map(([k, l]) => keyHint(k, l)).join("  ");
 }

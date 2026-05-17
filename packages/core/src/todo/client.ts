@@ -13,7 +13,10 @@ export interface TodoApi {
 }
 
 export class TodoClient implements TodoApi {
-  constructor(private readonly fetcher: Fetcher, private readonly base: string) {}
+  constructor(
+    private readonly fetcher: Fetcher,
+    private readonly base: string,
+  ) {}
 
   async listTodos(filter?: TodoFilter): Promise<Todo[]> {
     const url = new URL(`${this.base}/v1/todos`);
@@ -59,7 +62,9 @@ export class TodoClient implements TodoApi {
 
   async deleteTodo(id: string): Promise<void> {
     await this.fetcher(
-      new Request(`${this.base}/v1/todos/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      new Request(`${this.base}/v1/todos/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
     );
   }
 

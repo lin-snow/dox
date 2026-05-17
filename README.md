@@ -13,9 +13,8 @@ The server is one container. One command, one persistent volume:
 ```bash
 docker run -d --name dox \
   -p 8080:8080 \
-  -v dox-data:/data \
-  -e DOX_DB_PATH=/data/dox.db \
-  ghcr.io/lin-snow/dox:latest
+  -v /opt/dox/data:/app/data \
+  sn0wl1n/dox:latest
 ```
 
 Or with `compose.yml`:
@@ -23,48 +22,16 @@ Or with `compose.yml`:
 ```yaml
 services:
   dox:
-    image: ghcr.io/lin-snow/dox:latest
+    image: sn0wl1n/dox:latest
     ports: ["8080:8080"]
-    volumes: ["dox-data:/data"]
-    environment:
-      DOX_DB_PATH: /data/dox.db
+    volumes: ["./data:/app/data"]
     restart: unless-stopped
-
-volumes:
-  dox-data:
 ```
 
-Optional env: `DOX_LISTEN_ADDR` (default `:8080`), `DOX_LOG_LEVEL`
-(`debug` · `info` · `warn` · `error`), `DOX_EVENT_RETENTION` (Go duration,
-e.g. `720h`), `DOX_JWT_SECRET` (base64; rotating it invalidates every paired
-device).
+## Use
 
-## First run
-
-```bash
-# 1. Pair your device — first registrant becomes the owner
-dox register --server http://your-server:8080 --name alice --device laptop
-
-# 2. (optional) Share a project
-dox project create "Family"
-dox project invite <project-id> --role editor
-#   they run:  dox accept <code> --server http://your-server:8080
-```
-
-Run `dox` on a TTY for the TUI, or use the subcommands below.
-
-## Commands
-
-| group | verbs |
-|---|---|
-| todos | `add` · `list` · `done` · `undone` · `edit` · `rm` |
-| projects | `project list / create / rename / archive / rm` |
-| members | `project invite / members / member-rm` |
-| devices | `device pair / list / revoke` |
-| server *(owner)* | `server me / users / invite / set-registration` |
-| session | `register` · `login` · `accept <code>` |
-
-`dox <command> --help` for the full signature.
+Run `dox`. The TUI handles onboarding (register · login · accept invite) and
+everything after.
 
 ## Stack
 
@@ -79,10 +46,10 @@ a device bearer token.
 ## Develop
 
 ```bash
-just generate       # proto → Go + TS
-just server-sqlc    # regenerate sqlc Go bindings
+just gen            # proto → Go + TS, sqlc → Go DB bindings
 just serve          # run the server locally
 just cli -- list    # run the CLI against the local server
+just release v0.1.0 # tag + push → triggers Docker Hub release
 ```
 
 See [`docs/onboarding.md`](docs/onboarding.md) for how the auth/onboarding

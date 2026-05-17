@@ -52,7 +52,14 @@ export function TodoDetailView({
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <TitledPanel title="Todo" width={panelWidth} height={panelHeight} paddingX={2} paddingY={1} focused>
+      <TitledPanel
+        title="Todo"
+        width={panelWidth}
+        height={panelHeight}
+        paddingX={2}
+        paddingY={1}
+        focused
+      >
         {/* Status pill + short ID — same shape as TodoInfo but with more breathing room. */}
         <Box>
           <Box borderStyle="round" borderColor={statusColor} paddingX={2}>
@@ -83,11 +90,15 @@ export function TodoDetailView({
                   <Text>{project.name}</Text>
                 </Text>
               ) : (
-                <Text color={color.muted} dimColor>● inbox</Text>
+                <Text color={color.muted} dimColor>
+                  ● inbox
+                </Text>
               )}
             </MetaRow>
             <MetaRow label="Created by">
-              <Text color={color.accent2}>{ownerName ?? todo.createdBy.toLowerCase()}</Text>
+              <Text color={color.accent2}>
+                {ownerName ?? todo.createdBy.toLowerCase()}
+              </Text>
             </MetaRow>
           </Box>
           <Box flexDirection="column" flexGrow={1}>
@@ -103,10 +114,14 @@ export function TodoDetailView({
         {/* Description section — placeholder when missing so the section header
             always renders, making the field's eventual arrival a no-op visually. */}
         <Box marginTop={1}>
-          <Text color={color.muted}>{"─".repeat(Math.max(10, panelWidth - 6))}</Text>
+          <Text color={color.muted}>
+            {"─".repeat(Math.max(10, panelWidth - 6))}
+          </Text>
         </Box>
         <Box marginTop={1}>
-          <Text bold color={color.muted}>DESCRIPTION</Text>
+          <Text bold color={color.muted}>
+            DESCRIPTION
+          </Text>
         </Box>
         <Box marginTop={1} flexDirection="column">
           {todo.description ? (
@@ -132,7 +147,13 @@ export function TodoDetailView({
   );
 }
 
-function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+function MetaRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <Box>
       <Box width={12}>

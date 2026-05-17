@@ -81,15 +81,18 @@ export function buildServerTab(args: BuildSettingsArgs): SettingsTabSpec {
       key: "name",
       label: "Server Name",
       value: s?.serverName || (args.serverLoaded ? "(unset)" : "loading…"),
-      detail: "Display name shown on the login screen and in the dashboard header.",
+      detail:
+        "Display name shown on the login screen and in the dashboard header.",
       onEnter: owner ? args.on.editServerName : undefined,
       muted: !s?.serverName,
     },
     {
       key: "description",
       label: "Description",
-      value: s?.serverDescription || (args.serverLoaded ? "(unset)" : "loading…"),
-      detail: "Short blurb shown to anyone hitting /v1/auth/server-info — describes what this instance is for.",
+      value:
+        s?.serverDescription || (args.serverLoaded ? "(unset)" : "loading…"),
+      detail:
+        "Short blurb shown to anyone hitting /v1/auth/server-info — describes what this instance is for.",
       onEnter: owner ? args.on.editServerDescription : undefined,
       muted: !s?.serverDescription,
     },
@@ -101,13 +104,17 @@ export function buildServerTab(args: BuildSettingsArgs): SettingsTabSpec {
       value: s ? (s.registrationOpen ? "true" : "false") : "loading…",
       detail:
         "When on, anyone with the server URL can register an account. When off, registration requires a server invite issued by you.",
-      onEnter: s ? () => args.on.toggleRegistration(!s.registrationOpen) : undefined,
+      onEnter: s
+        ? () => args.on.toggleRegistration(!s.registrationOpen)
+        : undefined,
     });
   }
   return {
     key: "server",
     label: "Server",
-    hint: owner ? "Instance metadata. You're the owner." : "Read-only — only the server owner can change these.",
+    hint: owner
+      ? "Instance metadata. You're the owner."
+      : "Read-only — only the server owner can change these.",
     rows,
     hints: owner
       ? [
@@ -128,30 +135,35 @@ export function buildAccountTab(args: BuildSettingsArgs): SettingsTabSpec {
       key: "user",
       label: "Logged-in User",
       value: args.identity.userName || "—",
-      detail: "The identity bound to the JWT in your local config. Cannot be changed in place — sign out and log in as someone else.",
+      detail:
+        "The identity bound to the JWT in your local config. Cannot be changed in place — sign out and log in as someone else.",
     },
     {
       key: "server-url",
       label: "Server URL",
       value: args.identity.server || "—",
-      detail: "Base URL of the dox server this client talks to. Set via `dox login --server …`.",
+      detail:
+        "Base URL of the dox server this client talks to. Set via `dox login --server …`.",
     },
     {
       key: "role",
       label: "Role",
       value: args.identity.role || "—",
-      detail: "Server-level role. `owner` can edit server settings and issue server invites; `member` cannot.",
+      detail:
+        "Server-level role. `owner` can edit server settings and issue server invites; `member` cannot.",
     },
     {
       key: "change-password",
       label: "Change Password…",
-      detail: "Replace your password. You'll be prompted for the current one and a new one (min 8 chars).",
+      detail:
+        "Replace your password. You'll be prompted for the current one and a new one (min 8 chars).",
       onEnter: args.on.changePassword,
     },
     {
       key: "sign-out",
       label: "Sign Out",
-      detail: "Clears the token in ~/.config/dox/config.toml and exits. Re-run `dox` to log in again.",
+      detail:
+        "Clears the token in ~/.config/dox/config.toml and exits. Re-run `dox` to log in again.",
       onEnter: args.on.signOut,
     },
   ];
@@ -175,14 +187,19 @@ export function buildInvitesTab(args: BuildSettingsArgs): SettingsTabSpec {
     detail: inv.projectId
       ? `Project invite for ${inv.projectName || "(deleted project)"} — role ${inv.role || "editor"}. ${fmtExpiry(inv.expiresAt)}. Press r to revoke.`
       : `Server invite — anyone with the code can register a new account. ${fmtExpiry(inv.expiresAt)}. Press r to revoke.`,
-    secondary: { key: "r", label: "revoke", action: () => args.on.revokeInvite(inv.codeHash) },
+    secondary: {
+      key: "r",
+      label: "revoke",
+      action: () => args.on.revokeInvite(inv.codeHash),
+    },
   }));
   const rows: SettingsRow[] = [
     ...inviteRows,
     {
       key: "redeem",
       label: "Redeem code…",
-      detail: "Paste a project invite code someone shared with you to join their project.",
+      detail:
+        "Paste a project invite code someone shared with you to join their project.",
       onEnter: args.on.redeemCode,
     },
   ];

@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/oklog/ulid/v2"
-	_ "modernc.org/sqlite"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	_ "modernc.org/sqlite"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/bus"

@@ -52,10 +52,12 @@ export function TodoInfo({
   const contentH = Math.max(0, panelHeight - PANEL_CHROME);
   const descBudget = Math.max(0, contentH - FIXED_ROWS - DESC_HEADER);
   const rawDesc = todo.description?.trim() ?? "";
-  const preview = rawDesc && descBudget > 0
-    ? previewDescription(rawDesc, contentW, descBudget)
-    : null;
-  const overflowed = Boolean(preview?.truncated) || (rawDesc.length > 0 && descBudget === 0);
+  const preview =
+    rawDesc && descBudget > 0
+      ? previewDescription(rawDesc, contentW, descBudget)
+      : null;
+  const overflowed =
+    Boolean(preview?.truncated) || (rawDesc.length > 0 && descBudget === 0);
 
   return (
     <Box flexDirection="column">
@@ -86,11 +88,15 @@ export function TodoInfo({
               <Text>{project.name}</Text>
             </Text>
           ) : (
-            <Text color={color.muted} dimColor>● inbox</Text>
+            <Text color={color.muted} dimColor>
+              ● inbox
+            </Text>
           )}
         </InfoRow>
         <InfoRow label="By">
-          <Text color={color.accent2}>{ownerName ?? todo.createdBy.slice(0, 8).toLowerCase() + "…"}</Text>
+          <Text color={color.accent2}>
+            {ownerName ?? todo.createdBy.slice(0, 8).toLowerCase() + "…"}
+          </Text>
         </InfoRow>
         <InfoRow label="Created">
           <Text>{relativeTime(nowMs, todo.createdAt)} ago</Text>
@@ -123,7 +129,10 @@ export function TodoInfo({
           description was truncated above. */}
       <Box marginTop={1}>
         <Text color={color.muted} dimColor>
-          press <Text color={color.accent} bold>⏎</Text>{" "}
+          press{" "}
+          <Text color={color.accent} bold>
+            ⏎
+          </Text>{" "}
           {overflowed ? "to read full description" : "for details"}
         </Text>
       </Box>
@@ -131,7 +140,13 @@ export function TodoInfo({
   );
 }
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <Box>
       <Box width={9}>
@@ -151,7 +166,11 @@ interface WrappedPreview {
   lines: string[];
   truncated: boolean;
 }
-function previewDescription(text: string, width: number, maxLines: number): WrappedPreview {
+function previewDescription(
+  text: string,
+  width: number,
+  maxLines: number,
+): WrappedPreview {
   const lines: string[] = [];
   let overflowed = false;
 

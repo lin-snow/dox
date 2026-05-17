@@ -7,7 +7,9 @@ import { App } from "./App";
 
 function makeTodo(overrides: Partial<Todo> = {}): Todo {
   return {
-    id: "01HX" + Math.random().toString(36).slice(2, 24).toUpperCase().padEnd(22, "A"),
+    id:
+      "01HX" +
+      Math.random().toString(36).slice(2, 24).toUpperCase().padEnd(22, "A"),
     title: "task",
     done: false,
     createdAt: "1715856000000",
@@ -35,13 +37,15 @@ function makeFakeApi(initial: Todo[] = []): FakeApi {
     store.set(t.id, t);
     return t;
   });
-  const updateMock = mock(async (id: string, patch: { title?: string; done?: boolean }) => {
-    const existing = store.get(id);
-    if (!existing) throw new Error(`not found: ${id}`);
-    const updated = { ...existing, ...patch };
-    store.set(id, updated);
-    return updated;
-  });
+  const updateMock = mock(
+    async (id: string, patch: { title?: string; done?: boolean }) => {
+      const existing = store.get(id);
+      if (!existing) throw new Error(`not found: ${id}`);
+      const updated = { ...existing, ...patch };
+      store.set(id, updated);
+      return updated;
+    },
+  );
   const deleteMock = mock(async (id: string) => {
     store.delete(id);
   });
@@ -100,7 +104,10 @@ describe("App", () => {
   });
 
   test("renders todos with selection bar on first", async () => {
-    const { api } = makeFakeApi([makeTodo({ title: "buy milk" }), makeTodo({ title: "write code" })]);
+    const { api } = makeFakeApi([
+      makeTodo({ title: "buy milk" }),
+      makeTodo({ title: "write code" }),
+    ]);
     const { lastFrame } = mountApp(api);
     await flush();
     const frame = lastFrame() ?? "";

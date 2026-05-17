@@ -137,7 +137,9 @@ export function SearchView({
             <>
               {win.items.map((t, idx) => {
                 const projectId = t.projectId;
-                const project = projectId ? projectById.get(projectId) ?? null : null;
+                const project = projectId
+                  ? (projectById.get(projectId) ?? null)
+                  : null;
                 return (
                   <ResultRow
                     key={t.id}
@@ -187,9 +189,19 @@ interface ResultRowProps {
   width: number;
 }
 
-function ResultRow({ todo, project, nowMs, highlighted, width }: ResultRowProps) {
+function ResultRow({
+  todo,
+  project,
+  nowMs,
+  highlighted,
+  width,
+}: ResultRowProps) {
   const mark = todo.done ? icon.done : icon.open;
-  const markColor = todo.done ? color.success : highlighted ? color.accent : color.muted;
+  const markColor = todo.done
+    ? color.success
+    : highlighted
+      ? color.accent
+      : color.muted;
   const bar = highlighted ? icon.selectBar : " ";
   const age = relativeTime(nowMs, todo.updatedAt);
   const ageWidth = 4;
@@ -211,7 +223,10 @@ function ResultRow({ todo, project, nowMs, highlighted, width }: ResultRowProps)
         </Text>
       </Box>
       {project && (
-        <Box width={Math.min(14, Math.floor(width / 3))} justifyContent="flex-end">
+        <Box
+          width={Math.min(14, Math.floor(width / 3))}
+          justifyContent="flex-end"
+        >
           <Text color={swatchColor(project.color)} wrap="truncate">
             ● {project.name}
           </Text>
@@ -248,7 +263,11 @@ interface WindowSlice<T> {
   moreBelow: number;
 }
 
-function sliceWindow<T>(items: T[], cursor: number, viewportH: number): WindowSlice<T> {
+function sliceWindow<T>(
+  items: T[],
+  cursor: number,
+  viewportH: number,
+): WindowSlice<T> {
   if (items.length <= viewportH) {
     return { items, start: 0, moreAbove: 0, moreBelow: 0 };
   }

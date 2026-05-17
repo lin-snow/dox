@@ -1,0 +1,18 @@
+node_modules
+bun.lock
+package-lock.json
+
+# Generated code
+apps/server/gen
+packages/proto-gen/src/dox
+packages/proto-gen/src/google
+
+# Build / data artifacts
+apps/server/bin
+apps/server/data
+docs/swagger
+
+# Go / SQL — not handled by prettier
+**/*.go
+**/*.sum
+**/*.sql

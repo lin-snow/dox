@@ -31,7 +31,9 @@ async function buildContext(opts: GlobalOpts): Promise<CliContext> {
   const io = realIO();
   const cfg = await loadConfig();
   if (!cfg) {
-    io.stderr.write("dox: not logged in. Run 'dox register --server <url>' first.\n");
+    io.stderr.write(
+      "dox: not logged in. Run 'dox register --server <url>' first.\n",
+    );
     process.exit(1);
   }
   const fetcher = buildFetcher(cfg, io);

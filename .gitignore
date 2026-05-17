@@ -10,6 +10,10 @@ build/
 *.out
 coverage.out
 *.prof
+apps/server/bin/
+
+# Local Docker build staging (mirrors CI artifact layout)
+artifacts/
 
 # SQLite dev DBs (any depth)
 *.db

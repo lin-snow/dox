@@ -7,12 +7,12 @@ How a fresh dox client gets connected to a dox server. Covers both the TUI
 
 When a user runs `dox` on a new machine, exactly one of four things is true:
 
-| Situation | Branch |
-|---|---|
-| The server has no users yet | **first-user** — caller becomes owner |
-| The user already has an account on that server | **login** |
-| The user is new to the server, has an invite code | **register-with-invite** |
-| The user is new to the server, registration is open | **register-open** |
+| Situation                                           | Branch                                |
+| --------------------------------------------------- | ------------------------------------- |
+| The server has no users yet                         | **first-user** — caller becomes owner |
+| The user already has an account on that server      | **login**                             |
+| The user is new to the server, has an invite code   | **register-with-invite**              |
+| The user is new to the server, registration is open | **register-open**                     |
 
 Onboarding's job is to pick the right branch with the fewest user
 keystrokes and the least jargon. The user should never have to know what an
@@ -36,7 +36,7 @@ public RPC `AuthService.ServerInfo` (`/v1/auth/server-info`). Response shape:
 ```
 
 Two of these route the flow; the rest are purely for the UI to display
-"joining: Alice's Dox · by alice" so the user knows *whose* server they're
+"joining: Alice's Dox · by alice" so the user knows _whose_ server they're
 about to connect to.
 
 Source: `apps/server/internal/handler/user.go` (`ServerInfo`),
@@ -186,7 +186,7 @@ Above the active panel, every confirmed value so far is shown as a chip:
 - `invite: <code>` — after invite is entered
 - `user: <username>` — after username is entered
 
-Purpose: at any point in the wizard the user can see *exactly* what they've
+Purpose: at any point in the wizard the user can see _exactly_ what they've
 committed to so far, and whose server they're joining. Eliminates "wait,
 am I on the right server?" confusion before they type a password.
 
@@ -235,15 +235,15 @@ Source: `apps/cli/src/tui/index.tsx` (`runTui`),
 The TUI is the primary entry point on a TTY, but every action it performs
 is available as a non-interactive CLI command:
 
-| TUI stage | CLI equivalent |
-|---|---|
-| Whole first-user flow | `dox register --server <url> --name <n> --password <p>` |
-| Whole login flow | `dox login --server <url> --name <n> --password <p>` |
-| Register with invite | `dox register --server <url> --invite <code>` |
-| Accept-as-existing-user | `dox accept <code>` (uses current config) |
-| Accept-as-new-user | `dox accept <code> --server <url>` (no config) |
-| Set server identity later | `dox server set-name <name>` / `set-description <desc>` |
-| Owner-mediated password recovery | `dox server reset-password <user-name>` |
+| TUI stage                        | CLI equivalent                                          |
+| -------------------------------- | ------------------------------------------------------- |
+| Whole first-user flow            | `dox register --server <url> --name <n> --password <p>` |
+| Whole login flow                 | `dox login --server <url> --name <n> --password <p>`    |
+| Register with invite             | `dox register --server <url> --invite <code>`           |
+| Accept-as-existing-user          | `dox accept <code>` (uses current config)               |
+| Accept-as-new-user               | `dox accept <code> --server <url>` (no config)          |
+| Set server identity later        | `dox server set-name <name>` / `set-description <desc>` |
+| Owner-mediated password recovery | `dox server reset-password <user-name>`                 |
 
 `dox accept <code>` is the smart fall-through entry: if a config exists it
 just calls `AcceptInvite` on the current server; if not, it pivots into
@@ -253,15 +253,15 @@ Source: `apps/cli/src/cli/auth.ts`, `apps/cli/src/index.ts`.
 
 ## Edge cases and how the UI handles them
 
-| Condition | Behavior |
-|---|---|
-| Server unreachable during probe | error chip below panel; stage rolls back to `server` |
-| Login wrong password | uniform `"invalid username or password"` (no user-enum leak); UI drops back to `enter-password` |
-| Register short password | UI rejects locally before submit (`< 8 chars`) — saves a round trip |
-| Confirm-password mismatch | UI rejects locally; stays on `confirm-password` |
-| Register with already-taken username | server returns `AlreadyExists`; UI drops back to `confirm-password` with the message |
-| Register with invalid/expired/used invite | server returns `NotFound`; UI drops back to whichever input stage corresponds to the intent |
-| Network failure mid-submit | error surfaced via `ErrorAlert`; user retries from the same stage |
+| Condition                                 | Behavior                                                                                        |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Server unreachable during probe           | error chip below panel; stage rolls back to `server`                                            |
+| Login wrong password                      | uniform `"invalid username or password"` (no user-enum leak); UI drops back to `enter-password` |
+| Register short password                   | UI rejects locally before submit (`< 8 chars`) — saves a round trip                             |
+| Confirm-password mismatch                 | UI rejects locally; stays on `confirm-password`                                                 |
+| Register with already-taken username      | server returns `AlreadyExists`; UI drops back to `confirm-password` with the message            |
+| Register with invalid/expired/used invite | server returns `NotFound`; UI drops back to whichever input stage corresponds to the intent     |
+| Network failure mid-submit                | error surfaced via `ErrorAlert`; user retries from the same stage                               |
 
 ## Why no email / OAuth / recovery codes
 
@@ -269,7 +269,7 @@ Dox is a self-hosted single-binary application. The auth model trades a
 few capabilities for zero external dependencies:
 
 - **No password reset by email.** Owners run `dox server reset-password
-  <user>` to mint a one-time temp password and relay it out-of-band. Fits
+<user>` to mint a one-time temp password and relay it out-of-band. Fits
   the small-team, family-server use case dox is built for.
 - **No OAuth / SSO.** Not relevant for self-hosted.
 - **No 2FA.** Could add TOTP later if anyone asks.
@@ -280,12 +280,12 @@ These are explicit non-goals; revisit if user feedback says otherwise.
 
 ## Files
 
-| File | Role |
-|---|---|
-| `apps/cli/src/tui/components/Onboarding.tsx` | The stage machine described above |
-| `apps/cli/src/tui/index.tsx` | Mount point; runs `checkToken` and decides `fresh` vs `reauth` |
-| `apps/cli/src/cli/auth.ts` | Non-interactive equivalents (`registerCmd`, `loginCmd`, `acceptInviteCmd`, `logoutCmd`, `passwdCmd`) |
-| `apps/server/internal/handler/user.go` | Server-side `ServerInfo` / `Register` / `Login` |
-| `packages/core/src/auth/index.ts` | Client SDK: `fetchServerInfo`, `register`, `login`, `acceptInvite`, `checkToken` |
-| `packages/core/src/config/index.ts` | `~/.config/dox/config.toml` read/write |
-| `proto/dox/v1/auth.proto` | RPC contract |
+| File                                         | Role                                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `apps/cli/src/tui/components/Onboarding.tsx` | The stage machine described above                                                                    |
+| `apps/cli/src/tui/index.tsx`                 | Mount point; runs `checkToken` and decides `fresh` vs `reauth`                                       |
+| `apps/cli/src/cli/auth.ts`                   | Non-interactive equivalents (`registerCmd`, `loginCmd`, `acceptInviteCmd`, `logoutCmd`, `passwdCmd`) |
+| `apps/server/internal/handler/user.go`       | Server-side `ServerInfo` / `Register` / `Login`                                                      |
+| `packages/core/src/auth/index.ts`            | Client SDK: `fetchServerInfo`, `register`, `login`, `acceptInvite`, `checkToken`                     |
+| `packages/core/src/config/index.ts`          | `~/.config/dox/config.toml` read/write                                                               |
+| `proto/dox/v1/auth.proto`                    | RPC contract                                                                                         |

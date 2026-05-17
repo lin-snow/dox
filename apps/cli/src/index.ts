@@ -25,7 +25,9 @@ program
 // ── auth ───────────────────────────────────────────────────────────────────
 program
   .command("register")
-  .description("Create an account on a dox server (first user becomes the owner)")
+  .description(
+    "Create an account on a dox server (first user becomes the owner)",
+  )
   .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
   .option("--name <username>", "username")
   .option("--password <password>", "password (min 8 chars)")
@@ -42,7 +44,9 @@ program
 
 program
   .command("logout")
-  .description("Remove local credentials. Server-side token expires on its own.")
+  .description(
+    "Remove local credentials. Server-side token expires on its own.",
+  )
   .action(auth.logoutCmd);
 
 program
@@ -56,7 +60,9 @@ program
 
 program
   .command("accept <code>")
-  .description("Accept an invite (joins a project, or registers + joins if not logged in)")
+  .description(
+    "Accept an invite (joins a project, or registers + joins if not logged in)",
+  )
   .option("--server <url>", "server URL (only needed if not logged in)")
   .action(auth.acceptInviteCmd);
 
@@ -116,7 +122,10 @@ program
   });
 
 // ── projects ───────────────────────────────────────────────────────────────
-const proj = program.command("project").alias("p").description("Manage projects");
+const proj = program
+  .command("project")
+  .alias("p")
+  .description("Manage projects");
 proj
   .command("list")
   .alias("ls")
@@ -177,7 +186,9 @@ proj
   });
 
 // ── server (owner-only) ────────────────────────────────────────────────────
-const srv = program.command("server").description("Server-wide operations (owner-only)");
+const srv = program
+  .command("server")
+  .description("Server-wide operations (owner-only)");
 srv
   .command("me")
   .description("Show the currently logged-in user")
@@ -192,14 +203,18 @@ srv
   });
 srv
   .command("invite")
-  .description("Issue a server-level invite code (brings a new user onto the server)")
+  .description(
+    "Issue a server-level invite code (brings a new user onto the server)",
+  )
   .option("--ttl-ms <ms>", "code lifetime in milliseconds", (v) => Number(v))
   .action(function (this: Command) {
     return server.inviteServer(this.optsWithGlobals());
   });
 srv
   .command("set-registration <bool>")
-  .description("Toggle open registration: 'true' to allow anyone, 'false' for invite-only")
+  .description(
+    "Toggle open registration: 'true' to allow anyone, 'false' for invite-only",
+  )
   .action(function (this: Command, value: string) {
     return server.setRegistrationOpen(value, this.optsWithGlobals());
   });

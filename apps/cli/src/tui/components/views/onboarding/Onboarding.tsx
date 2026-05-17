@@ -118,8 +118,10 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
             userName,
             password,
             inviteCode: inviteCode || undefined,
-            serverName: intent === "first-user" && serverName ? serverName : undefined,
-            serverDescription: intent === "first-user" && serverDesc ? serverDesc : undefined,
+            serverName:
+              intent === "first-user" && serverName ? serverName : undefined,
+            serverDescription:
+              intent === "first-user" && serverDesc ? serverDesc : undefined,
           });
         }
         const cfg: Config = {
@@ -141,7 +143,17 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     return () => {
       cancelled = true;
     };
-  }, [stage, intent, server, userName, password, inviteCode, serverName, serverDesc, onDone]);
+  }, [
+    stage,
+    intent,
+    server,
+    userName,
+    password,
+    inviteCode,
+    serverName,
+    serverDesc,
+    onDone,
+  ]);
 
   // Branch picker — numeric keys, native useInput is simpler than a Select.
   useInput(
@@ -250,9 +262,15 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
       <ContextStrip
         server={stage !== "server" ? server : undefined}
         info={stage !== "server" && stage !== "probing" ? info : null}
-        inviteCode={intent === "register" && inviteCode ? inviteCode : undefined}
+        inviteCode={
+          intent === "register" && inviteCode ? inviteCode : undefined
+        }
         userName={
-          (stage === "enter-password" || stage === "confirm-password" || stage === "enter-server-name" || stage === "enter-server-description" || stage === "submitting")
+          stage === "enter-password" ||
+          stage === "confirm-password" ||
+          stage === "enter-server-name" ||
+          stage === "enter-server-description" ||
+          stage === "submitting"
             ? userName
             : undefined
         }
@@ -266,26 +284,38 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
               <Text color={color.muted}>where does your dox server live?</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput defaultValue={server} placeholder={DEFAULT_SERVER} onSubmit={submitServer} />
+                <TextInput
+                  defaultValue={server}
+                  placeholder={DEFAULT_SERVER}
+                  onSubmit={submitServer}
+                />
               </Box>
             </Box>
           )}
 
-          {stage === "probing" && <Spinner label={`connecting to ${server}…`} />}
+          {stage === "probing" && (
+            <Spinner label={`connecting to ${server}…`} />
+          )}
 
           {stage === "choose-branch" && (
             <Box flexDirection="column">
               <Text color={color.muted}>how would you like to connect?</Text>
               <Box flexDirection="column" marginTop={1}>
                 <Box>
-                  <Text color={color.accent} bold>{"  1  "}</Text>
+                  <Text color={color.accent} bold>
+                    {"  1  "}
+                  </Text>
                   <Text>Log in to an existing account on this server</Text>
                 </Box>
                 <Box>
-                  <Text color={color.accent} bold>{"  2  "}</Text>
+                  <Text color={color.accent} bold>
+                    {"  2  "}
+                  </Text>
                   <Text>Create a new account </Text>
                   <Text color={color.muted}>
-                    {info && info.registrationOpen ? "(open — no invite needed)" : "(invite code required)"}
+                    {info && info.registrationOpen
+                      ? "(open — no invite needed)"
+                      : "(invite code required)"}
                   </Text>
                 </Box>
               </Box>
@@ -320,7 +350,9 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-password" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                {intent === "login" ? "your password" : `pick a password (min ${MIN_PASSWORD_LEN} chars)`}
+                {intent === "login"
+                  ? "your password"
+                  : `pick a password (min ${MIN_PASSWORD_LEN} chars)`}
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -334,7 +366,10 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
               <Text color={color.muted}>confirm password</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput placeholder="••••••••" onSubmit={submitConfirmPassword} />
+                <TextInput
+                  placeholder="••••••••"
+                  onSubmit={submitConfirmPassword}
+                />
               </Box>
             </Box>
           )}
@@ -342,11 +377,15 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-server-name" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                give this server a display name <Text dimColor>(leave blank to skip)</Text>
+                give this server a display name{" "}
+                <Text dimColor>(leave blank to skip)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput placeholder="Alice's Dox" onSubmit={submitServerName} />
+                <TextInput
+                  placeholder="Alice's Dox"
+                  onSubmit={submitServerName}
+                />
               </Box>
             </Box>
           )}
@@ -358,13 +397,18 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
-                <TextInput placeholder="family todos" onSubmit={submitServerDesc} />
+                <TextInput
+                  placeholder="family todos"
+                  onSubmit={submitServerDesc}
+                />
               </Box>
             </Box>
           )}
 
           {stage === "submitting" && (
-            <Spinner label={intent === "login" ? "logging in…" : "creating account…"} />
+            <Spinner
+              label={intent === "login" ? "logging in…" : "creating account…"}
+            />
           )}
         </Panel>
       </Box>
@@ -432,12 +476,21 @@ interface ContextStripProps {
   userName?: string;
 }
 
-function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps) {
+function ContextStrip({
+  server,
+  info,
+  inviteCode,
+  userName,
+}: ContextStripProps) {
   const chips: { label: string; value: string; tone?: string }[] = [];
   if (server) chips.push({ label: "server", value: server });
   if (info) {
     if (!info.hasUsers) {
-      chips.push({ label: "mode", value: "first user → owner", tone: color.accent2 });
+      chips.push({
+        label: "mode",
+        value: "first user → owner",
+        tone: color.accent2,
+      });
     } else {
       const identity = info.serverName
         ? `${info.serverName}${info.ownerName ? ` · by ${info.ownerName}` : ""}`
@@ -445,7 +498,10 @@ function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps)
           ? `by ${info.ownerName}`
           : "(unnamed server)";
       chips.push({ label: "joining", value: identity, tone: color.accent2 });
-      chips.push({ label: "registration", value: info.registrationOpen ? "open" : "invite-only" });
+      chips.push({
+        label: "registration",
+        value: info.registrationOpen ? "open" : "invite-only",
+      });
     }
   }
   if (inviteCode) chips.push({ label: "invite", value: inviteCode });
@@ -455,7 +511,7 @@ function ContextStrip({ server, info, inviteCode, userName }: ContextStripProps)
     <Box flexDirection="column">
       {chips.map((c) => (
         <Box key={c.label}>
-          <Text color={color.success}>  {icon.done} </Text>
+          <Text color={color.success}> {icon.done} </Text>
           <Text color={color.muted}>{c.label}: </Text>
           <Text color={c.tone ?? undefined}>{c.value}</Text>
         </Box>

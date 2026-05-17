@@ -16,7 +16,10 @@ import {
 } from "@dox/core";
 
 import { App } from "./App";
-import { Onboarding, type OnboardingReason } from "./components/views/onboarding/Onboarding";
+import {
+  Onboarding,
+  type OnboardingReason,
+} from "./components/views/onboarding/Onboarding";
 
 interface RootProps {
   initialConfig: Config | null;
@@ -71,6 +74,8 @@ export async function runTui(): Promise<void> {
     }
   }
 
-  const app = render(<Root initialConfig={initialConfig} initialReason={initialReason} />);
+  const app = render(
+    <Root initialConfig={initialConfig} initialReason={initialReason} />,
+  );
   await app.waitUntilExit();
 }

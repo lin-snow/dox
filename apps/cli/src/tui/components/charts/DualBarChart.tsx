@@ -31,8 +31,12 @@ export function DualBarChart({
   max,
 }: DualBarChartProps) {
   const peak = max ?? Math.max(1, ...primary, ...secondary);
-  const pCols = primary.map((v) => buildColumn(v, peak, rows, FULL_PRIMARY, EIGHTHS_PRIMARY));
-  const sCols = secondary.map((v) => buildColumn(v, peak, rows, FULL_SECONDARY, EIGHTHS_SECONDARY));
+  const pCols = primary.map((v) =>
+    buildColumn(v, peak, rows, FULL_PRIMARY, EIGHTHS_PRIMARY),
+  );
+  const sCols = secondary.map((v) =>
+    buildColumn(v, peak, rows, FULL_SECONDARY, EIGHTHS_SECONDARY),
+  );
   const len = Math.max(pCols.length, sCols.length);
   return (
     <Box>
@@ -57,7 +61,15 @@ export function DualBarChart({
   );
 }
 
-function YAxis({ rows, peak, step }: { rows: number; peak: number; step: number }) {
+function YAxis({
+  rows,
+  peak,
+  step,
+}: {
+  rows: number;
+  peak: number;
+  step: number;
+}) {
   return (
     <Box flexDirection="column" marginRight={1}>
       {Array.from({ length: rows }).map((_, idx) => {
@@ -84,7 +96,13 @@ function formatY(n: number): string {
   return n.toFixed(0);
 }
 
-function buildColumn(value: number, peak: number, rows: number, full: string, eighths: string[]): string[] {
+function buildColumn(
+  value: number,
+  peak: number,
+  rows: number,
+  full: string,
+  eighths: string[],
+): string[] {
   const v = Math.max(0, Math.min(value, peak));
   const total = (v / peak) * rows * 8;
   const out: string[] = [];

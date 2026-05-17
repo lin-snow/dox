@@ -4,7 +4,10 @@ interface TodoOpts extends GlobalOpts {
   project?: string;
 }
 
-function resolveFilter(opts: TodoOpts, defaultProject?: string): string | undefined {
+function resolveFilter(
+  opts: TodoOpts,
+  defaultProject?: string,
+): string | undefined {
   const raw = opts.project ?? defaultProject;
   if (!raw || raw === "all") return undefined;
   return raw;
@@ -25,7 +28,9 @@ export const get = (id: string, opts: GlobalOpts) =>
 export const add = (title: string, opts: TodoOpts) =>
   withContext(opts, async ({ api, output, defaultProject }) => {
     const project = resolveFilter(opts, defaultProject);
-    const todo = await api.createTodo(title, { projectId: project === "inbox" ? undefined : project });
+    const todo = await api.createTodo(title, {
+      projectId: project === "inbox" ? undefined : project,
+    });
     output.todo(todo);
   });
 

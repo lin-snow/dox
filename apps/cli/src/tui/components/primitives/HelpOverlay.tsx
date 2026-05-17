@@ -2,7 +2,10 @@ import { Box, Text } from "ink";
 
 import { color, icon } from "../../theme";
 
-const sections: { title: string; rows: ReadonlyArray<readonly [string, string]> }[] = [
+const sections: {
+  title: string;
+  rows: ReadonlyArray<readonly [string, string]>;
+}[] = [
   {
     title: "Navigate",
     rows: [
@@ -59,7 +62,7 @@ export function HelpOverlay() {
             {s.rows.map(([k, l]) => (
               <Box key={k}>
                 <Box width={16}>
-                  <Text color={color.accent}>  {k}</Text>
+                  <Text color={color.accent}> {k}</Text>
                 </Box>
                 <Text>{l}</Text>
               </Box>

@@ -27,11 +27,18 @@ export interface AcceptInviteResult {
 }
 
 export class InviteClient {
-  constructor(private readonly fetcher: Fetcher, private readonly base: string) {}
+  constructor(
+    private readonly fetcher: Fetcher,
+    private readonly base: string,
+  ) {}
 
   // Creates either a server invite (projectId omitted, owner-only) or a project
   // invite (projectId + role, project-owner-only).
-  async create(args: { projectId?: string; role?: "editor" | "viewer"; ttlMs?: number }): Promise<Invite> {
+  async create(args: {
+    projectId?: string;
+    role?: "editor" | "viewer";
+    ttlMs?: number;
+  }): Promise<Invite> {
     const res = await this.fetcher(
       new Request(`${this.base}/v1/invites`, {
         method: "POST",
@@ -59,14 +66,18 @@ export class InviteClient {
   }
 
   async listOutgoing(): Promise<OutgoingInvite[]> {
-    const res = await this.fetcher(new Request(`${this.base}/v1/invites/outgoing`));
+    const res = await this.fetcher(
+      new Request(`${this.base}/v1/invites/outgoing`),
+    );
     const body = (await res.json()) as { invites?: OutgoingInvite[] };
     return body.invites ?? [];
   }
 
   async revoke(codeHash: string): Promise<void> {
     await this.fetcher(
-      new Request(`${this.base}/v1/invites/${encodeURIComponent(codeHash)}`, { method: "DELETE" }),
+      new Request(`${this.base}/v1/invites/${encodeURIComponent(codeHash)}`, {
+        method: "DELETE",
+      }),
     );
   }
 }

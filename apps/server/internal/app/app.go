@@ -30,7 +30,11 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer dbConn.Close()
+	defer func() {
+		if err := dbConn.Close(); err != nil {
+			slog.Error("db close failed", "err", err)
+		}
+	}()
 
 	q := queries.New(dbConn)
 

@@ -83,7 +83,9 @@ export function SettingsModal({
           if (!users) return cancel();
           dispatch({ type: "SETTINGS_BUSY", busy: true });
           try {
-            await users.updateSettings({ serverDescription: vals.description ?? "" });
+            await users.updateSettings({
+              serverDescription: vals.description ?? "",
+            });
             const next = await users.getSettings();
             dispatch({ type: "SETTINGS_BUSY", busy: false });
             dispatch({ type: "SETTINGS_SERVER_SET", settings: next });
@@ -111,7 +113,10 @@ export function SettingsModal({
         onSubmit={async (vals) => {
           if (!users) return cancel();
           if ((vals.new ?? "").length < 8) {
-            dispatch({ type: "SETTINGS_ERROR", error: "new password must be at least 8 characters" });
+            dispatch({
+              type: "SETTINGS_ERROR",
+              error: "new password must be at least 8 characters",
+            });
             return;
           }
           dispatch({ type: "SETTINGS_BUSY", busy: true });
@@ -222,7 +227,9 @@ export function SettingsModal({
   }
 
   if (editing.kind === "revokeInvite") {
-    const inv = state.settingsOutgoing.find((i) => i.codeHash === editing.codeHash);
+    const inv = state.settingsOutgoing.find(
+      (i) => i.codeHash === editing.codeHash,
+    );
     const label = inv
       ? inv.projectId
         ? `${inv.projectName || "(deleted project)"} · ${inv.role || "editor"}`
@@ -303,5 +310,12 @@ function ConfirmAction({
     </>
   );
 
-  return <ConfirmDialog title={title} tone={tone} message={body} footerMode={title.toLowerCase()} />;
+  return (
+    <ConfirmDialog
+      title={title}
+      tone={tone}
+      message={body}
+      footerMode={title.toLowerCase()}
+    />
+  );
 }

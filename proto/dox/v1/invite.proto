@@ -60,17 +60,13 @@ service InviteService {
   // and project invites they issued; non-owner project owners see only their
   // project invites.
   rpc ListOutgoingInvites(ListOutgoingInvitesRequest) returns (ListOutgoingInvitesResponse) {
-    option (google.api.http) = {
-      get: "/v1/invites/outgoing"
-    };
+    option (google.api.http) = {get: "/v1/invites/outgoing"};
   }
 
   // Hard-deletes one of the caller's own outgoing invites. Code becomes
   // invalid immediately.
   rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse) {
-    option (google.api.http) = {
-      delete: "/v1/invites/{code_hash}"
-    };
+    option (google.api.http) = {delete: "/v1/invites/{code_hash}"};
   }
 }
 

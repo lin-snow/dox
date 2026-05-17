@@ -11,7 +11,12 @@ interface StatusBarProps {
 
 // Bottom-of-screen mode + key hint strip. The mode pill is reverse-video so the
 // active context is unmistakable at a glance.
-export function StatusBar({ mode, modeColor = color.accent, left, hints }: StatusBarProps) {
+export function StatusBar({
+  mode,
+  modeColor = color.accent,
+  left,
+  hints,
+}: StatusBarProps) {
   return (
     <Box paddingX={1} marginTop={1}>
       <Text color={modeColor} inverse>

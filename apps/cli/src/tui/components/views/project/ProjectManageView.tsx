@@ -62,24 +62,43 @@ export function ProjectManageView({
       return;
     }
     if (key.escape || input === "q") return onClose();
-    if ((input === "i" || input === "I") && isOwner) return onOpenInvitePicker();
+    if ((input === "i" || input === "I") && isOwner)
+      return onOpenInvitePicker();
   });
 
   if (!project) {
     return (
       <Box flexDirection="column" paddingX={1} height={rows - 1}>
-        <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-          <TitledPanel title="Project" width={cardWidth} paddingX={2} paddingY={1} focused>
+        <Box
+          flexGrow={1}
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <TitledPanel
+            title="Project"
+            width={cardWidth}
+            paddingX={2}
+            paddingY={1}
+            focused
+          >
             <Text color={color.muted}>project not found</Text>
           </TitledPanel>
         </Box>
-        <Footer mode="manage" version="v0.0.0" outerPadX={1} hints={[["esc", "back"]]} />
+        <Footer
+          mode="manage"
+          version="v0.0.0"
+          outerPadX={1}
+          hints={[["esc", "back"]]}
+        />
       </Box>
     );
   }
 
   if (editing?.kind === "invitePicker") {
-    return <InvitePickerModal busy={busy} error={error} onCancel={onDismissModal} />;
+    return (
+      <InvitePickerModal busy={busy} error={error} onCancel={onDismissModal} />
+    );
   }
   if (editing?.kind === "codeReveal") {
     return (
@@ -96,7 +115,12 @@ export function ProjectManageView({
 
   return (
     <Box flexDirection="column" paddingX={1} height={rows - 1}>
-      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+      >
         <TitledPanel
           title={`Project · ${project.name}`}
           width={cardWidth}
@@ -105,7 +129,11 @@ export function ProjectManageView({
           focused
           borderTint={swatchColor(project.color)}
         >
-          <Header project={project} memberCount={members.length} membersLoaded={membersLoaded} />
+          <Header
+            project={project}
+            memberCount={members.length}
+            membersLoaded={membersLoaded}
+          />
 
           <Box marginTop={1} flexDirection="column">
             <Text color={color.muted}>Members</Text>
@@ -119,7 +147,9 @@ export function ProjectManageView({
                   (just you)
                 </Text>
               ) : (
-                members.map((m) => <MemberRow key={m.userId} m={m} nowMs={nowMs} />)
+                members.map((m) => (
+                  <MemberRow key={m.userId} m={m} nowMs={nowMs} />
+                ))
               )}
             </Box>
           </Box>
@@ -127,7 +157,11 @@ export function ProjectManageView({
           {isOwner && (
             <Box marginTop={1}>
               <Text color={color.muted}>
-                Press <Text color={color.accent} bold>i</Text> to invite a new user.
+                Press{" "}
+                <Text color={color.accent} bold>
+                  i
+                </Text>{" "}
+                to invite a new user.
               </Text>
             </Box>
           )}
@@ -169,7 +203,9 @@ function Header({
         <Text bold>{project.name}</Text>
         <Box marginLeft={2}>
           <Text color={color.muted}>
-            {membersLoaded ? `${memberCount} member${memberCount === 1 ? "" : "s"}` : "—"}
+            {membersLoaded
+              ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+              : "—"}
           </Text>
         </Box>
       </Box>
@@ -218,9 +254,22 @@ function InvitePickerModal({
 
   return (
     <Box flexDirection="column" paddingX={1} height={rows - 1}>
-      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-        <TitledPanel title="Invite User" width={cardWidth} paddingX={2} paddingY={1} focused>
-          <Text wrap="wrap">Pick a role for the invitee. You'll get a code to share.</Text>
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <TitledPanel
+          title="Invite User"
+          width={cardWidth}
+          paddingX={2}
+          paddingY={1}
+          focused
+        >
+          <Text wrap="wrap">
+            Pick a role for the invitee. You'll get a code to share.
+          </Text>
           <Box marginTop={1} justifyContent="center">
             <Text color={color.accent} bold>{`[e]`}</Text>
             <Text color={color.muted}>{` editor    `}</Text>
@@ -281,7 +330,12 @@ function CodeRevealModal({
 
   return (
     <Box flexDirection="column" paddingX={1} height={rows - 1}>
-      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+      >
         <TitledPanel
           title="Invite Code"
           width={cardWidth}
@@ -291,8 +345,11 @@ function CodeRevealModal({
           borderTint={color.accent}
         >
           <Text wrap="wrap">
-            New {role} invite for <Text bold>{projectName}</Text>. Share this code with the user
-            you want to add. <Text color={color.danger} bold>You won't see it again.</Text>
+            New {role} invite for <Text bold>{projectName}</Text>. Share this
+            code with the user you want to add.{" "}
+            <Text color={color.danger} bold>
+              You won't see it again.
+            </Text>
           </Text>
           <Box marginTop={1} justifyContent="center">
             <Text color={color.accent} bold>
@@ -307,7 +364,12 @@ function CodeRevealModal({
           </Box>
         </TitledPanel>
       </Box>
-      <Footer mode="invite" version="v0.0.0" outerPadX={1} hints={[["any", "close"]]} />
+      <Footer
+        mode="invite"
+        version="v0.0.0"
+        outerPadX={1}
+        hints={[["any", "close"]]}
+      />
     </Box>
   );
 }

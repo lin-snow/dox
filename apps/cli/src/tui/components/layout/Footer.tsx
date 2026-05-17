@@ -49,13 +49,17 @@ export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
   return (
     <Box paddingX={1} marginTop={1}>
       <Text>
-        <Text color={color.muted} dimColor>{POWERED_BY}</Text>
+        <Text color={color.muted} dimColor>
+          {POWERED_BY}
+        </Text>
         <Text color={color.muted}>{"  "}</Text>
         <Text color={color.muted}>{"─".repeat(dashes)}</Text>
         <Text color={color.muted}>{"  "}</Text>
         {hints.map(([k, l], idx) => (
           <Text key={k}>
-            {idx > 0 ? <Text color={color.muted} dimColor>{`  ${icon.dot} `}</Text> : null}
+            {idx > 0 ? (
+              <Text color={color.muted} dimColor>{`  ${icon.dot} `}</Text>
+            ) : null}
             <Text color={color.accent} bold>
               {k}
             </Text>
@@ -69,7 +73,9 @@ export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
         {version && (
           <Text>
             <Text color={color.muted}>{"  "}</Text>
-            <Text color={color.accent2} bold>{icon.brand}</Text>
+            <Text color={color.accent2} bold>
+              {icon.brand}
+            </Text>
             <Text color={color.accent2}> dox</Text>
           </Text>
         )}

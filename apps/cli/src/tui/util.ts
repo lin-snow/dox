@@ -1,7 +1,8 @@
 // Compact relative-time string (`2m`, `1h`, `3d`, `2w`). Tolerates the
 // grpc-gateway string-encoded int64s by accepting `unknown`.
 export function relativeTime(now: number, raw: unknown): string {
-  const ms = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;
+  const ms =
+    typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;
   if (!Number.isFinite(ms) || ms <= 0) return "—";
   const diffMs = Math.max(0, now - ms);
   const s = Math.floor(diffMs / 1000);

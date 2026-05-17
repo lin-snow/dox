@@ -14,7 +14,9 @@ export const listUsers = (opts: GlobalOpts) =>
   withContext(opts, async ({ users, output }) => {
     const rows = await users.list();
     output.ok(
-      rows.map((u) => `${u.id.slice(0, 8)}  ${u.role.padEnd(7)}  ${u.name}`).join("\n") || "(no users)",
+      rows
+        .map((u) => `${u.id.slice(0, 8)}  ${u.role.padEnd(7)}  ${u.name}`)
+        .join("\n") || "(no users)",
       { users: rows },
     );
   });
@@ -44,7 +46,9 @@ export const setServerName = (name: string, opts: GlobalOpts) =>
 export const setServerDescription = (desc: string, opts: GlobalOpts) =>
   withContext(opts, async ({ users, output }) => {
     const s = await users.updateSettings({ serverDescription: desc });
-    output.ok(`server_description = ${s.serverDescription || "(empty)"}`, { settings: s });
+    output.ok(`server_description = ${s.serverDescription || "(empty)"}`, {
+      settings: s,
+    });
   });
 
 // resetUserPassword resolves a username to its user_id then resets the

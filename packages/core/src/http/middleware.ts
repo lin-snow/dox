@@ -2,10 +2,13 @@ import type { Config } from "../config";
 import type { IO } from "../io";
 import { ApiError, compose, type Fetcher, type Middleware } from "./fetcher";
 
-export const withAuth = (token: string): Middleware => (next) => (req) => {
-  req.headers.set("Authorization", `Bearer ${token}`);
-  return next(req);
-};
+export const withAuth =
+  (token: string): Middleware =>
+  (next) =>
+  (req) => {
+    req.headers.set("Authorization", `Bearer ${token}`);
+    return next(req);
+  };
 
 export const withErrorMap: Middleware = (next) => async (req) => {
   const res = await next(req);
@@ -22,18 +25,21 @@ const isRetryable = (e: unknown): boolean => {
   return true;
 };
 
-export const withRetry = (max = 2): Middleware => (next) => async (req) => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      // Bun's Request.clone() returns the Web-standard Request type, which TS
-      // narrows compared to Bun's extended Request. Runtime behavior matches.
-      return await next(req.clone() as Request);
-    } catch (e) {
-      if (attempt >= max || !isRetryable(e)) throw e;
-      await sleep(2 ** attempt * 100);
+export const withRetry =
+  (max = 2): Middleware =>
+  (next) =>
+  async (req) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        // Bun's Request.clone() returns the Web-standard Request type, which TS
+        // narrows compared to Bun's extended Request. Runtime behavior matches.
+        return await next(req.clone() as Request);
+      } catch (e) {
+        if (attempt >= max || !isRetryable(e)) throw e;
+        await sleep(2 ** attempt * 100);
+      }
     }
-  }
-};
+  };
 
 export const withLog =
   (log: (line: string) => void): Middleware =>

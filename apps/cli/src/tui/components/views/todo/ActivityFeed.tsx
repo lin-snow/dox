@@ -16,8 +16,15 @@ interface ActivityFeedProps {
 export function ActivityFeed({ events, nowMs }: ActivityFeedProps) {
   if (events.length === 0) {
     return (
-      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-        <Text color={color.muted} dimColor>no activity yet</Text>
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Text color={color.muted} dimColor>
+          no activity yet
+        </Text>
         <Box marginTop={1}>
           <Text color={color.muted} dimColor>
             invite teammates to a project to see updates
@@ -42,7 +49,13 @@ export function ActivityFeed({ events, nowMs }: ActivityFeedProps) {
 const ACTOR_W = 8;
 const TIME_W = 4;
 
-function ActivityRow({ event, nowMs }: { event: ActivityEvent; nowMs: number }) {
+function ActivityRow({
+  event,
+  nowMs,
+}: {
+  event: ActivityEvent;
+  nowMs: number;
+}) {
   const { glyph, tint } = verbStyle(event.verb);
   const age = relativeTime(nowMs, event.createdAt);
   return (
@@ -53,7 +66,9 @@ function ActivityRow({ event, nowMs }: { event: ActivityEvent; nowMs: number }) 
         </Text>
       </Box>
       <Text> </Text>
-      <Text color={tint} bold>{glyph}</Text>
+      <Text color={tint} bold>
+        {glyph}
+      </Text>
       <Text> </Text>
       {event.projectColor && (
         <>

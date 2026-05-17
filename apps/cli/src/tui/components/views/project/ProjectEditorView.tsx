@@ -37,7 +37,10 @@ type FieldIndex = 0 | 1 | 2;
 // Full-screen centered editor for creating a project. Modeled on
 // TodoEditorView but multi-field: name + description (text), color (picker).
 // Tab cycles fields, Enter submits from any field, Esc cancels.
-export function ProjectEditorView({ onSubmit, onCancel }: ProjectEditorViewProps) {
+export function ProjectEditorView({
+  onSubmit,
+  onCancel,
+}: ProjectEditorViewProps) {
   const { stdout } = useStdout();
   const cols = Math.max(60, stdout?.columns ?? 100);
   const rows = Math.max(15, stdout?.rows ?? 30);
@@ -70,7 +73,7 @@ export function ProjectEditorView({ onSubmit, onCancel }: ProjectEditorViewProps
     }
     if (key.tab) {
       const delta = key.shift ? -1 : 1;
-      setField((((field + delta) % 3) + 3) % 3 as FieldIndex);
+      setField(((((field + delta) % 3) + 3) % 3) as FieldIndex);
       return;
     }
     // Color picker navigation + submit only fire when the picker holds focus,
@@ -194,7 +197,9 @@ function ColorPicker({ idx, active }: { idx: number; active: boolean }) {
       })}
       {selected && (
         <Box marginLeft={1}>
-          <Text color={active ? color.accent : color.muted}>{selected.name}</Text>
+          <Text color={active ? color.accent : color.muted}>
+            {selected.name}
+          </Text>
         </Box>
       )}
     </Box>

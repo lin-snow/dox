@@ -29,7 +29,7 @@ export function Panel({
   borderTint,
   children,
 }: PanelProps) {
-  const borderColor = focused ? color.accent : borderTint ?? color.muted;
+  const borderColor = focused ? color.accent : (borderTint ?? color.muted);
   return (
     <Box
       flexDirection="column"

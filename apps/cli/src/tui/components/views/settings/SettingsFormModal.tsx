@@ -82,8 +82,19 @@ export function SettingsFormModal({
 
   return (
     <Box flexDirection="column" paddingX={1} height={rows - 1}>
-      <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-        <TitledPanel title={title} width={cardWidth} paddingX={2} paddingY={1} focused>
+      <Box
+        flexGrow={1}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <TitledPanel
+          title={title}
+          width={cardWidth}
+          paddingX={2}
+          paddingY={1}
+          focused
+        >
           {help && (
             <Text color={color.muted} wrap="wrap">
               {help}

@@ -9,11 +9,23 @@ VERSION_PKG := "github.com/lin-snow/dox/apps/server/internal/version"
 default:
     @just --list
 
+# === Quality ===
+
+# Run the full lint / format / typecheck pipeline (see scripts/check.sh).
+check:
+    bash scripts/check.sh
+
+# Run all tests (Go + Bun).
+test:
+    cd apps/server && go test ./...
+    bun test
+
 # === Codegen ===
 
-# Generate Go + TS + OpenAPI from proto
-generate:
+# Generate everything: proto → Go + TS + OpenAPI, and sqlc → Go DB bindings.
+gen:
     buf generate
+    cd apps/server && sqlc generate
 
 # Lint proto
 proto-lint:
@@ -32,10 +44,6 @@ server-test:
 # Format Go source
 server-fmt:
     cd apps/server && gofmt -s -w .
-
-# Run sqlc to (re)generate db query Go code
-server-sqlc:
-    cd apps/server && sqlc generate
 
 # Run server with version/commit injected via -ldflags (defaults from config.go: ./apps/server/data/dox.db, :8080)
 serve:
@@ -74,3 +82,74 @@ cli *ARGS:
 # Run client tests
 cli-test:
     bun test
+
+# === Docker ===
+
+# Build the runtime Docker image locally end-to-end — mirrors what CI does
+# (cross-compiles the binary for this host's arch into ./artifacts, then
+# `docker build` consumes it). Tags the result `dox:local`.
+docker-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "$(uname -m)" in
+        x86_64|amd64)  arch=amd64 ;;
+        aarch64|arm64) arch=arm64 ;;
+        *) echo ">>> unsupported arch: $(uname -m)" >&2; exit 1 ;;
+    esac
+    mkdir -p artifacts
+    cd apps/server && CGO_ENABLED=0 GOOS=linux GOARCH=${arch} \
+        go build -trimpath -ldflags="-s -w" \
+        -o "$(git rev-parse --show-toplevel)/artifacts/dox-server-linux-${arch}" \
+        ./cmd/dox-server
+    cd "$(git rev-parse --show-toplevel)"
+    docker build -f docker/Dockerfile -t dox:local \
+        --build-arg TARGETOS=linux --build-arg TARGETARCH=${arch} .
+    echo ">>> built dox:local (linux/${arch})"
+
+# === Release ===
+
+# Cut a release: tag the current commit and push it to trigger
+# .github/workflows/release.yml (Docker Hub build & push).
+# Usage:  just release v0.1.0
+release VERSION:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if ! [[ "{{VERSION}}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+        echo ">>> version must look like vMAJOR.MINOR.PATCH (e.g. v0.1.0)" >&2
+        exit 1
+    fi
+
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$branch" != "main" ]]; then
+        echo ">>> refusing to release from '$branch' — switch to main first" >&2
+        exit 1
+    fi
+
+    if ! git diff --quiet HEAD -- 2>/dev/null; then
+        echo ">>> working tree is dirty — commit or stash first" >&2
+        exit 1
+    fi
+
+    git fetch --quiet origin main
+    if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+        echo ">>> local main is not aligned with origin/main — push or pull first" >&2
+        exit 1
+    fi
+
+    if git rev-parse "{{VERSION}}" >/dev/null 2>&1; then
+        echo ">>> tag {{VERSION}} already exists" >&2
+        exit 1
+    fi
+
+    sha=$(git rev-parse --short HEAD)
+    echo ">>> about to tag ${sha} on main as {{VERSION}} and push to origin."
+    echo ">>> this triggers release.yml → docker.io/<dockerhub-user>/dox:{{VERSION}}"
+    read -r -p ">>> continue? [y/N] " ans
+    [[ "$ans" =~ ^[yY]$ ]] || { echo ">>> aborted"; exit 1; }
+
+    git tag -a "{{VERSION}}" -m "release {{VERSION}}"
+    git push origin "{{VERSION}}"
+
+    echo ">>> pushed {{VERSION}} — watch:"
+    echo "    https://github.com/lin-snow/dox/actions/workflows/release.yml"

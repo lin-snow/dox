@@ -51,7 +51,10 @@ export function AboutView({ version, onClose }: AboutViewProps) {
         mode="about"
         version={version}
         outerPadX={1}
-        hints={[["esc", "back"], ["⏎", "back"]]}
+        hints={[
+          ["esc", "back"],
+          ["⏎", "back"],
+        ]}
       />
     </Box>
   );

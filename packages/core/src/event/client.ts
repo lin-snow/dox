@@ -6,7 +6,10 @@ export interface EventsApi {
 }
 
 export class EventClient implements EventsApi {
-  constructor(private readonly fetcher: Fetcher, private readonly base: string) {}
+  constructor(
+    private readonly fetcher: Fetcher,
+    private readonly base: string,
+  ) {}
 
   async list(opts?: { limit?: number }): Promise<ActivityEvent[]> {
     const url = new URL(`${this.base}/v1/events`);

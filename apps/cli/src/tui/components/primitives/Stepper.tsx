@@ -17,11 +17,24 @@ export function Stepper({ steps, activeIndex }: StepperProps) {
     <Box flexDirection="column">
       <Box>
         {steps.map((_, idx) => {
-          const state = idx < activeIndex ? "done" : idx === activeIndex ? "active" : "pending";
+          const state =
+            idx < activeIndex
+              ? "done"
+              : idx === activeIndex
+                ? "active"
+                : "pending";
           const glyph =
-            state === "done" ? icon.stepDone : state === "active" ? icon.stepActive : icon.stepPending;
+            state === "done"
+              ? icon.stepDone
+              : state === "active"
+                ? icon.stepActive
+                : icon.stepPending;
           const dotColor =
-            state === "done" ? color.success : state === "active" ? color.accent : color.muted;
+            state === "done"
+              ? color.success
+              : state === "active"
+                ? color.accent
+                : color.muted;
           const linkColor = idx < activeIndex ? color.success : color.muted;
           return (
             <Box key={`d-${idx}`} width={CELL_WIDTH}>
@@ -40,12 +53,20 @@ export function Stepper({ steps, activeIndex }: StepperProps) {
       </Box>
       <Box>
         {steps.map((label, idx) => {
-          const state = idx < activeIndex ? "done" : idx === activeIndex ? "active" : "pending";
-          const labelColor =
-            state === "active" ? color.accent : color.muted;
+          const state =
+            idx < activeIndex
+              ? "done"
+              : idx === activeIndex
+                ? "active"
+                : "pending";
+          const labelColor = state === "active" ? color.accent : color.muted;
           return (
             <Box key={`l-${idx}`} width={CELL_WIDTH}>
-              <Text color={labelColor} bold={state === "active"} dimColor={state === "pending"}>
+              <Text
+                color={labelColor}
+                bold={state === "active"}
+                dimColor={state === "pending"}
+              >
                 {label}
               </Text>
             </Box>

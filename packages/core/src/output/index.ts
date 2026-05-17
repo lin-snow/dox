@@ -44,7 +44,9 @@ export class JsonOutput implements Output {
   }
 
   ok(message: string, details?: Record<string, unknown>): void {
-    this.io.stdout.write(JSON.stringify({ ok: true, message, ...(details ?? {}) }) + "\n");
+    this.io.stdout.write(
+      JSON.stringify({ ok: true, message, ...(details ?? {}) }) + "\n",
+    );
   }
 
   error(message: string): void {

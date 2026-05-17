@@ -37,10 +37,14 @@ export function SettingsView({
   const panelWidth = cols - 2;
   const innerHeight = Math.max(15, rows - 4);
 
-  const tabIndex = Math.max(0, tabs.findIndex((t) => t.key === activeTab));
+  const tabIndex = Math.max(
+    0,
+    tabs.findIndex((t) => t.key === activeTab),
+  );
   const tab = tabs[tabIndex] ?? tabs[0];
   const tabRows = tab?.rows ?? [];
-  const clampedCursor = tabRows.length === 0 ? 0 : Math.min(cursor, tabRows.length - 1);
+  const clampedCursor =
+    tabRows.length === 0 ? 0 : Math.min(cursor, tabRows.length - 1);
   const current: SettingsRow | undefined = tabRows[clampedCursor];
 
   useInput((input, key) => {
@@ -85,7 +89,13 @@ export function SettingsView({
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <TitledPanel title="Settings" width={panelWidth} paddingY={1} focused height={innerHeight}>
+      <TitledPanel
+        title="Settings"
+        width={panelWidth}
+        paddingY={1}
+        focused
+        height={innerHeight}
+      >
         <TabStrip tabs={tabs} activeKey={activeTab} />
         {tab?.hint && (
           <Box marginTop={1} justifyContent="center">
@@ -93,7 +103,11 @@ export function SettingsView({
           </Box>
         )}
         <Box marginTop={1} flexGrow={1}>
-          <RowList rows={tabRows} cursor={clampedCursor} width={Math.floor(panelWidth * 0.36)} />
+          <RowList
+            rows={tabRows}
+            cursor={clampedCursor}
+            width={Math.floor(panelWidth * 0.36)}
+          />
           <Box width={2} />
           <Detail row={current} />
         </Box>
@@ -108,7 +122,13 @@ export function SettingsView({
   );
 }
 
-function TabStrip({ tabs, activeKey }: { tabs: SettingsTabSpec[]; activeKey: SettingsTabKey }) {
+function TabStrip({
+  tabs,
+  activeKey,
+}: {
+  tabs: SettingsTabSpec[];
+  activeKey: SettingsTabKey;
+}) {
   return (
     <Box justifyContent="center">
       {tabs.map((t, idx) => {
@@ -157,7 +177,11 @@ function RowList({
           const readOnly = !row.onEnter && !row.secondary;
           // Label tint: accent when active, dim when read-only + inactive,
           // default otherwise.
-          const labelColor = active ? color.accent : readOnly ? color.muted : undefined;
+          const labelColor = active
+            ? color.accent
+            : readOnly
+              ? color.muted
+              : undefined;
           return (
             <Box key={row.key}>
               <Text color={active ? color.accent : color.muted}>
@@ -169,7 +193,11 @@ function RowList({
                 </Text>
               </Box>
               {row.value && (
-                <Text color={row.muted ? color.muted : labelColor ?? color.muted} dimColor={row.muted} wrap="truncate">
+                <Text
+                  color={row.muted ? color.muted : (labelColor ?? color.muted)}
+                  dimColor={row.muted}
+                  wrap="truncate"
+                >
                   {row.value}
                 </Text>
               )}
@@ -206,7 +234,11 @@ function Detail({ row }: { row: SettingsRow | undefined }) {
         <Text color={color.muted}>{"─".repeat(60)}</Text>
       </Box>
       <Box marginTop={1}>
-        <Text wrap="wrap">{typeof row.detail === "string" || !row.detail ? row.detail ?? "" : row.detail}</Text>
+        <Text wrap="wrap">
+          {typeof row.detail === "string" || !row.detail
+            ? (row.detail ?? "")
+            : row.detail}
+        </Text>
       </Box>
       <Box marginTop={1}>
         {row.onEnter && (
@@ -217,7 +249,7 @@ function Detail({ row }: { row: SettingsRow | undefined }) {
             to activate
           </Text>
         )}
-        {row.onEnter && row.secondary && <Text color={color.muted}>   ·   </Text>}
+        {row.onEnter && row.secondary && <Text color={color.muted}> · </Text>}
         {row.secondary && (
           <Text color={color.muted}>
             <Text color={color.accent2} bold>

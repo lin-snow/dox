@@ -2,7 +2,10 @@ import type { Fetcher } from "../http";
 import type { ServerSettings, User } from "./domain";
 
 export class UserClient {
-  constructor(private readonly fetcher: Fetcher, private readonly base: string) {}
+  constructor(
+    private readonly fetcher: Fetcher,
+    private readonly base: string,
+  ) {}
 
   async me(): Promise<User> {
     const res = await this.fetcher(new Request(`${this.base}/v1/me`));
@@ -16,7 +19,11 @@ export class UserClient {
   }
 
   async remove(id: string): Promise<void> {
-    await this.fetcher(new Request(`${this.base}/v1/users/${encodeURIComponent(id)}`, { method: "DELETE" }));
+    await this.fetcher(
+      new Request(`${this.base}/v1/users/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    );
   }
 
   async getSettings(): Promise<ServerSettings> {
@@ -53,12 +60,18 @@ export class UserClient {
     };
   }
 
-  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     await this.fetcher(
       new Request(`${this.base}/v1/me/password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+        body: JSON.stringify({
+          old_password: oldPassword,
+          new_password: newPassword,
+        }),
       }),
     );
   }
@@ -67,11 +80,14 @@ export class UserClient {
   // and have the user ChangePassword on first login.
   async resetUserPassword(userId: string): Promise<{ tempPassword: string }> {
     const res = await this.fetcher(
-      new Request(`${this.base}/v1/users/${encodeURIComponent(userId)}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      }),
+      new Request(
+        `${this.base}/v1/users/${encodeURIComponent(userId)}/reset-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      ),
     );
     const body = (await res.json()) as { tempPassword?: string };
     return { tempPassword: body.tempPassword ?? "" };

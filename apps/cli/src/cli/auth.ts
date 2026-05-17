@@ -47,7 +47,10 @@ function validUrlOrDie(input: string): URL {
   }
 }
 
-async function promptText(message: string, placeholder?: string): Promise<string> {
+async function promptText(
+  message: string,
+  placeholder?: string,
+): Promise<string> {
   const v = await p.text({ message, placeholder });
   if (p.isCancel(v)) {
     p.cancel("Cancelled");
@@ -95,10 +98,14 @@ export async function registerCmd(opts: RegisterOptions): Promise<void> {
   const url = validUrlOrDie(opts.server);
   p.intro(`Register with ${url.origin}`);
   const userName = opts.name ?? (await promptText("Username:", "alice"));
-  const password = opts.password ?? (await promptPassword("Password (min 8 chars):"));
+  const password =
+    opts.password ?? (await promptPassword("Password (min 8 chars):"));
   let invite = opts.invite;
   if (!invite) {
-    const ans = await p.text({ message: "Invite code (leave empty if you're the first user or open registration is on):" });
+    const ans = await p.text({
+      message:
+        "Invite code (leave empty if you're the first user or open registration is on):",
+    });
     if (p.isCancel(ans)) {
       p.cancel("Cancelled");
       process.exit(1);
@@ -107,7 +114,11 @@ export async function registerCmd(opts: RegisterOptions): Promise<void> {
   }
   let result;
   try {
-    result = await register(url.origin, { userName, password, inviteCode: invite });
+    result = await register(url.origin, {
+      userName,
+      password,
+      inviteCode: invite,
+    });
   } catch (err) {
     p.cancel(`Register failed: ${(err as Error).message}`);
     process.exit(1);
@@ -124,7 +135,10 @@ export async function registerCmd(opts: RegisterOptions): Promise<void> {
 
 // acceptInviteCmd redeems an invite code. If already logged in, just joins
 // the project. Otherwise prompts for registration and uses the code there.
-export async function acceptInviteCmd(codeArg: string, opts: AcceptOptions): Promise<void> {
+export async function acceptInviteCmd(
+  codeArg: string,
+  opts: AcceptOptions,
+): Promise<void> {
   const cfg = await loadConfig();
   if (cfg) {
     p.intro(`Accept invite as ${cfg.userName}`);
@@ -139,7 +153,8 @@ export async function acceptInviteCmd(codeArg: string, opts: AcceptOptions): Pro
     return;
   }
   // No existing config — fall through to registration with the invite.
-  const server = opts.server ?? (await promptText("Server URL:", "http://localhost:8080"));
+  const server =
+    opts.server ?? (await promptText("Server URL:", "http://localhost:8080"));
   // Pre-probe so we can warn if registration is closed AND no invite was
   // given — but we DO have an invite here, so just go.
   try {
@@ -170,7 +185,8 @@ export async function passwdCmd(opts: PasswdOptions): Promise<void> {
     process.exit(1);
   }
   const oldPassword = opts.old ?? (await promptPassword("Current password:"));
-  const newPassword = opts.new ?? (await promptPassword("New password (min 8 chars):"));
+  const newPassword =
+    opts.new ?? (await promptPassword("New password (min 8 chars):"));
   const fetcher = buildFetcher(cfg, realIO());
   const users = new UserClient(fetcher, cfg.server);
   try {

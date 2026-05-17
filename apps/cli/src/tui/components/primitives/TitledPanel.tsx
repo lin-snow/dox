@@ -32,7 +32,7 @@ export function TitledPanel({
   height,
   children,
 }: TitledPanelProps) {
-  const borderColor = focused ? color.accent : borderTint ?? color.muted;
+  const borderColor = focused ? color.accent : (borderTint ?? color.muted);
   const titleColor = focused ? color.accent : color.accent2;
 
   // Layout inside the top border (excluding the two corner glyphs):
