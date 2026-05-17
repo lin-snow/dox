@@ -91,7 +91,7 @@ Onboarding is non-obvious: read **`docs/onboarding.md`** before touching anythin
 - **Status codes carry meaning** (`authz/authz.go` docstring): NotFound vs PermissionDenied is a deliberate existence-leak control, not interchangeable.
 - **Bus messages and DB mutations must be tx-bound** — call `bus.Publish` from inside `runInTx` with the tx-bound `*queries.Queries`, never from outside the transaction.
 - **`emit_empty_slices: true`** is set in `sqlc.yaml` — sqlc list results are non-nil empty slices, not `nil`. Handlers and tests rely on this.
-- **Releases ship server and CLI from a single tag.** `just release vX.Y.Z` pushes the tag and CI does the rest in parallel jobs: (1) Linux amd64/arm64 server binaries → tarballs on a draft GH Release, (2) multi-arch Docker image → Docker Hub, (3) `apps/cli` bundled via `bun build --target=node` → `npm publish` as `@sn0wl1n/dox` (see `scripts/build-cli.sh` and the `publish-npm` job in `release.yml`). The CLI version is injected at compile time via `--define` from `apps/cli/src/version.ts`, so `dox --version` reports the tag.
+- **Releases ship server and CLI from a single tag.** `just release vX.Y.Z` pushes the tag and CI does the rest in parallel jobs: (1) Linux amd64/arm64 server binaries → tarballs on a draft GH Release, (2) multi-arch Docker image → Docker Hub, (3) `apps/cli` bundled via `bun build --target=node` → `npm publish` as `@l1nsn0w/dox` (see `scripts/build-cli.sh` and the `publish-npm` job in `release.yml`). The CLI version is injected at compile time via `--define` from `apps/cli/src/version.ts`, so `dox --version` reports the tag.
 
 ## Notes for changes
 

@@ -13,6 +13,7 @@ export default tseslint.config(
       "node_modules/**",
       "**/node_modules/**",
       "apps/server/**",
+      "apps/cli/dist/**",
       "packages/proto-gen/src/dox/**",
       "packages/proto-gen/src/google/**",
       "docs/**",

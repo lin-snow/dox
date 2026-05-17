@@ -10,6 +10,7 @@ packages/proto-gen/src/google
 # Build / data artifacts
 apps/server/bin
 apps/server/data
+apps/cli/dist
 docs/swagger
 
 # Go / SQL — not handled by prettier

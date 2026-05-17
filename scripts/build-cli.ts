@@ -67,10 +67,10 @@ const stubReactDevtoolsCore = {
       path: "stub",
       namespace: "stub-react-devtools",
     }));
-    builder.onLoad(
-      { filter: /.*/, namespace: "stub-react-devtools" },
-      () => ({ contents: "export default {};", loader: "js" }),
-    );
+    builder.onLoad({ filter: /.*/, namespace: "stub-react-devtools" }, () => ({
+      contents: "export default {};",
+      loader: "js",
+    }));
   },
 };
 
@@ -107,7 +107,7 @@ chmodSync(bundlePath, 0o755);
 // never reach the registry. Everything the CLI needs at runtime is already
 // bundled into dox.js, so this manifest deliberately has no `dependencies`.
 const manifest = {
-  name: "@sn0wl1n/dox",
+  name: "@l1nsn0w/dox",
   version: NPM_VERSION,
   description: "Self-hosted personal todo — thin CLI/TUI client",
   type: "module",

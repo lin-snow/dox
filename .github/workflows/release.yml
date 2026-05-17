@@ -5,14 +5,14 @@ name: release
 # Server: cross-compile dox-server binaries, attach them as tarballs to a draft
 # GitHub Release, and push a multi-arch image to Docker Hub.
 # CLI:    bundle apps/cli into a single-file Node binary and publish it to npm
-# as @sn0wl1n/dox at the same version (tag minus the leading "v").
+# as @l1nsn0w/dox at the same version (tag minus the leading "v").
 #
 # Fires on push of a `v*` tag, or manually via workflow_dispatch.
 #
 # Required repo config:
 #   variables: DOCKERHUB_USERNAME
 #   secrets:   DOCKERHUB_TOKEN  (Docker Hub access token, read+write)
-#              NPM_TOKEN        (npm automation token with publish on @sn0wl1n)
+#              NPM_TOKEN        (npm automation token with publish on @l1nsn0w)
 #
 # To cut a release:
 #   just release v0.1.0          (preferred)
