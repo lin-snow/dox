@@ -2,10 +2,22 @@
 
 > A quiet home for the things you need to do.
 
+A self-hosted todo app you live in from the terminal — TUI by default, CLI
+for scripts. One Go binary, one SQLite file, optional multi-user via invite.
+
 Self-hosted, so it's yours. On every device, so it's always there. Open to a
 few, when you'd like the company. Small enough to forget you're running it.
 
 ![screenshot](./docs/imgs/screenshot.png)
+
+## Features
+
+- TUI by default, CLI for scripts — same server, no separate daemon
+- Projects + Inbox, markdown descriptions, done/undone
+- Search across todos and projects
+- Multi-user — first to register owns the server, others join by invite link
+- Activity feed — see who changed what, when
+- One container, one SQLite file — back it up with `cp`
 
 ## Deploy
 
