@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
-	_ "modernc.org/sqlite"
 )
 
 //go:embed migrations/*.sql
@@ -30,7 +30,7 @@ func Open(path string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}
-	conn, err := sql.Open("sqlite", path)
+	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
@@ -57,7 +57,6 @@ func migrate(db *sql.DB) error {
 	// into slog at debug level so it stays out of normal startup output but is
 	// still available with DOX_LOG_LEVEL=debug. Real errors propagate via goose.Up.
 	goose.SetLogger(slogGooseLogger{})
-	// goose dialect is "sqlite3" even though the modernc driver registers as "sqlite".
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("goose set dialect: %w", err)
 	}

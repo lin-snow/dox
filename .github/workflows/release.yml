@@ -35,6 +35,8 @@ jobs:
         include:
           - { goos: linux, goarch: amd64 }
           - { goos: linux, goarch: arm64 }
+    env:
+      ZIG_VERSION: "0.13.0"
     steps:
       - uses: actions/checkout@v6
 
@@ -43,10 +45,16 @@ jobs:
           go-version: stable
           cache-dependency-path: apps/server/go.sum
 
+      - name: Setup Zig for ARM64 cross-compilation
+        if: matrix.goarch == 'arm64'
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
       - name: Build dox-server
         working-directory: apps/server
         env:
-          CGO_ENABLED: "0"
+          CGO_ENABLED: "1"
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           VERSION: ${{ github.ref_name }}
@@ -55,8 +63,19 @@ jobs:
           set -euo pipefail
           BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           mkdir -p bin
-          go build -trimpath \
-            -ldflags="-s -w \
+
+          # mattn/go-sqlite3 requires cgo. Static linking keeps the artifact
+          # portable across linux distros (alpine release image, scratch, etc).
+          # amd64 uses the runner's gcc; arm64 cross-compiles via zig cc.
+          if [ "${GOARCH}" = "arm64" ]; then
+            export CC="zig cc -target aarch64-linux-musl"
+            export CXX="zig c++ -target aarch64-linux-musl"
+          else
+            export CC="gcc"
+          fi
+
+          go build -trimpath -tags netgo \
+            -ldflags="-s -w -linkmode external -extldflags '-static' \
               -X github.com/lin-snow/dox/apps/server/internal/version.version=${VERSION} \
               -X github.com/lin-snow/dox/apps/server/internal/version.commit=${COMMIT} \
               -X github.com/lin-snow/dox/apps/server/internal/version.date=${BUILD_DATE} \

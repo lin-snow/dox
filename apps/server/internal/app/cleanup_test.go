@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"

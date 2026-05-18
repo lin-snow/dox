@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/authz"
