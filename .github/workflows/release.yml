@@ -36,7 +36,7 @@ jobs:
           - { goos: linux, goarch: amd64 }
           - { goos: linux, goarch: arm64 }
     env:
-      ZIG_VERSION: "0.13.0"
+      ZIG_VERSION: "latest" # for ARM64 cross-compilation
     steps:
       - uses: actions/checkout@v6
 
