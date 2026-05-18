@@ -20,7 +20,7 @@ import { ActivityFeed } from "./components/views/todo/ActivityFeed";
 import { DualBarChart } from "./components/charts/DualBarChart";
 import { ErrorAlert } from "./components/primitives/ErrorAlert";
 import { Footer } from "./components/layout/Footer";
-import { HelpOverlay } from "./components/primitives/HelpOverlay";
+import { HelpView } from "./components/views/help/HelpView";
 import { Logo } from "./components/layout/Logo";
 import { SearchView } from "./components/views/search/SearchView";
 import { SettingsView } from "./components/views/settings/SettingsView";
@@ -348,14 +348,6 @@ export function App({
     [state.todos],
   );
 
-  // Help overlay swallows everything except its own toggles.
-  useInput(
-    (input, key) => {
-      if (input === "?" || key.escape) dispatch({ type: "CLOSE_HELP" });
-    },
-    { isActive: state.helpOpen },
-  );
-
   useInput(
     (input, key) => {
       if (state.helpOpen) return;
@@ -575,6 +567,12 @@ export function App({
   const nowMs = Date.now();
 
   const showSpinner = state.loading && state.todos.length === 0;
+
+  // Help is its own centered page rather than an overlay on the list — keeps
+  // the keybindings card from competing visually with the main grid below.
+  if (state.helpOpen) {
+    return <HelpView onClose={() => dispatch({ type: "CLOSE_HELP" })} />;
+  }
 
   // ── Todos list viewport ───────────────────────────────────────────────────
   // Panel chrome above the list eats: border-top 1 + paddingY-top 1 + meta 1
@@ -1142,8 +1140,6 @@ export function App({
       </Box>
 
       {state.error && <ErrorAlert message={state.error} />}
-
-      {state.helpOpen && <HelpOverlay />}
 
       <Footer mode="normal" version={VERSION} hints={listHints} outerPadX={1} />
     </Box>

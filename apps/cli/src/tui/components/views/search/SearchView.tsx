@@ -1,9 +1,10 @@
-import { Box, Text, useInput, useStdout } from "ink";
+import { Box, Text, useInput } from "ink";
 import { TextInput } from "@inkjs/ui";
 import { useEffect, useMemo } from "react";
 
 import type { Project, Todo } from "@dox/core";
 
+import { useTerminalSize } from "../../../hooks";
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
 import { VERSION } from "../../../../version";
@@ -25,9 +26,11 @@ interface SearchViewProps {
   onClose: () => void;
 }
 
-// Full-screen fuzzy search for todos. Matches against title and (when the row
+// Centered fuzzy search for todos. Matches against title and (when the row
 // has been hydrated by App.tsx's getTodo loop) description. Enter opens the
-// cursored result in a detail view; Esc bounces back to the list.
+// cursored result in a detail view; Esc bounces back to the list. The panel
+// is sized as a card (capped width + height) rather than full-screen so it
+// reads as a focused modal-style page on top of the rest of the chrome.
 export function SearchView({
   todos,
   projects,
@@ -42,11 +45,14 @@ export function SearchView({
   onOpen,
   onClose,
 }: SearchViewProps) {
-  const { stdout } = useStdout();
-  const cols = Math.max(80, stdout?.columns ?? 100);
-  const rows = Math.max(20, stdout?.rows ?? 30);
-  const panelWidth = cols - 2;
-  const panelHeight = Math.max(15, rows - 4);
+  const { cols, rows } = useTerminalSize();
+  // Card dimensions: capped so wide terminals don't stretch the input + result
+  // list into uncomfortable line lengths. The min keeps the layout legible on
+  // 80×24 terminals — anything smaller would degrade regardless.
+  const panelWidth = Math.min(96, Math.max(60, cols - 4));
+  const panelHeight = Math.min(30, Math.max(18, rows - 6));
+  // Push the card toward the visual middle; subtract ~3 rows for the footer.
+  const topPad = Math.max(1, Math.floor((rows - panelHeight - 3) / 2));
 
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
@@ -84,89 +90,92 @@ export function SearchView({
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <TitledPanel
-        title="Search"
-        width={panelWidth}
-        height={panelHeight}
-        paddingX={2}
-        paddingY={1}
-        focused
-      >
-        {/* Query row: chevron prompt + live-bound TextInput. */}
-        <Box>
-          <Box width={2}>
-            <Text color={color.accent} bold>
-              {icon.chevron}
-            </Text>
+      <Box height={topPad} />
+      <Box justifyContent="center">
+        <TitledPanel
+          title="Search"
+          width={panelWidth}
+          height={panelHeight}
+          paddingX={2}
+          paddingY={1}
+          focused
+        >
+          {/* Query row: chevron prompt + live-bound TextInput. */}
+          <Box>
+            <Box width={2}>
+              <Text color={color.accent} bold>
+                {icon.chevron}
+              </Text>
+            </Box>
+            <Box flexGrow={1}>
+              <TextInput
+                defaultValue={query}
+                placeholder="search by title or description…"
+                onChange={onQueryChange}
+                onSubmit={() => {
+                  const target = results[safeCursor];
+                  if (target) onOpen(target.id);
+                }}
+              />
+            </Box>
           </Box>
-          <Box flexGrow={1}>
-            <TextInput
-              defaultValue={query}
-              placeholder="search by title or description…"
-              onChange={onQueryChange}
-              onSubmit={() => {
-                const target = results[safeCursor];
-                if (target) onOpen(target.id);
-              }}
-            />
+
+          {/* Meta strip — match count + hydration hint. */}
+          <Box marginTop={1}>
+            <Text color={color.muted}>{matchLabel}</Text>
+            {hydrating && (
+              <Text color={color.muted} dimColor>
+                {"   "}
+                {icon.dot} loading descriptions…
+              </Text>
+            )}
           </Box>
-        </Box>
 
-        {/* Meta strip — match count + hydration hint. */}
-        <Box marginTop={1}>
-          <Text color={color.muted}>{matchLabel}</Text>
-          {hydrating && (
-            <Text color={color.muted} dimColor>
-              {"   "}
-              {icon.dot} loading descriptions…
-            </Text>
-          )}
-        </Box>
-
-        {/* Result list — windowed around the cursor so long match sets don't
+          {/* Result list — windowed around the cursor so long match sets don't
             push the footer off-screen. Empty query shows recent todos so the
             page is useful immediately on open. */}
-        <Box marginTop={1} flexDirection="column">
-          {results.length === 0 ? (
-            <Text color={color.muted} dimColor>
-              {"  "}
-              {query.trim() === ""
-                ? "type to search…"
-                : "no matches — try a shorter query"}
-            </Text>
-          ) : (
-            <>
-              {win.items.map((t, idx) => {
-                const projectId = t.projectId;
-                const project = projectId
-                  ? (projectById.get(projectId) ?? null)
-                  : null;
-                return (
-                  <ResultRow
-                    key={t.id}
-                    todo={t}
-                    project={project}
-                    nowMs={nowMs}
-                    highlighted={win.start + idx === safeCursor}
-                    width={panelWidth - 6}
-                  />
-                );
-              })}
-              {(win.moreAbove > 0 || win.moreBelow > 0) && (
-                <Box width={panelWidth - 6}>
-                  <Text color={color.muted} dimColor>
-                    {win.moreAbove > 0 ? `↑ ${win.moreAbove} more` : ""}
-                  </Text>
-                  <Box flexGrow={1} />
-                  <Text color={color.muted} dimColor>
-                    {win.moreBelow > 0 ? `${win.moreBelow} more ↓` : ""}
-                  </Text>
-                </Box>
-              )}
-            </>
-          )}
-        </Box>
-      </TitledPanel>
+          <Box marginTop={1} flexDirection="column">
+            {results.length === 0 ? (
+              <Text color={color.muted} dimColor>
+                {"  "}
+                {query.trim() === ""
+                  ? "type to search…"
+                  : "no matches — try a shorter query"}
+              </Text>
+            ) : (
+              <>
+                {win.items.map((t, idx) => {
+                  const projectId = t.projectId;
+                  const project = projectId
+                    ? (projectById.get(projectId) ?? null)
+                    : null;
+                  return (
+                    <ResultRow
+                      key={t.id}
+                      todo={t}
+                      project={project}
+                      nowMs={nowMs}
+                      highlighted={win.start + idx === safeCursor}
+                      width={panelWidth - 6}
+                    />
+                  );
+                })}
+                {(win.moreAbove > 0 || win.moreBelow > 0) && (
+                  <Box width={panelWidth - 6}>
+                    <Text color={color.muted} dimColor>
+                      {win.moreAbove > 0 ? `↑ ${win.moreAbove} more` : ""}
+                    </Text>
+                    <Box flexGrow={1} />
+                    <Text color={color.muted} dimColor>
+                      {win.moreBelow > 0 ? `${win.moreBelow} more ↓` : ""}
+                    </Text>
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
+        </TitledPanel>
+      </Box>
 
       <Footer
         mode="search"
