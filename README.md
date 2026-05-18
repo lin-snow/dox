@@ -19,9 +19,9 @@ few, when you'd like the company. Small enough to forget you're running it.
 - Activity feed — see who changed what, when
 - One container, one SQLite file — back it up with `cp`
 
-## Deploy
+## Get started
 
-The server is one container. One command, one persistent volume:
+Run the server — one container, one persistent volume:
 
 ```bash
 docker run -d --name dox \
@@ -36,9 +36,7 @@ Or with Docker Compose — see [`docker/docker-compose.yml`](./docker/docker-com
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-## Use
-
-Install the client, then run it:
+Then install the client and point it at the server:
 
 ```bash
 npm install -g @l1nsn0w/dox     # or: bun add -g @l1nsn0w/dox
