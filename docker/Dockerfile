@@ -6,6 +6,11 @@
 # binaries in a separate matrix job and downloads them here before
 # `docker buildx build`.
 #
+# The binary is fully static (CGO_ENABLED=0) and embeds IANA tzdata via
+# `import _ "time/tzdata"`, so we don't install `tzdata` here. The server
+# only listens (no outbound HTTPS), so `ca-certificates` is also omitted —
+# add it back at the point a feature actually needs it.
+#
 # Local equivalent:  just docker-build
 
 FROM alpine:latest
@@ -13,12 +18,7 @@ FROM alpine:latest
 ARG TARGETOS
 ARG TARGETARCH
 
-# ca-certificates: outbound HTTPS readiness (future-proofing; the server today
-# only listens, but a single layer adds <300 KB).
-# tzdata: Go's time package falls back to /usr/share/zoneinfo when not running
-# in UTC; shipping it avoids surprise Local() behavior on hosts with non-UTC TZ.
-RUN apk add --no-cache ca-certificates tzdata \
- && mkdir -p /app/data
+RUN mkdir -p /app/data
 
 COPY artifacts/dox-server-${TARGETOS}-${TARGETARCH} /usr/local/bin/dox-server
 RUN chmod +x /usr/local/bin/dox-server

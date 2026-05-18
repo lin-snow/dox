@@ -360,6 +360,49 @@ export function App({
     [state.todos],
   );
 
+  // Single mutation path for "toggle done" — used by the list space key, the
+  // todo-detail view, and the search-detail view. Done todos drop out of the
+  // working list immediately, so on the open→done transition we publish a
+  // 5-second toast carrying the affordance to undo. On done→open (only
+  // reachable from detail views or via the toast's own undo) we clear any
+  // stale toast so the banner doesn't outlive its target.
+  const toggleDone = useCallback(
+    async (todo: Todo) => {
+      const prevDone = todo.done;
+      try {
+        const updated = await api.updateTodo(todo.id, { done: !prevDone });
+        dispatch({ type: "TODO_UPDATED", todo: updated });
+        if (!prevDone) {
+          dispatch({
+            type: "TOAST_SET",
+            toast: {
+              kind: "doneToggled",
+              todoId: todo.id,
+              title: todo.title,
+              prevDone,
+              expiresAt: Date.now() + 5000,
+            },
+          });
+        } else {
+          dispatch({ type: "TOAST_CLEAR" });
+        }
+      } catch (err) {
+        dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
+      }
+    },
+    [api],
+  );
+
+  // Auto-dismiss the toast at expiresAt. Recreated on every toast change so a
+  // rapid re-toggle (toast B replacing toast A) resets the timer correctly.
+  useEffect(() => {
+    const t = state.toast;
+    if (!t) return;
+    const ms = Math.max(0, t.expiresAt - Date.now());
+    const id = setTimeout(() => dispatch({ type: "TOAST_CLEAR" }), ms);
+    return () => clearTimeout(id);
+  }, [state.toast]);
+
   useInput(
     (input, key) => {
       if (state.helpOpen) return;
@@ -381,6 +424,24 @@ export function App({
       }
       if (input === "/") {
         dispatch({ type: "OPEN_SEARCH" });
+        return;
+      }
+      // Undo the most-recent done toggle while the toast is still up. Handled
+      // before cursor / filter keys so the affordance always works in the
+      // 5-second window regardless of where the cursor has moved since.
+      if (input === "z" && state.toast?.kind === "doneToggled") {
+        const t = state.toast;
+        void (async () => {
+          try {
+            const updated = await api.updateTodo(t.todoId, {
+              done: t.prevDone,
+            });
+            dispatch({ type: "TODO_UPDATED", todo: updated });
+            dispatch({ type: "TOAST_CLEAR" });
+          } catch (err) {
+            dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
+          }
+        })();
         return;
       }
       if (state.error) dispatch({ type: "CLEAR_ERROR" });
@@ -439,16 +500,7 @@ export function App({
         return;
       }
       if (input === " ") {
-        void (async () => {
-          try {
-            const updated = await api.updateTodo(current.id, {
-              done: !current.done,
-            });
-            dispatch({ type: "TODO_UPDATED", todo: updated });
-          } catch (err) {
-            dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
-          }
-        })();
+        void toggleDone(current);
       } else if (input === "d") {
         void (async () => {
           try {
@@ -573,10 +625,16 @@ export function App({
     () => new Map(state.projects.map((p) => [p.id, p])),
     [state.projects],
   );
-  const totalCount = state.todos.length;
-  const doneCount = state.todos.filter((t) => t.done).length;
-  const openCount = totalCount - doneCount;
+  const openCount = state.todos.filter((t) => !t.done).length;
   const nowMs = Date.now();
+  // "Done today" = todos completed since local midnight, using updatedAt as a
+  // proxy for the completion time (the server doesn't store completed-at as a
+  // separate column). Mirrors `activityByDay(kind: "done")`'s definition so
+  // the header counter and the chart's last bucket agree.
+  const todayMs = startOfDay(nowMs);
+  const doneTodayCount = state.todos.filter(
+    (t) => t.done && Number(t.updatedAt ?? 0) >= todayMs,
+  ).length;
 
   const showSpinner = state.loading && state.todos.length === 0;
 
@@ -591,7 +649,10 @@ export function App({
   // + marginTop 1 + tabs 1 + marginTop 1 = 6, plus paddingY-bottom 1 +
   // border-bottom 1 = 2 below — 8 rows total. Capping the rendered slice to
   // what fits keeps the panel from pushing the footer off-screen.
-  const LIST_VIEWPORT_H = Math.max(5, todosH - 8);
+  // While the undo toast is up it claims one extra row (itself + marginTop),
+  // so shave 2 more off the available height to keep the panel stable.
+  const toastChromeH = state.toast?.kind === "doneToggled" ? 2 : 0;
+  const LIST_VIEWPORT_H = Math.max(5, todosH - 8 - toastChromeH);
   const listWindow = sliceWindow(visible, state.cursor, LIST_VIEWPORT_H);
 
   // Full-screen settings view replaces the main grid when active. Kept as an
@@ -804,18 +865,7 @@ export function App({
         ownerName={identity?.userName}
         nowMs={nowMs}
         onClose={() => dispatch({ type: "SEARCH_CLOSE_DETAIL" })}
-        onToggleDone={() => {
-          void (async () => {
-            try {
-              const updated = await api.updateTodo(current.id, {
-                done: !current.done,
-              });
-              dispatch({ type: "TODO_UPDATED", todo: updated });
-            } catch (err) {
-              dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
-            }
-          })();
-        }}
+        onToggleDone={() => void toggleDone(current)}
         onEdit={() =>
           void enterEditWithFullTodo(
             current.id,
@@ -855,18 +905,7 @@ export function App({
         ownerName={identity?.userName}
         nowMs={nowMs}
         onClose={() => dispatch({ type: "CLOSE_TODO_DETAIL" })}
-        onToggleDone={() => {
-          void (async () => {
-            try {
-              const updated = await api.updateTodo(current.id, {
-                done: !current.done,
-              });
-              dispatch({ type: "TODO_UPDATED", todo: updated });
-            } catch (err) {
-              dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
-            }
-          })();
-        }}
+        onToggleDone={() => void toggleDone(current)}
         onEdit={() =>
           void enterEditWithFullTodo(
             current.id,
@@ -991,28 +1030,22 @@ export function App({
             focused
           >
             {/* Meta line — at-a-glance summary that survives even when the list
-              scrolls offscreen on tiny terminals. */}
+              scrolls offscreen on tiny terminals. "Done today" replaces the
+              all-time done count: it gives the satisfying daily-progress
+              reading without competing with the open list for attention. */}
             <Box>
-              <Text color={color.accent} bold>
-                {totalCount}
+              <Text color={color.accent2} bold>
+                {openCount}
               </Text>
-              <Text color={color.muted}>{" todos  "}</Text>
+              <Text color={color.muted}>{" open  "}</Text>
               <Text color={color.muted} dimColor>
                 {icon.dot}
               </Text>
               <Text color={color.muted}>{"  "}</Text>
               <Text color={color.success} bold>
-                {doneCount}
+                {doneTodayCount}
               </Text>
-              <Text color={color.muted}>{" done  "}</Text>
-              <Text color={color.muted} dimColor>
-                {icon.dot}
-              </Text>
-              <Text color={color.muted}>{"  "}</Text>
-              <Text color={color.accent2} bold>
-                {openCount}
-              </Text>
-              <Text color={color.muted}>{" open"}</Text>
+              <Text color={color.muted}>{" done today"}</Text>
               <Box flexGrow={1} />
               <Text color={color.muted} dimColor>
                 sorted by updated
@@ -1024,22 +1057,17 @@ export function App({
                   {
                     key: "inbox",
                     label: "Private",
-                    count: state.todos.filter((t) => !t.projectId).length,
-                    kind: "system",
-                    prefixIcon: icon.brand,
-                  },
-                  {
-                    key: "done",
-                    label: "Done",
-                    count: state.todos.filter((t) => t.done).length,
+                    count: state.todos.filter((t) => !t.projectId && !t.done)
+                      .length,
                     kind: "system",
                     prefixIcon: icon.brand,
                   },
                   ...state.projects.map((p) => ({
                     key: `p:${p.id}`,
                     label: p.name,
-                    count: state.todos.filter((t) => t.projectId === p.id)
-                      .length,
+                    count: state.todos.filter(
+                      (t) => t.projectId === p.id && !t.done,
+                    ).length,
                     kind: "project" as const,
                     prefixIcon: icon.on,
                     prefixColor: swatchColor(p.color),
@@ -1048,6 +1076,20 @@ export function App({
                 activeKey={activeTab}
               />
             </Box>
+            {state.toast?.kind === "doneToggled" && (
+              <Box marginTop={1}>
+                <Text color={color.success}>{icon.done}</Text>
+                <Text color={color.muted}>{' completed "'}</Text>
+                <Text color={color.accent}>{state.toast.title}</Text>
+                <Text color={color.muted}>{'"'}</Text>
+                <Box flexGrow={1} />
+                <Text color={color.muted}>press </Text>
+                <Text color={color.accent} bold>
+                  z
+                </Text>
+                <Text color={color.muted}> to undo</Text>
+              </Box>
+            )}
             <Box marginTop={1} flexDirection="column">
               {showSpinner ? (
                 <Spinner label="Loading todos…" />

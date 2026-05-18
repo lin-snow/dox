@@ -30,6 +30,19 @@ export type ManageEditing =
   | { kind: "codeReveal"; code: string; expiresAt: string; role: string };
 export type Focus = "list" | "sidebar";
 
+// Transient banner shown above the todos list after the user completes a
+// todo. The row vanishes from the working list immediately; the toast carries
+// the affordance to undo within a 5s window. `prevDone` is the value before
+// the toggle so the undo restores the right state instead of unconditionally
+// reopening.
+export type Toast = {
+  kind: "doneToggled";
+  todoId: string;
+  title: string;
+  prevDone: boolean;
+  expiresAt: number;
+};
+
 export type SettingsTabKey = "server" | "account" | "invites";
 
 // Exactly one modal is up at a time on the settings screen. The discriminator
@@ -101,6 +114,8 @@ export interface State {
   // Todo opened via the search result list. Lets `todoDetail`/`searchDetail`
   // look up the row by id rather than relying on the list-page cursor.
   searchDetailTodoId: string | null;
+  // Transient banner above the list; see `Toast`. Null when nothing recent.
+  toast: Toast | null;
 }
 
 export type Action =
@@ -163,7 +178,9 @@ export type Action =
   | { type: "TODO_UPDATED"; todo: Todo }
   | { type: "TODO_DELETED"; id: string }
   | { type: "OPEN_ABOUT" }
-  | { type: "CLOSE_ABOUT" };
+  | { type: "CLOSE_ABOUT" }
+  | { type: "TOAST_SET"; toast: Toast }
+  | { type: "TOAST_CLEAR" };
 
 export const initialState: State = {
   mode: "list",
@@ -201,15 +218,19 @@ export const initialState: State = {
   searchQuery: "",
   searchCursor: 0,
   searchDetailTodoId: null,
+  toast: null,
 };
 
-// Private (filter key "inbox") = todos with no project; project filter = todos
-// matching projectId. There is no "all" filter — cycling moves only across
-// Private and per-project tabs.
+// Private (filter key "inbox") = open todos with no project; project filter =
+// open todos matching projectId. Done todos drop out of the working list
+// immediately on completion — see the toast undo path in App.tsx for the
+// 5-second recovery window. To inspect historical completions, look at the
+// Activity panel / `events` feed; this list is "what's left to do".
 export function visibleTodos(state: State): Todo[] {
   const f = state.filter;
-  if (f === "inbox") return state.todos.filter((t) => !t.projectId);
-  return state.todos.filter((t) => t.projectId === f.id);
+  const base = state.todos.filter((t) => !t.done);
+  if (f === "inbox") return base.filter((t) => !t.projectId);
+  return base.filter((t) => t.projectId === f.id);
 }
 
 export function filterList(projects: Project[]): Filter[] {
@@ -515,12 +536,15 @@ export function reducer(state: State, action: Action): State {
       };
       return { ...next, cursor: 0 };
     }
-    case "TODO_UPDATED":
-      // Pure data merge — callers control mode transitions. Previously this
-      // forced mode back to "list", which fought with async hydration: pressing
+    case "TODO_UPDATED": {
+      // Data merge — callers control mode transitions. Previously this forced
+      // mode back to "list", which fought with async hydration: pressing
       // Enter opened the detail view, then the GetTodo response landed and
       // kicked the user back to the list (visible as a flash).
-      return {
+      //
+      // Cursor re-clamp is needed because flipping done now removes the row
+      // from visibleTodos; without re-clamping the cursor lands past the end.
+      const next = {
         ...state,
         // Merge rather than replace: the next ListTodos refresh strips
         // description, but we still want the just-edited row to keep its
@@ -530,6 +554,11 @@ export function reducer(state: State, action: Action): State {
           t.id === action.todo.id ? { ...t, ...action.todo } : t,
         ),
       };
+      return {
+        ...next,
+        cursor: clampCursor(state.cursor, visibleTodos(next).length),
+      };
+    }
     case "TODO_DELETED": {
       const todos = state.todos.filter((t) => t.id !== action.id);
       const next = { ...state, todos };
@@ -542,6 +571,10 @@ export function reducer(state: State, action: Action): State {
       return { ...state, mode: "about", helpOpen: false, error: null };
     case "CLOSE_ABOUT":
       return { ...state, mode: "list" };
+    case "TOAST_SET":
+      return { ...state, toast: action.toast };
+    case "TOAST_CLEAR":
+      return { ...state, toast: null };
     default:
       return state;
   }

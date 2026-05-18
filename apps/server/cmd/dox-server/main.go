@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata"
 
 	"github.com/lin-snow/dox/apps/server/internal/app"
 	"github.com/lin-snow/dox/apps/server/internal/config"

@@ -173,6 +173,28 @@ describe("App", () => {
     expect(updateMock.mock.calls[0]?.[1]).toEqual({ done: true });
   });
 
+  // Done todos must not clutter the working list: completing one drops it
+  // immediately and the empty-state placeholder takes over. A short-lived
+  // toast carries the undo affordance; pressing `z` while it's up reopens
+  // the todo and the row reappears.
+  test("done todos disappear from the list; z undoes within the toast", async () => {
+    const a = makeTodo({ title: "buy milk", done: false });
+    const { api, updateMock } = makeFakeApi([a]);
+    const { stdin, lastFrame } = mountApp(api);
+    await flushUntil(() => (lastFrame() ?? "").includes("buy milk"));
+    stdin.write(" ");
+    // Row leaves the list and the toast banner appears in its place.
+    await flushUntil(() => {
+      const frame = lastFrame() ?? "";
+      return frame.includes("z to undo") && frame.includes("nothing here");
+    });
+    stdin.write("z");
+    await flushUntil(() => (lastFrame() ?? "").includes("buy milk"));
+    expect(updateMock).toHaveBeenCalledTimes(2);
+    expect(updateMock.mock.calls[0]?.[1]).toEqual({ done: true });
+    expect(updateMock.mock.calls[1]?.[1]).toEqual({ done: false });
+  });
+
   test("d deletes the cursored todo", async () => {
     const a = makeTodo({ title: "doomed" });
     const { api, deleteMock } = makeFakeApi([a]);
