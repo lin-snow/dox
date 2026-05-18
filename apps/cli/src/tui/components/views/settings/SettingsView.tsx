@@ -241,7 +241,7 @@ function Detail({
       </Box>
     );
   }
-  const hasTips = Boolean(row.onEnter || row.secondary);
+  const hasAction = Boolean(row.onEnter || row.secondary);
   return (
     <Box flexDirection="column" flexGrow={1} paddingX={2} paddingY={1}>
       <Text color={color.accent} bold>
@@ -261,23 +261,25 @@ function Detail({
             : row.detail}
         </Text>
       </Box>
-      {hasTips && (
-        <>
-          {/* Spacer pushes the tip strip to the bottom of the pane so the
-              labeled separator visually anchors the keybinding hints. */}
-          <Box flexGrow={1} />
-          <Box>
-            <Text color={color.muted} dimColor>
-              {"─ tips ".padEnd(sepW, "─")}
-            </Text>
-          </Box>
-          <Box marginTop={1}>
+      {/* Spacer pushes the tip strip to the bottom of the pane so the labeled
+          separator visually anchors the row hints. Render always (even for
+          read-only rows) so the panel layout is consistent across selections —
+          read-only rows get a small "view only" chip in place of keybindings. */}
+      <Box flexGrow={1} />
+      <Box>
+        <Text color={color.muted} dimColor>
+          {"─ tips ".padEnd(sepW, "─")}
+        </Text>
+      </Box>
+      <Box marginTop={1}>
+        {hasAction ? (
+          <>
             {row.onEnter && (
               <Text color={color.muted}>
                 <Text color={color.accent} bold>
                   ⏎
                 </Text>{" "}
-                to activate
+                {row.enterLabel ?? "open"}
               </Text>
             )}
             {row.onEnter && row.secondary && (
@@ -288,12 +290,16 @@ function Detail({
                 <Text color={color.accent2} bold>
                   {row.secondary.key}
                 </Text>{" "}
-                to {row.secondary.label}
+                {row.secondary.label}
               </Text>
             )}
-          </Box>
-        </>
-      )}
+          </>
+        ) : (
+          <Text color={color.muted} dimColor>
+            view only
+          </Text>
+        )}
+      </Box>
     </Box>
   );
 }
