@@ -234,6 +234,18 @@ export function App({
     };
   }, [identity?.server]);
 
+  // Auto-clear the transient settings notice. The reducer also drops it on
+  // tab change / settings close, so this only fires when the user lingers on
+  // the screen after the action that produced it.
+  useEffect(() => {
+    if (!state.settingsNotice) return;
+    const timer = setTimeout(
+      () => dispatch({ type: "SETTINGS_NOTICE", notice: null }),
+      4000,
+    );
+    return () => clearTimeout(timer);
+  }, [state.settingsNotice]);
+
   // ── description hydration ───────────────────────────────────────────────
   // ListTodos omits the description body, so any UI that wants to display
   // markdown (TodoDetailView, TodoEditorView seed) has to issue a GetTodo
@@ -634,6 +646,8 @@ export function App({
           dispatch={dispatch}
           users={users}
           invites={invites}
+          projects={projects}
+          onRefresh={refresh}
           onSignedOut={onSignedOut}
         />
       );
@@ -643,6 +657,7 @@ export function App({
         tabs={settingsTabs}
         activeTab={state.settingsTab}
         cursor={state.settingsCursor}
+        notice={state.settingsNotice}
         onTabChange={(tab) => dispatch({ type: "SETTINGS_TAB", tab })}
         onCursorChange={(i) => dispatch({ type: "SETTINGS_CURSOR", index: i })}
         onClose={() => dispatch({ type: "CLOSE_SETTINGS" })}

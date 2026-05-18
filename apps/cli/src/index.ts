@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 
+import { renderVersionBanner } from "./banner";
 import * as auth from "./cli/auth";
 import * as config from "./cli/config";
 import * as invite from "./cli/invite";
@@ -15,6 +16,14 @@ const args = process.argv.slice(2);
 if (args.length === 0 && process.stdout.isTTY) {
   const { runTui } = await import("./tui");
   await runTui();
+  process.exit(0);
+}
+
+// Intercept --version / -V / `version` before commander so we can render the
+// logo banner instead of commander's plain one-liner. `version` as a bare
+// subcommand mirrors `go version`, `node --version`, etc.
+if (args[0] === "--version" || args[0] === "-V" || args[0] === "version") {
+  process.stdout.write(renderVersionBanner() + "\n");
   process.exit(0);
 }
 

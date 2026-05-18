@@ -1,6 +1,6 @@
 import { Box, Text, useInput } from "ink";
 
-import type { InviteClient, UserClient } from "@dox/core";
+import type { InviteClient, Project, UserClient } from "@dox/core";
 import { loadConfig, saveConfig } from "@dox/core";
 
 import type { Action, SettingsEditing, State } from "../../../state";
@@ -14,6 +14,14 @@ interface SettingsModalProps {
   dispatch: (a: Action) => void;
   users?: UserClient;
   invites?: InviteClient;
+  // Slimmed-down shape to stay assignment-compatible with the structural
+  // ProjectsApi App.tsx passes (the test harness uses a fake). We only need
+  // list() — for resolving the joined project's name in the redeem toast.
+  projects?: { list(): Promise<Project[]> };
+  // Triggers the main todos+projects refresh in App.tsx. Used after actions
+  // that change the caller's visible project set (e.g. redeeming an invite)
+  // so the sidebar updates immediately instead of waiting for the 30s poll.
+  onRefresh?: () => Promise<void> | void;
   onSignedOut?: () => void;
 }
 
@@ -26,6 +34,8 @@ export function SettingsModal({
   dispatch,
   users,
   invites,
+  projects,
+  onRefresh,
   onSignedOut,
 }: SettingsModalProps) {
   const cancel = () => dispatch({ type: "SETTINGS_EDIT", editing: null });
@@ -146,12 +156,31 @@ export function SettingsModal({
           if (!invites) return cancel();
           dispatch({ type: "SETTINGS_BUSY", busy: true });
           try {
-            await invites.accept(vals.code ?? "");
+            const res = await invites.accept(vals.code ?? "");
+            // Pull the fresh project list ourselves so we can resolve the
+            // joined project's name for the toast. Also drives the main
+            // App refresh so the sidebar updates without waiting for the
+            // 30s poll. (Server invites have an empty projectId — fall
+            // back to a generic message in that case.)
+            let name = "";
+            if (res.projectId && projects) {
+              try {
+                const list = await projects.list();
+                name = list.find((p) => p.id === res.projectId)?.name ?? "";
+              } catch {
+                // Listing is best-effort; we still dispatch a useful notice.
+              }
+            }
+            await onRefresh?.();
             dispatch({ type: "SETTINGS_BUSY", busy: false });
             dispatch({ type: "SETTINGS_EDIT", editing: null });
-            // Accepting an invite doesn't change *my outgoing* list. The new
-            // project becomes visible on the next refresh poll (≤ 30s) — no
-            // need to force a refetch here.
+            const role = res.role || "member";
+            const notice = name
+              ? `Joined "${name}" as ${role}.`
+              : res.projectId
+                ? `Joined project as ${role}.`
+                : "Invite accepted.";
+            dispatch({ type: "SETTINGS_NOTICE", notice });
           } catch (err) {
             dispatch({ type: "SETTINGS_ERROR", error: (err as Error).message });
           }

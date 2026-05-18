@@ -12,6 +12,9 @@ interface SettingsViewProps {
   tabs: SettingsTabSpec[];
   activeTab: SettingsTabKey;
   cursor: number;
+  // Transient one-line confirmation banner (e.g. after a successful redeem).
+  // App.tsx clears it on a timer and on tab/close.
+  notice?: string | null;
   onTabChange: (next: SettingsTabKey) => void;
   onCursorChange: (next: number) => void;
   onClose: () => void;
@@ -29,6 +32,7 @@ export function SettingsView({
   tabs,
   activeTab,
   cursor,
+  notice,
   onTabChange,
   onCursorChange,
   onClose,
@@ -112,7 +116,12 @@ export function SettingsView({
           height={innerHeight}
         >
           <TabStrip tabs={tabs} activeKey={activeTab} />
-          {tab?.hint && (
+          {notice && (
+            <Box marginTop={1} justifyContent="center">
+              <Text color={color.success}>{`✓ ${notice}`}</Text>
+            </Box>
+          )}
+          {tab?.hint && !notice && (
             <Box marginTop={1} justifyContent="center">
               <Text color={color.muted}>{tab.hint}</Text>
             </Box>

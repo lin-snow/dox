@@ -81,6 +81,10 @@ export interface State {
   // Last error message produced by a settings action. Rendered inline in the
   // active modal. Cleared on dispatch of SETTINGS_EDIT.
   settingsError: string | null;
+  // Transient success message shown in the settings shell (above the tabs).
+  // Set after a successful action that closed its modal; auto-cleared on tab
+  // change, close, or after a short timer in App.tsx.
+  settingsNotice: string | null;
   // Project manage view sub-state. Active only when mode === "projectManage".
   manageProjectId: string | null;
   manageMembers: ProjectMember[];
@@ -137,6 +141,7 @@ export type Action =
   | { type: "SETTINGS_EDIT"; editing: SettingsEditing | null }
   | { type: "SETTINGS_BUSY"; busy: boolean }
   | { type: "SETTINGS_ERROR"; error: string | null }
+  | { type: "SETTINGS_NOTICE"; notice: string | null }
   | { type: "ENTER_PROJECT_MANAGE"; projectId: string }
   | { type: "EXIT_PROJECT_MANAGE" }
   | { type: "MANAGE_MEMBERS_SET"; members: ProjectMember[] }
@@ -185,6 +190,7 @@ export const initialState: State = {
   settingsEditing: null,
   settingsBusy: false,
   settingsError: null,
+  settingsNotice: null,
   manageProjectId: null,
   manageMembers: [],
   manageMembersLoaded: false,
@@ -380,6 +386,7 @@ export function reducer(state: State, action: Action): State {
         settingsOutgoingLoaded: false,
         settingsEditing: null,
         settingsError: null,
+        settingsNotice: null,
         settingsBusy: false,
       };
     case "CLOSE_SETTINGS":
@@ -388,6 +395,7 @@ export function reducer(state: State, action: Action): State {
         mode: "list",
         settingsEditing: null,
         settingsError: null,
+        settingsNotice: null,
       };
     case "SETTINGS_TAB":
       // Resetting the cursor on tab change matches the image: the new tab's
@@ -397,6 +405,7 @@ export function reducer(state: State, action: Action): State {
         settingsTab: action.tab,
         settingsCursor: 0,
         settingsError: null,
+        settingsNotice: null,
       };
     case "SETTINGS_CURSOR":
       return { ...state, settingsCursor: action.index };
@@ -418,6 +427,8 @@ export function reducer(state: State, action: Action): State {
       return { ...state, settingsBusy: action.busy };
     case "SETTINGS_ERROR":
       return { ...state, settingsError: action.error, settingsBusy: false };
+    case "SETTINGS_NOTICE":
+      return { ...state, settingsNotice: action.notice };
     case "ENTER_PROJECT_MANAGE":
       return {
         ...state,
