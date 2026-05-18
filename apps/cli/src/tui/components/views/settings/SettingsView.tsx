@@ -42,6 +42,13 @@ export function SettingsView({
   const innerHeight = Math.min(28, Math.max(18, rows - 6));
   // Push the card toward the visual middle; subtract ~3 rows for the footer.
   const topPad = Math.max(1, Math.floor((rows - innerHeight - 3) / 2));
+  // Inner two-column split: sidebar (label menu) on the left, Detail on the
+  // right with a 2-cell gutter. TitledPanel chrome eats 4 cells (border +
+  // paddingX=1 each side). Detail uses the remainder so its separators don't
+  // overflow on narrow terminals.
+  const innerW = Math.max(8, panelWidth - 4);
+  const sidebarW = Math.max(16, Math.floor(panelWidth * 0.36));
+  const detailW = Math.max(20, innerW - sidebarW - 2);
 
   const tabIndex = Math.max(
     0,
@@ -114,10 +121,10 @@ export function SettingsView({
             <RowList
               rows={tabRows}
               cursor={clampedCursor}
-              width={Math.floor(panelWidth * 0.36)}
+              width={sidebarW}
             />
             <Box width={2} />
-            <Detail row={current} />
+            <Detail row={current} width={detailW} />
           </Box>
         </TitledPanel>
       </Box>
@@ -167,6 +174,9 @@ function RowList({
   cursor: number;
   width: number;
 }) {
+  // Labels-only sidebar: keeps the column at a stable width regardless of
+  // each tab's longest `value`. The Detail pane on the right is the single
+  // source of truth for values, so showing them inline here was redundant.
   return (
     <Box
       flexDirection="column"
@@ -184,8 +194,6 @@ function RowList({
         rows.map((row, idx) => {
           const active = idx === cursor;
           const readOnly = !row.onEnter && !row.secondary;
-          // Label tint: accent when active, dim when read-only + inactive,
-          // default otherwise.
           const labelColor = active
             ? color.accent
             : readOnly
@@ -201,15 +209,6 @@ function RowList({
                   {row.label}
                 </Text>
               </Box>
-              {row.value && (
-                <Text
-                  color={row.muted ? color.muted : (labelColor ?? color.muted)}
-                  dimColor={row.muted}
-                  wrap="truncate"
-                >
-                  {row.value}
-                </Text>
-              )}
             </Box>
           );
         })
@@ -218,7 +217,21 @@ function RowList({
   );
 }
 
-function Detail({ row }: { row: SettingsRow | undefined }) {
+function Detail({
+  row,
+  width,
+}: {
+  row: SettingsRow | undefined;
+  width: number;
+}) {
+  // Separator width = inner content width (paddingX=2 on both sides). Width
+  // can briefly be ≤ 4 during initial layout — guard against negative repeat.
+  const sepW = Math.max(0, width - 4);
+  const sep = (
+    <Text color={color.muted} dimColor>
+      {"─".repeat(sepW)}
+    </Text>
+  );
   if (!row) {
     return (
       <Box flexGrow={1} paddingX={2} paddingY={1}>
@@ -228,6 +241,7 @@ function Detail({ row }: { row: SettingsRow | undefined }) {
       </Box>
     );
   }
+  const hasTips = Boolean(row.onEnter || row.secondary);
   return (
     <Box flexDirection="column" flexGrow={1} paddingX={2} paddingY={1}>
       <Text color={color.accent} bold>
@@ -239,9 +253,7 @@ function Detail({ row }: { row: SettingsRow | undefined }) {
           <Text color={color.accent2}>{row.value}</Text>
         </Box>
       )}
-      <Box marginTop={1}>
-        <Text color={color.muted}>{"─".repeat(60)}</Text>
-      </Box>
+      <Box marginTop={1}>{sep}</Box>
       <Box marginTop={1}>
         <Text wrap="wrap">
           {typeof row.detail === "string" || !row.detail
@@ -249,25 +261,39 @@ function Detail({ row }: { row: SettingsRow | undefined }) {
             : row.detail}
         </Text>
       </Box>
-      <Box marginTop={1}>
-        {row.onEnter && (
-          <Text color={color.muted}>
-            <Text color={color.accent} bold>
-              ⏎
-            </Text>{" "}
-            to activate
-          </Text>
-        )}
-        {row.onEnter && row.secondary && <Text color={color.muted}> · </Text>}
-        {row.secondary && (
-          <Text color={color.muted}>
-            <Text color={color.accent2} bold>
-              {row.secondary.key}
-            </Text>{" "}
-            to {row.secondary.label}
-          </Text>
-        )}
-      </Box>
+      {hasTips && (
+        <>
+          {/* Spacer pushes the tip strip to the bottom of the pane so the
+              labeled separator visually anchors the keybinding hints. */}
+          <Box flexGrow={1} />
+          <Box>
+            <Text color={color.muted} dimColor>
+              {"─ tips ".padEnd(sepW, "─")}
+            </Text>
+          </Box>
+          <Box marginTop={1}>
+            {row.onEnter && (
+              <Text color={color.muted}>
+                <Text color={color.accent} bold>
+                  ⏎
+                </Text>{" "}
+                to activate
+              </Text>
+            )}
+            {row.onEnter && row.secondary && (
+              <Text color={color.muted}> · </Text>
+            )}
+            {row.secondary && (
+              <Text color={color.muted}>
+                <Text color={color.accent2} bold>
+                  {row.secondary.key}
+                </Text>{" "}
+                to {row.secondary.label}
+              </Text>
+            )}
+          </Box>
+        </>
+      )}
     </Box>
   );
 }

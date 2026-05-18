@@ -184,7 +184,7 @@ describe("App", () => {
     expect(lastFrame() ?? "").toContain("nothing here");
   });
 
-  test("i + enter creates a new todo", async () => {
+  test("i + ctrl-s creates a new todo", async () => {
     const { api, createMock } = makeFakeApi([]);
     const { stdin, lastFrame } = mountApp(api);
     await flush();
@@ -192,26 +192,23 @@ describe("App", () => {
     await flush();
     expect(lastFrame() ?? "").toContain("New todo");
     // Editor has 2 fields (title + description). Enter on title advances
-    // focus to description; a second Enter on description submits both.
+    // focus to description; Ctrl+S saves from either field. Enter inside the
+    // description inserts a newline — see MultilineInput.
     stdin.write("buy milk");
     await flush();
-    stdin.write("\r"); // advance to description field
-    await flush();
-    stdin.write("\r"); // submit
+    stdin.write("\x13"); // Ctrl+S — submit
     await flush();
     expect(createMock).toHaveBeenCalledTimes(1);
     expect(createMock.mock.calls[0]?.[0]).toBe("buy milk");
   });
 
-  test("blank title cancels add mode", async () => {
+  test("ctrl-s with blank title cancels add mode", async () => {
     const { api, createMock } = makeFakeApi([]);
     const { stdin, lastFrame } = mountApp(api);
     await flush();
     stdin.write("i");
     await flush();
-    stdin.write("\r");
-    await flush();
-    stdin.write("\r");
+    stdin.write("\x13"); // Ctrl+S with empty title — behaves like cancel
     await flush();
     expect(createMock).not.toHaveBeenCalled();
     // Back in list mode — StatusBar's mode pill shows NORMAL.

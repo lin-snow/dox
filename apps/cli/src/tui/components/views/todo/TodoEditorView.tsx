@@ -5,6 +5,7 @@ import { useState } from "react";
 import { color, icon } from "../../../theme";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
+import { MultilineInput } from "../../primitives/MultilineInput";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
 export interface TodoEditorPayload {
@@ -27,8 +28,10 @@ const DESC_FIELD = "todo-editor:description";
 
 // Full-screen editor page for adding / editing a todo. Title is required; the
 // markdown description below it is optional. Tab swaps focus between the two
-// fields; Enter on title advances focus to description; Enter on description
-// submits both.
+// fields; Enter on title advances focus to description; Enter inside the
+// description inserts a newline. Ctrl+S saves from either field — a dedicated
+// save key avoids the terminal-level limitation that prevents Shift+Enter
+// from being distinguished from plain Enter in most terminals.
 export function TodoEditorView({
   mode,
   defaultTitle,
@@ -45,16 +48,29 @@ export function TodoEditorView({
 
   const { focus } = useFocusManager();
 
-  // Esc cancels — @inkjs/ui's TextInput doesn't capture escape, so a sibling
-  // useInput sees it cleanly.
-  useInput((_input, key) => {
-    if (key.escape) onCancel();
+  // Editor-level shortcuts: Esc cancels, Ctrl+S saves. Both fire regardless of
+  // which field has focus — @inkjs/ui's TextInput doesn't capture either key.
+  useInput((input, key) => {
+    if (key.escape) {
+      onCancel();
+      return;
+    }
+    if (key.ctrl && input === "s") {
+      const trimmed = title.trim();
+      // Empty title + save behaves like cancel — matches the original
+      // "blank title submits empty" gesture without ambiguity.
+      if (trimmed === "") {
+        onCancel();
+        return;
+      }
+      onSubmit({ title: trimmed, description });
+    }
   });
 
   const headerTitle = mode === "add" ? "New todo" : "Edit todo";
   const subtitle =
     mode === "add"
-      ? "Capture a new task. Blank title + Enter cancels."
+      ? "Capture a new task. Ctrl+S to save · Esc cancels."
       : "Update the title and optional markdown description.";
 
   // Card width: wide enough to type comfortably, narrow enough to read as a
@@ -86,15 +102,11 @@ export function TodoEditorView({
                 placeholder={mode === "add" ? "new todo title…" : undefined}
                 onChange={setTitle}
                 onSubmit={(value) => {
+                  // Enter on the title row advances focus to the description.
+                  // Save lives on Ctrl+S (handled at the editor level) so we
+                  // don't conflate "next field" and "submit".
                   setTitle(value);
-                  // Empty title + Enter is the "I changed my mind" gesture —
-                  // submit immediately so the caller can EXIT_MODE. With a
-                  // value present, advance focus to the description field.
-                  if (value.trim() === "" && description === "") {
-                    onSubmit({ title: "", description: "" });
-                  } else {
-                    focus(DESC_FIELD);
-                  }
+                  focus(DESC_FIELD);
                 }}
               />
             )}
@@ -102,21 +114,21 @@ export function TodoEditorView({
 
           <Field id={DESC_FIELD} label="description" value={description}>
             {(focused) => (
-              <TextInput
+              <MultilineInput
                 isDisabled={!focused}
-                defaultValue={defaultDescription}
-                placeholder="optional · markdown (**bold**, `code`, [link](url), #, -, ```)"
+                value={description}
                 onChange={setDescription}
-                onSubmit={(value) => {
-                  onSubmit({ title: title.trim(), description: value });
-                }}
+                placeholder="optional · markdown (**bold**, `code`, [link](url), #, -, ```)"
+                width={cardWidth - 6}
+                maxRows={8}
               />
             )}
           </Field>
 
           <Box marginTop={1}>
             <Text color={color.muted}>
-              Tab to switch · Enter on description to save · Esc to cancel
+              Tab to switch fields · Enter inserts newline · Ctrl+S to save ·
+              Esc cancels
             </Text>
           </Box>
         </TitledPanel>
@@ -127,7 +139,7 @@ export function TodoEditorView({
         outerPadX={1}
         hints={[
           ["tab", "next field"],
-          ["⏎", "save"],
+          ["^S", "save"],
           ["esc", "cancel"],
         ]}
       />

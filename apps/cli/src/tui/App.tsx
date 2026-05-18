@@ -33,7 +33,7 @@ import { TodoDetailView } from "./components/views/todo/TodoDetailView";
 import { TodoEditorView } from "./components/views/todo/TodoEditorView";
 import { TodoInfo } from "./components/views/todo/TodoInfo";
 import { SettingsModal } from "./components/views/settings/SettingsModal";
-import { useTerminalSize } from "./hooks";
+import { useMinHold, useSpinnerFrame, useTerminalSize } from "./hooks";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
@@ -1196,6 +1196,10 @@ function StatusPanel({
       ? color.warn
       : color.muted;
   const connLabel = serverInfo ? "connected" : server ? "probing…" : "local";
+  // Hold the indicator on-screen long enough for the animation to register
+  // even on fast LANs where a single poll round-trip can be < 100ms.
+  const showSyncing = useMinHold(syncing, 600);
+  const spinnerFrame = useSpinnerFrame(showSyncing);
   return (
     <Box flexDirection="column">
       {rows.map(([label, value, tint]) => (
@@ -1211,7 +1215,9 @@ function StatusPanel({
       <Box marginTop={1}>
         <Text color={connTint}>{icon.on} </Text>
         <Text color={connTint}>{connLabel}</Text>
-        {syncing && <Text color={color.muted}>{`  ${icon.dot} syncing`}</Text>}
+        {showSyncing && (
+          <Text color={color.muted}>{`  ${spinnerFrame} syncing`}</Text>
+        )}
       </Box>
     </Box>
   );
