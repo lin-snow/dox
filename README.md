@@ -22,15 +22,10 @@ docker run -d --name dox \
   sn0wl1n/dox:latest
 ```
 
-Or with `compose.yml`:
+Or with Docker Compose — see [`docker/docker-compose.yml`](./docker/docker-compose.yml):
 
-```yaml
-services:
-  dox:
-    image: sn0wl1n/dox:latest
-    ports: ["6278:6278"]
-    volumes: ["./data:/app/data"]
-    restart: unless-stopped
+```bash
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 ## Use
