@@ -931,12 +931,19 @@ export function App({
               paddingY={1}
               height={topRowH}
             >
-              <Logo />
-              <Box marginTop={1}>
-                <Text color={color.muted}>serving at </Text>
-                <Text color={color.accent2} wrap="truncate">
-                  {identity?.server ?? "local"}
-                </Text>
+              <Box
+                flexDirection="column"
+                flexGrow={1}
+                justifyContent="center"
+                alignItems="center"
+              >
+                <Logo />
+                <Box marginTop={1}>
+                  <Text color={color.muted}>serving at </Text>
+                  <Text color={color.accent2} wrap="truncate">
+                    {identity?.server ?? "local"}
+                  </Text>
+                </Box>
               </Box>
             </TitledPanel>
 
@@ -1171,7 +1178,15 @@ function StatusPanel({
       serverInfo?.version || (serverInfo ? "unknown" : "—"),
       color.accent,
     ],
-    ["sha", serverInfo?.commit || (serverInfo ? "unknown" : "—"), color.accent],
+    [
+      "sha",
+      serverInfo?.commit
+        ? shortSha(serverInfo.commit)
+        : serverInfo
+          ? "unknown"
+          : "—",
+      color.accent,
+    ],
     ["cli", clientVersion, color.accent],
     ["cfg", configPath ? tildifyPath(configPath) : "—", color.muted],
   ];
@@ -1206,6 +1221,14 @@ function StatusPanel({
 // panel. Full URL is still printed under the logo in the Server panel.
 function stripScheme(url: string): string {
   return url.replace(/^https?:\/\//, "");
+}
+
+// Git-style short SHA (7 chars). Full hash is 40 hex chars; the leading 7 are
+// effectively unique within any project we'd realistically host here, and they
+// fit the narrow Status panel without the right edge getting hard-truncated.
+// Non-hex inputs (e.g. "unknown") fall through untouched.
+function shortSha(sha: string): string {
+  return /^[0-9a-f]{7,}$/i.test(sha) ? sha.slice(0, 7) : sha;
 }
 
 // Replace the user's home directory with `~` so config paths read naturally in
