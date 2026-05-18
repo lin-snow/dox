@@ -2,6 +2,8 @@
 import { Command } from "commander";
 
 import * as auth from "./cli/auth";
+import * as config from "./cli/config";
+import * as invite from "./cli/invite";
 import * as project from "./cli/project";
 import * as server from "./cli/server";
 import * as todo from "./cli/todo";
@@ -81,6 +83,11 @@ program
   .command("add <title>")
   .description("Create a new todo")
   .option("--project <id>", "place in a specific project (default: Inbox)")
+  .option("--description <text>", "markdown body")
+  .option(
+    "--description-file <path>",
+    "read markdown body from file ('-' for stdin)",
+  )
   .action(function (this: Command, title: string) {
     return todo.add(title, this.optsWithGlobals());
   });
@@ -108,10 +115,18 @@ program
 
 program
   .command("edit <id>")
-  .description("Edit a todo's title")
-  .requiredOption("--title <text>", "new title")
-  .action(function (this: Command, id: string, opts: { title: string }) {
-    return todo.edit(id, opts.title, this.optsWithGlobals());
+  .description(
+    "Edit a todo. For rich multi-line markdown editing, run `dox` for the TUI.",
+  )
+  .option("--title <text>", "new title")
+  .option("--description <text>", "new markdown body")
+  .option(
+    "--description-file <path>",
+    "read new markdown body from file ('-' for stdin)",
+  )
+  .option("--clear-description", "remove the markdown body")
+  .action(function (this: Command, id: string) {
+    return todo.edit(id, this.optsWithGlobals());
   });
 
 program
@@ -136,7 +151,9 @@ proj
   });
 proj
   .command("create <name>")
-  .description("Create a project (you become its owner)")
+  .description(
+    "Create a project (you become its owner). description/color can only be edited later from the TUI — run `dox`.",
+  )
   .option("--description <text>")
   .option("--color <code>")
   .action(function (this: Command, name: string) {
@@ -236,6 +253,39 @@ srv
   .description("Reset a user's password and print a one-time temp password")
   .action(function (this: Command, name: string) {
     return server.resetUserPassword(name, this.optsWithGlobals());
+  });
+
+// ── invites (manage outgoing) ──────────────────────────────────────────────
+// Distinct from `project invite` and `server invite` (which *issue* codes).
+// This group is for listing / revoking codes you previously issued.
+const inv = program
+  .command("invite")
+  .description("Manage outgoing invite codes");
+inv
+  .command("list")
+  .alias("ls")
+  .description("List invite codes you've issued (not yet redeemed/expired)")
+  .action(function (this: Command) {
+    return invite.list(this.optsWithGlobals());
+  });
+inv
+  .command("revoke <codeHash>")
+  .description("Revoke an outgoing invite by its codeHash (from `invite list`)")
+  .action(function (this: Command, hash: string) {
+    return invite.revoke(hash, this.optsWithGlobals());
+  });
+
+// ── local config ───────────────────────────────────────────────────────────
+const cfg = program
+  .command("config")
+  .description("Read / write ~/.config/dox/config.toml");
+cfg
+  .command("default-project <value>")
+  .description(
+    "Set default project filter. value = project id, 'inbox', or 'none' to clear.",
+  )
+  .action(function (this: Command, value: string) {
+    return config.setDefaultProject(value, this.optsWithGlobals());
   });
 
 await program.parseAsync(process.argv);

@@ -118,11 +118,7 @@ export function SettingsView({
             </Box>
           )}
           <Box marginTop={1} flexGrow={1}>
-            <RowList
-              rows={tabRows}
-              cursor={clampedCursor}
-              width={sidebarW}
-            />
+            <RowList rows={tabRows} cursor={clampedCursor} width={sidebarW} />
             <Box width={2} />
             <Detail row={current} width={detailW} />
           </Box>
