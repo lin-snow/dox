@@ -69,8 +69,4 @@ just serve          # run the server locally
 just cli            # run the CLI against the local server
 ```
 
-> **Heads up:** dox is in early, active development — things will move and
-> occasionally break between versions. Issues and pull requests warmly
-> welcome at [github.com/lin-snow/dox](https://github.com/lin-snow/dox).
-
 [AGPL-3.0](LICENSE)
