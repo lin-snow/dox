@@ -1,6 +1,6 @@
 import { Box, Text, useInput } from "ink";
 import { TextInput } from "@inkjs/ui";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { Project, Todo } from "@dox/core";
 
@@ -62,12 +62,41 @@ export function SearchView({
   const results = useMemo(() => searchTodos(todos, query), [todos, query]);
   const safeCursor = Math.min(cursor, Math.max(0, results.length - 1));
 
-  // Push the current result count up to the reducer so it can clamp the cursor
-  // as the user narrows the query. Without this, deleting characters could
-  // leave the cursor pointing past the end of the list.
+  // All three callbacks below come from App.tsx as fresh inline arrows on
+  // every parent render. We route them through refs + stable wrappers so that:
+  //  - The result-count effect only fires when the count actually changes.
+  //  - The handlers we hand to TextInput keep a stable identity. @inkjs/ui's
+  //    TextInput depends on `onChange` inside a useEffect that fires whenever
+  //    its internal `value !== previousValue`; with an unstable `onChange`,
+  //    every parent re-render re-fires that effect, calls onChange again with
+  //    the same value, the parent dispatches SEARCH_SET_QUERY (which always
+  //    returns a new state object), and we ping-pong into the "Maximum update
+  //    depth exceeded" loop.
+  const onResultCountRef = useRef(onResultCount);
+  const onQueryChangeRef = useRef(onQueryChange);
+  const onOpenRef = useRef(onOpen);
+  // Submit needs the current results + cursor without bringing them into the
+  // callback's deps, which would invalidate it on every keystroke and re-trip
+  // the TextInput effect described above.
+  const resultsRef = useRef(results);
+  const cursorRef = useRef(safeCursor);
+  onResultCountRef.current = onResultCount;
+  onQueryChangeRef.current = onQueryChange;
+  onOpenRef.current = onOpen;
+  resultsRef.current = results;
+  cursorRef.current = safeCursor;
+
   useEffect(() => {
-    onResultCount(results.length);
-  }, [results.length, onResultCount]);
+    onResultCountRef.current(results.length);
+  }, [results.length]);
+
+  const handleQueryChange = useCallback((q: string) => {
+    onQueryChangeRef.current(q);
+  }, []);
+  const handleSubmit = useCallback(() => {
+    const target = resultsRef.current[cursorRef.current];
+    if (target) onOpenRef.current(target.id);
+  }, []);
 
   // Arrow keys + Esc are handled here so they work while the TextInput holds
   // focus — TextInput only consumes left/right arrows + typed characters.
@@ -111,11 +140,8 @@ export function SearchView({
               <TextInput
                 defaultValue={query}
                 placeholder="search by title or description…"
-                onChange={onQueryChange}
-                onSubmit={() => {
-                  const target = results[safeCursor];
-                  if (target) onOpen(target.id);
-                }}
+                onChange={handleQueryChange}
+                onSubmit={handleSubmit}
               />
             </Box>
           </Box>
