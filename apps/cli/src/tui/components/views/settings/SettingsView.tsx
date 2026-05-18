@@ -1,7 +1,8 @@
-import { Box, Text, useInput, useStdout } from "ink";
+import { Box, Text, useInput } from "ink";
 
 import type { SettingsTabSpec, SettingsRow } from "../../../settings";
 import type { SettingsTabKey } from "../../../state";
+import { useTerminalSize } from "../../../hooks";
 import { color } from "../../../theme";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
@@ -20,9 +21,10 @@ interface SettingsViewProps {
   inputPaused?: boolean;
 }
 
-// Full-screen settings panel. Outer chrome (TitledPanel + tab strip + footer)
-// is owned here; per-tab content is data-driven via `tabs` so adding a new
-// tab is one entry in settings.ts.
+// Centered settings panel. Outer chrome (TitledPanel + tab strip + footer) is
+// owned here; per-tab content is data-driven via `tabs` so adding a new tab is
+// one entry in settings.ts. Panel is sized as a card (capped width + height)
+// so it reads as a focused page rather than a full-screen surface.
 export function SettingsView({
   tabs,
   activeTab,
@@ -32,11 +34,14 @@ export function SettingsView({
   onClose,
   inputPaused = false,
 }: SettingsViewProps) {
-  const { stdout } = useStdout();
-  const cols = Math.max(80, stdout?.columns ?? 100);
-  const rows = Math.max(20, stdout?.rows ?? 30);
-  const panelWidth = cols - 2;
-  const innerHeight = Math.max(15, rows - 4);
+  const { cols, rows } = useTerminalSize();
+  // Card dimensions: the two-column body (RowList + Detail) wants real width
+  // to breathe, hence a higher cap than search/detail. Min keeps the layout
+  // legible on 80×24 terminals.
+  const panelWidth = Math.min(110, Math.max(72, cols - 4));
+  const innerHeight = Math.min(28, Math.max(18, rows - 6));
+  // Push the card toward the visual middle; subtract ~3 rows for the footer.
+  const topPad = Math.max(1, Math.floor((rows - innerHeight - 3) / 2));
 
   const tabIndex = Math.max(
     0,
@@ -90,29 +95,32 @@ export function SettingsView({
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <TitledPanel
-        title="Settings"
-        width={panelWidth}
-        paddingY={1}
-        focused
-        height={innerHeight}
-      >
-        <TabStrip tabs={tabs} activeKey={activeTab} />
-        {tab?.hint && (
-          <Box marginTop={1} justifyContent="center">
-            <Text color={color.muted}>{tab.hint}</Text>
+      <Box height={topPad} />
+      <Box justifyContent="center">
+        <TitledPanel
+          title="Settings"
+          width={panelWidth}
+          paddingY={1}
+          focused
+          height={innerHeight}
+        >
+          <TabStrip tabs={tabs} activeKey={activeTab} />
+          {tab?.hint && (
+            <Box marginTop={1} justifyContent="center">
+              <Text color={color.muted}>{tab.hint}</Text>
+            </Box>
+          )}
+          <Box marginTop={1} flexGrow={1}>
+            <RowList
+              rows={tabRows}
+              cursor={clampedCursor}
+              width={Math.floor(panelWidth * 0.36)}
+            />
+            <Box width={2} />
+            <Detail row={current} />
           </Box>
-        )}
-        <Box marginTop={1} flexGrow={1}>
-          <RowList
-            rows={tabRows}
-            cursor={clampedCursor}
-            width={Math.floor(panelWidth * 0.36)}
-          />
-          <Box width={2} />
-          <Detail row={current} />
-        </Box>
-      </TitledPanel>
+        </TitledPanel>
+      </Box>
       <Footer
         mode="settings"
         version={VERSION}
