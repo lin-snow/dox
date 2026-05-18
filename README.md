@@ -7,10 +7,6 @@ few, when you'd like the company. Small enough to forget you're running it.
 
 ![screenshot](./docs/imgs/screenshot.png)
 
-> **Heads up:** dox is in early, active development — things will move and
-> occasionally break between versions. Issues and pull requests warmly
-> welcome at [github.com/lin-snow/dox](https://github.com/lin-snow/dox).
-
 ## Deploy
 
 The server is one container. One command, one persistent volume:
@@ -40,7 +36,7 @@ dox
 The TUI handles onboarding (register · login · accept invite) and everything
 after.
 
-## Develop
+## Dev
 
 ```bash
 just gen            # proto → Go + TS, sqlc → Go DB bindings
@@ -48,6 +44,8 @@ just serve          # run the server locally
 just cli            # run the CLI against the local server
 ```
 
-## License
+> **Heads up:** dox is in early, active development — things will move and
+> occasionally break between versions. Issues and pull requests warmly
+> welcome at [github.com/lin-snow/dox](https://github.com/lin-snow/dox).
 
 [AGPL-3.0](LICENSE)

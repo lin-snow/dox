@@ -195,6 +195,28 @@ describe("App", () => {
     expect(updateMock.mock.calls[1]?.[1]).toEqual({ done: false });
   });
 
+  // The Done tab is the review surface for historical completions. Cycling
+  // right (`l`) from Private with no projects in between should land on it;
+  // its list shows completed rows; space reopens the cursored row.
+  test("Done tab lists completed todos; space reopens them", async () => {
+    const a = makeTodo({ title: "shipped feature", done: true });
+    const b = makeTodo({ title: "draft email", done: false });
+    const { api, updateMock } = makeFakeApi([a, b]);
+    const { stdin, lastFrame } = mountApp(api);
+    await flushUntil(() => (lastFrame() ?? "").includes("draft email"));
+    // Cycle right from Private to Done (no projects → one hop).
+    stdin.write("l");
+    await flushUntil(() => (lastFrame() ?? "").includes("shipped feature"));
+    expect(lastFrame() ?? "").not.toContain("draft email");
+    // Space in Done flips it back to open; toast announces the reopen.
+    stdin.write(" ");
+    await flushUntil(() =>
+      (lastFrame() ?? "").includes('reopened "shipped feature"'),
+    );
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(updateMock.mock.calls[0]?.[1]).toEqual({ done: false });
+  });
+
   test("d deletes the cursored todo", async () => {
     const a = makeTodo({ title: "doomed" });
     const { api, deleteMock } = makeFakeApi([a]);

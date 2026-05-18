@@ -6,15 +6,20 @@ import { color, icon } from "../../theme";
 // "inbox" = private todos with no project (project_id IS NULL on the server).
 // Surfaced to users as "Private" — see App.tsx tabs. Key stays "inbox" for
 // persistence stability.
-export type Filter = "inbox" | { type: "project"; id: string };
+//
+// "done" is the cross-project archive of completed todos. It's *not* part of
+// the working flow — open todos drop out of every other tab once completed —
+// so it sits at the end of the cycle as a review-only surface.
+export type Filter = "inbox" | "done" | { type: "project"; id: string };
 
 export function filterKey(f: Filter): string {
-  if (f === "inbox") return f;
+  if (typeof f === "string") return f;
   return `p:${f.id}`;
 }
 
 export function filterLabel(f: Filter, projects: Project[]): string {
   if (f === "inbox") return "Private";
+  if (f === "done") return "Done";
   const p = projects.find((p) => p.id === f.id);
   return p?.name ?? "Project";
 }

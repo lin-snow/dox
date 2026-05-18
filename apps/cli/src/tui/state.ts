@@ -222,20 +222,36 @@ export const initialState: State = {
 };
 
 // Private (filter key "inbox") = open todos with no project; project filter =
-// open todos matching projectId. Done todos drop out of the working list
+// open todos matching projectId. Done todos drop out of those working lists
 // immediately on completion — see the toast undo path in App.tsx for the
-// 5-second recovery window. To inspect historical completions, look at the
-// Activity panel / `events` feed; this list is "what's left to do".
+// 5-second recovery window.
+//
+// The "done" filter is the review surface: it lists every completed todo
+// across all projects, sorted most-recently-completed first (proxied by
+// updatedAt, since the server doesn't store completed-at separately). It's
+// sorted here rather than at render time so the windowing slice + cursor
+// agree with what the user sees.
 export function visibleTodos(state: State): Todo[] {
   const f = state.filter;
+  if (f === "done") {
+    return state.todos
+      .filter((t) => t.done)
+      .slice()
+      .sort((a, b) => Number(b.updatedAt ?? 0) - Number(a.updatedAt ?? 0));
+  }
   const base = state.todos.filter((t) => !t.done);
   if (f === "inbox") return base.filter((t) => !t.projectId);
   return base.filter((t) => t.projectId === f.id);
 }
 
 export function filterList(projects: Project[]): Filter[] {
+  // Done sits next to Private (both "system" surfaces) so users who don't use
+  // projects still have one-hop access to their archive. Projects follow,
+  // separated visually by the `│` divider Tabs.tsx auto-inserts before the
+  // first `kind: "project"` chip.
   return [
     "inbox",
+    "done",
     ...projects.map((p) => ({ type: "project" as const, id: p.id })),
   ];
 }

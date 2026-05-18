@@ -361,31 +361,27 @@ export function App({
   );
 
   // Single mutation path for "toggle done" — used by the list space key, the
-  // todo-detail view, and the search-detail view. Done todos drop out of the
-  // working list immediately, so on the open→done transition we publish a
-  // 5-second toast carrying the affordance to undo. On done→open (only
-  // reachable from detail views or via the toast's own undo) we clear any
-  // stale toast so the banner doesn't outlive its target.
+  // todo-detail view, and the search-detail view. Either direction makes the
+  // row vanish from its current scope (working tab loses open→done; Done tab
+  // loses done→open), so the same 5s toast pattern carries the undo
+  // affordance in both directions; the banner text picks up the new state
+  // via prevDone.
   const toggleDone = useCallback(
     async (todo: Todo) => {
       const prevDone = todo.done;
       try {
         const updated = await api.updateTodo(todo.id, { done: !prevDone });
         dispatch({ type: "TODO_UPDATED", todo: updated });
-        if (!prevDone) {
-          dispatch({
-            type: "TOAST_SET",
-            toast: {
-              kind: "doneToggled",
-              todoId: todo.id,
-              title: todo.title,
-              prevDone,
-              expiresAt: Date.now() + 5000,
-            },
-          });
-        } else {
-          dispatch({ type: "TOAST_CLEAR" });
-        }
+        dispatch({
+          type: "TOAST_SET",
+          toast: {
+            kind: "doneToggled",
+            todoId: todo.id,
+            title: todo.title,
+            prevDone,
+            expiresAt: Date.now() + 5000,
+          },
+        });
       } catch (err) {
         dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
       }
@@ -1062,6 +1058,18 @@ export function App({
                     kind: "system",
                     prefixIcon: icon.brand,
                   },
+                  // Review-only archive sits with Private as a "system"
+                  // surface — both are always present and don't belong to
+                  // any project. The `│` divider Tabs.tsx auto-inserts
+                  // before the first `kind: "project"` lands cleanly to
+                  // Done's right when projects exist.
+                  {
+                    key: "done",
+                    label: "Done",
+                    count: state.todos.filter((t) => t.done).length,
+                    kind: "system",
+                    prefixIcon: icon.brand,
+                  },
                   ...state.projects.map((p) => ({
                     key: `p:${p.id}`,
                     label: p.name,
@@ -1076,28 +1084,44 @@ export function App({
                 activeKey={activeTab}
               />
             </Box>
-            {state.toast?.kind === "doneToggled" && (
-              <Box marginTop={1}>
-                <Text color={color.success}>{icon.done}</Text>
-                <Text color={color.muted}>{' completed "'}</Text>
-                <Text color={color.accent}>{state.toast.title}</Text>
-                <Text color={color.muted}>{'"'}</Text>
-                <Box flexGrow={1} />
-                <Text color={color.muted}>press </Text>
-                <Text color={color.accent} bold>
-                  z
-                </Text>
-                <Text color={color.muted}> to undo</Text>
-              </Box>
-            )}
+            {state.toast?.kind === "doneToggled" &&
+              (() => {
+                // prevDone === false → just completed (open→done). prevDone
+                // === true → just reopened (done→open, typically from the
+                // Done tab). Same affordance either way — `z` reverts.
+                const reopened = state.toast.prevDone;
+                const glyph = reopened ? icon.open : icon.done;
+                const tint = reopened ? color.accent2 : color.success;
+                const verb = reopened ? "reopened" : "completed";
+                return (
+                  <Box marginTop={1}>
+                    <Text color={tint}>{glyph}</Text>
+                    <Text color={color.muted}>{` ${verb} "`}</Text>
+                    <Text color={color.accent}>{state.toast.title}</Text>
+                    <Text color={color.muted}>{'"'}</Text>
+                    <Box flexGrow={1} />
+                    <Text color={color.muted}>press </Text>
+                    <Text color={color.accent} bold>
+                      z
+                    </Text>
+                    <Text color={color.muted}> to undo</Text>
+                  </Box>
+                );
+              })()}
             <Box marginTop={1} flexDirection="column">
               {showSpinner ? (
                 <Spinner label="Loading todos…" />
               ) : visible.length === 0 ? (
-                <Text color={color.muted} dimColor>
-                  {"  "}nothing here — press <Text color={color.accent}>i</Text>{" "}
-                  to add a todo
-                </Text>
+                state.filter === "done" ? (
+                  <Text color={color.muted} dimColor>
+                    {"  "}no completions yet — finished todos land here
+                  </Text>
+                ) : (
+                  <Text color={color.muted} dimColor>
+                    {"  "}nothing here — press{" "}
+                    <Text color={color.accent}>i</Text> to add a todo
+                  </Text>
+                )
               ) : (
                 <>
                   {listWindow.items.map((t, idx) => (
@@ -1360,7 +1384,10 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
 ];
 
 function activeProjectId(filter: Filter): string | undefined {
-  if (filter === "inbox") return undefined;
+  // Only project filters seed `project_id` on newly-created todos. Adding from
+  // the Done archive falls back to no-project (inbox), mirroring "no scope" —
+  // creating a todo from a review surface shouldn't tie it to that surface.
+  if (typeof filter === "string") return undefined;
   return filter.id;
 }
 
