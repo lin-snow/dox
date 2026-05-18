@@ -53,7 +53,7 @@ type Intent = "first-user" | "login" | "register";
 // this screen.
 export type OnboardingReason = "fresh" | "reauth";
 
-const DEFAULT_SERVER = "http://localhost:8080";
+const DEFAULT_SERVER = "http://localhost:6278";
 const STEPS = ["Server", "Method", "Account", "Password"] as const;
 const MIN_PASSWORD_LEN = 8;
 

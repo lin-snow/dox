@@ -3,7 +3,7 @@ services:
     image: sn0wl1n/dox:latest
     container_name: dox
     ports:
-      - "8080:8080"
+      - "6278:6278"
     volumes:
       - ./data:/app/data
     restart: unless-stopped

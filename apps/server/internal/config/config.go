@@ -26,7 +26,7 @@ func (cfg *Config) Logger() *slog.Logger {
 func Load() (*Config, error) {
 	cfg := &Config{
 		DBPath:         getenv("DOX_DB_PATH", "./data/dox.db"),
-		ListenAddr:     getenv("DOX_LISTEN_ADDR", ":8080"),
+		ListenAddr:     getenv("DOX_LISTEN_ADDR", ":6278"),
 		EventRetention: defaultEventRetention,
 	}
 	// DOX_EVENT_RETENTION accepts a Go duration string (e.g. "360h", "168h").

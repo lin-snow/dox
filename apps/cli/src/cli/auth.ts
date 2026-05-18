@@ -154,7 +154,7 @@ export async function acceptInviteCmd(
   }
   // No existing config — fall through to registration with the invite.
   const server =
-    opts.server ?? (await promptText("Server URL:", "http://localhost:8080"));
+    opts.server ?? (await promptText("Server URL:", "http://localhost:6278"));
   // Pre-probe so we can warn if registration is closed AND no invite was
   // given — but we DO have an invite here, so just go.
   try {

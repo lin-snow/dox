@@ -17,7 +17,7 @@ The server is one container. One command, one persistent volume:
 
 ```bash
 docker run -d --name dox \
-  -p 8080:8080 \
+  -p 6278:6278 \
   -v /opt/dox/data:/app/data \
   sn0wl1n/dox:latest
 ```
@@ -28,7 +28,7 @@ Or with `compose.yml`:
 services:
   dox:
     image: sn0wl1n/dox:latest
-    ports: ["8080:8080"]
+    ports: ["6278:6278"]
     volumes: ["./data:/app/data"]
     restart: unless-stopped
 ```

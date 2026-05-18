@@ -45,7 +45,7 @@ server-test:
 server-fmt:
     cd apps/server && gofmt -s -w .
 
-# Run server with version/commit injected via -ldflags (defaults from config.go: ./apps/server/data/dox.db, :8080)
+# Run server with version/commit injected via -ldflags (defaults from config.go: ./apps/server/data/dox.db, :6278)
 serve:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -75,7 +75,7 @@ server-build:
 install:
     bun install
 
-# Run cli (pass args after --, e.g. `just cli -- login --server http://localhost:8080`)
+# Run cli (pass args after --, e.g. `just cli -- login --server http://localhost:6278`)
 cli *ARGS:
     bun run apps/cli/src/index.ts {{ARGS}}
 

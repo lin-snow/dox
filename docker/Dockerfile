@@ -28,6 +28,6 @@ RUN chmod +x /usr/local/bin/dox-server
 ENV DOX_DB_PATH=/app/data/dox.db
 
 VOLUME ["/app/data"]
-EXPOSE 8080
+EXPOSE 6278
 
 ENTRYPOINT ["/usr/local/bin/dox-server"]

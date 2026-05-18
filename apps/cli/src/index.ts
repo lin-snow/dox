@@ -29,7 +29,7 @@ program
   .description(
     "Create an account on a dox server (first user becomes the owner)",
   )
-  .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
+  .requiredOption("--server <url>", "server URL, e.g. http://localhost:6278")
   .option("--name <username>", "username")
   .option("--password <password>", "password (min 8 chars)")
   .option("--invite <code>", "invite code (required if registration is closed)")
@@ -38,7 +38,7 @@ program
 program
   .command("login")
   .description("Log in to an existing account on a dox server")
-  .requiredOption("--server <url>", "server URL, e.g. http://localhost:8080")
+  .requiredOption("--server <url>", "server URL, e.g. http://localhost:6278")
   .option("--name <username>", "username")
   .option("--password <password>", "password")
   .action(auth.loginCmd);
