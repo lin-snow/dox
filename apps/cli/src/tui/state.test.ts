@@ -52,6 +52,29 @@ describe("reducer / loading", () => {
     const trimmed = reducer(seeded, { type: "TODOS_LOADED", todos: [todo()] });
     expect(trimmed.cursor).toBe(0);
   });
+
+  test("TODOS_LOADED preserves a hydrated description the list payload omits", () => {
+    // Regression: ListTodos drops the description body, so a background poll
+    // would overwrite the row with description=undefined and the open detail
+    // view's body would vanish ~30s after opening. The reducer must keep the
+    // GetTodo-hydrated body when the refreshed row arrives without one.
+    const t = todo({ title: "x", description: "hydrated body" });
+    const polled = applyAll(initialState, [
+      { type: "TODOS_LOADED", todos: [t] },
+      // The poll re-lists with the same row, sans description (list payload).
+      { type: "TODOS_LOADED", todos: [{ ...t, description: undefined }] },
+    ]);
+    expect(polled.todos[0]?.description).toBe("hydrated body");
+  });
+
+  test("TODOS_LOADED still drops a row that genuinely disappeared", () => {
+    const t = todo({ description: "body" });
+    const polled = applyAll(initialState, [
+      { type: "TODOS_LOADED", todos: [t] },
+      { type: "TODOS_LOADED", todos: [] },
+    ]);
+    expect(polled.todos).toHaveLength(0);
+  });
 });
 
 describe("reducer / cursor", () => {

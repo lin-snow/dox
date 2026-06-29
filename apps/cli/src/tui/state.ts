@@ -264,12 +264,22 @@ function clampCursor(cursor: number, length: number): number {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "TODOS_LOADED": {
-      const next = {
-        ...state,
-        todos: action.todos,
-        loading: false,
-        error: null,
-      };
+      // ListTodos omits the description body, so the incoming rows carry
+      // `description === undefined`. Preserve any description we've already
+      // hydrated via GetTodo instead of clobbering it — otherwise the 30s
+      // background poll wipes the body out from under an open detail view
+      // (which, unlike the list, has no cursor-hydration effect to refetch
+      // it). Mirrors the merge in TODO_UPDATED; a row whose body genuinely
+      // changed is refreshed on the next GetTodo (detail open / cursor move).
+      const prevById = new Map(state.todos.map((t) => [t.id, t]));
+      const todos = action.todos.map((t) => {
+        if (t.description !== undefined) return t;
+        const prev = prevById.get(t.id);
+        return prev?.description !== undefined
+          ? { ...t, description: prev.description }
+          : t;
+      });
+      const next = { ...state, todos, loading: false, error: null };
       return {
         ...next,
         cursor: clampCursor(state.cursor, visibleTodos(next).length),
