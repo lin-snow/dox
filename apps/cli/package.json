@@ -7,15 +7,15 @@
     "dox": "./src/index.ts"
   },
   "dependencies": {
-    "@clack/prompts": "^0.10.0",
+    "@clack/prompts": "^1.6.0",
     "@dox/core": "workspace:*",
     "@dox/proto-gen": "workspace:*",
     "@inkjs/ui": "^2.0.0",
-    "commander": "^14.0.0",
-    "ink": "^7.0.3",
-    "marked": "^18.0.3",
+    "commander": "^15.0.0",
+    "ink": "^7.1.0",
+    "marked": "^18.0.5",
     "marked-terminal": "^7.3.0",
-    "react": "^19.2.6"
+    "react": "^19.2.7"
   },
   "devDependencies": {
     "ink-testing-library": "^4.0.0"
