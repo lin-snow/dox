@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="./docs/dox.png" width="96" alt="dox logo">
+</p>
+
 # dox
 
 > A quiet home for the things you need to do.
