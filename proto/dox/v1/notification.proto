@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package dox.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1";
+
+// Notification is one reminder that fired for the caller. Rows are written by
+// the server-side reminder sweep (never by clients) exactly once per
+// (todo, kind, trigger instant), so the list is a durable ledger the thin
+// client can poll without local cache.
+message Notification {
+  // ULID, primary key.
+  string id = 1;
+  // Todo the reminder points at. Missing todos cascade-delete the row.
+  string todo_id = 2;
+  // Title snapshot taken when the reminder fired, so renames don't rewrite
+  // history.
+  string todo_title = 3;
+  // Project the todo belongs to. Unset = Inbox.
+  optional string project_id = 4;
+  // "due" today; more kinds may appear without a schema change.
+  string kind = 5;
+  // The instant this reminder was scheduled for, UTC unix milliseconds.
+  int64 scheduled_for = 6;
+  // When the caller acknowledged it; unset = unread.
+  optional int64 read_at = 7;
+  // Row creation time, UTC unix milliseconds.
+  int64 created_at = 8;
+}
+
+// NotificationService exposes the caller's reminder ledger. Read/ack only:
+// rows are produced by the server's due-date sweep.
+service NotificationService {
+  // ListNotifications returns the caller's reminders, newest trigger first.
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {
+    option (google.api.http) = {get: "/v1/notifications"};
+  }
+
+  // AckNotifications marks reminders read. An empty ids list acks every unread
+  // reminder, which is what clients use when the user opens the list.
+  rpc AckNotifications(AckNotificationsRequest) returns (AckNotificationsResponse) {
+    option (google.api.http) = {
+      post: "/v1/notifications/ack"
+      body: "*"
+    };
+  }
+}
+
+message ListNotificationsRequest {
+  // Max rows to return. Server clamps to [1, 100]; 0 falls back to 20.
+  uint32 limit = 1;
+  // Only return unread reminders.
+  bool unread_only = 2;
+}
+
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+  // Total unread count for the caller, independent of limit/filters, so a
+  // single poll drives both the list and the badge.
+  uint32 unread_count = 2;
+}
+
+message AckNotificationsRequest {
+  // Reminder ids to mark read. Empty = all unread.
+  repeated string ids = 1;
+}
+
+message AckNotificationsResponse {
+  // Rows transitioned from unread to read by this call.
+  uint32 acked = 1;
+}

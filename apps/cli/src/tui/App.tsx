@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import type {
   EventsApi,
   InviteClient,
+  NotificationsApi,
   Project,
   ProjectMember,
   ServerInfo,
@@ -13,10 +14,18 @@ import type {
   TodoApi,
   UserClient,
 } from "@dox/core";
-import { fetchServerInfo } from "@dox/core";
+import {
+  dueLabel,
+  fetchServerInfo,
+  formatWhenInput,
+  isOverdue,
+  localZone,
+  parseWhen,
+} from "@dox/core";
 
 import { AboutView } from "./components/views/about/AboutView";
 import { ActivityFeed } from "./components/views/todo/ActivityFeed";
+import { NotificationsView } from "./components/views/notifications/NotificationsView";
 import { DualBarChart } from "./components/charts/DualBarChart";
 import { ErrorAlert } from "./components/primitives/ErrorAlert";
 import { Footer } from "./components/layout/Footer";
@@ -34,10 +43,15 @@ import { TodoEditorView } from "./components/views/todo/TodoEditorView";
 import { TodoInfo } from "./components/views/todo/TodoInfo";
 import { SettingsModal } from "./components/views/settings/SettingsModal";
 import { useMinHold, useSpinnerFrame } from "./hooks";
-import { relativeTime, swatchColor } from "./util";
+import { dueInput, relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
-import { initialState, reducer, visibleTodos } from "./state";
+import {
+  dueTodayOrOverdue,
+  initialState,
+  reducer,
+  visibleTodos,
+} from "./state";
 import type { Filter } from "./components/layout/Sidebar";
 import { filterKey } from "./components/layout/Sidebar";
 
@@ -45,6 +59,7 @@ import { VERSION } from "../version";
 
 const POLL_INTERVAL_MS = 30_000;
 const EVENTS_POLL_INTERVAL_MS = 60_000;
+const REMINDERS_POLL_INTERVAL_MS = 30_000;
 const ACTIVITY_DAYS = 14;
 
 interface ProjectsApi {
@@ -62,6 +77,7 @@ interface AppProps {
   api: TodoApi;
   projects?: ProjectsApi;
   events?: EventsApi;
+  notifications?: NotificationsApi;
   users?: UserClient;
   invites?: InviteClient;
   identity?: {
@@ -78,6 +94,7 @@ export function App({
   api,
   projects,
   events,
+  notifications,
   users,
   invites,
   identity,
@@ -128,6 +145,50 @@ export function App({
     );
     return () => clearInterval(timer);
   }, [events, refreshEvents]);
+
+  const refreshReminders = useCallback(async () => {
+    if (!notifications) return;
+    try {
+      const list = await notifications.list({ limit: 50 });
+      dispatch({
+        type: "REMINDERS_LOADED",
+        reminders: list.notifications,
+        unreadCount: list.unreadCount,
+      });
+    } catch {}
+  }, [notifications]);
+
+  useEffect(() => {
+    if (!notifications) return;
+    void refreshReminders();
+    const timer = setInterval(
+      () => void refreshReminders(),
+      REMINDERS_POLL_INTERVAL_MS,
+    );
+    return () => clearInterval(timer);
+  }, [notifications, refreshReminders]);
+
+  // Opening the list is the acknowledgement: it is the only place reminders
+  // are shown, and the badge exists to get you here.
+  useEffect(() => {
+    if (state.mode !== "notifications" || !notifications) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await notifications.ack();
+        const list = await notifications.list({ limit: 50 });
+        if (cancelled) return;
+        dispatch({
+          type: "REMINDERS_LOADED",
+          reminders: list.notifications,
+          unreadCount: list.unreadCount,
+        });
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.mode, notifications]);
 
   useEffect(() => {
     if (state.mode !== "projectManage") return;
@@ -228,28 +289,40 @@ export function App({
     },
     [api],
   );
+  const editPayload = useCallback((todo: Todo) => {
+    return {
+      id: todo.id,
+      initialTitle: todo.title,
+      initialDescription: todo.description ?? "",
+      initialDue: dueInput(todo),
+      initialRemind:
+        todo.remindAt === undefined
+          ? ""
+          : formatWhenInput(Number(todo.remindAt), false),
+    };
+  }, []);
   const enterEditWithFullTodo = useCallback(
     async (id: string, fallbackTitle: string, cachedDescription?: string) => {
+      const cached = state.todos.find((t) => t.id === id);
       dispatch({
         type: "ENTER_EDIT",
         id,
         initialTitle: fallbackTitle,
         initialDescription: cachedDescription ?? "",
+        initialDue: cached ? dueInput(cached) : "",
+        initialRemind: cached?.remindAt
+          ? formatWhenInput(Number(cached.remindAt), false)
+          : "",
       });
       if (cachedDescription !== undefined) return;
       try {
         const full = await api.getTodo(id);
-        dispatch({
-          type: "ENTER_EDIT",
-          id: full.id,
-          initialTitle: full.title,
-          initialDescription: full.description ?? "",
-        });
+        dispatch({ type: "ENTER_EDIT", ...editPayload(full) });
       } catch (err) {
         dispatch({ type: "LOAD_ERROR", error: (err as Error).message });
       }
     },
-    [api],
+    [api, editPayload, state.todos],
   );
 
   const [hydratingSearch, setHydratingSearch] = useState(false);
@@ -356,6 +429,10 @@ export function App({
       }
       if (input === "/") {
         dispatch({ type: "OPEN_SEARCH" });
+        return;
+      }
+      if (input === "n" && notifications) {
+        dispatch({ type: "OPEN_NOTIFICATIONS" });
         return;
       }
       if (input === "z" && state.toast?.kind === "doneToggled") {
@@ -473,18 +550,65 @@ export function App({
     { isActive: state.mode === "projectConfirmDelete" },
   );
 
-  const handleSubmit = (payload: { title: string; description: string }) => {
+  const handleSubmit = (payload: {
+    title: string;
+    description: string;
+    due: string;
+    remind: string;
+  }) => {
     const title = payload.title.trim();
     if (!title) {
       dispatch({ type: "EXIT_MODE" });
       return;
     }
+    const dueRaw = payload.due.trim();
+    const remindRaw = payload.remind.trim();
+    const due = dueRaw ? parseWhen(dueRaw) : null;
+    if (dueRaw && !due) {
+      dispatch({
+        type: "LOAD_ERROR",
+        error: `invalid due date "${dueRaw}" - try 2026-11-05, "2026-11-05 09:30", 09:30, or +2h`,
+      });
+      return;
+    }
+    const remind = remindRaw ? parseWhen(remindRaw) : null;
+    if (remindRaw && !remind) {
+      dispatch({
+        type: "LOAD_ERROR",
+        error: `invalid reminder "${remindRaw}" - try 2026-11-05 09:30, 09:30, or +30m`,
+      });
+      return;
+    }
     const description = payload.description;
+    // Empty due input means "no deadline": send explicit clears on edit so a
+    // removed date really goes away, and omit them on create.
+    const dueFields = due
+      ? {
+          dueAt: due.at,
+          dueAllDay: due.allDay,
+          dueZone: due.allDay ? localZone() : "",
+        }
+      : null;
+    const remindAt = remind ? remind.at : null;
+
     if (state.mode === "add") {
       const projectId = activeProjectId(state.filter);
-      const opts: { projectId?: string; description?: string } = {};
+      const opts: {
+        projectId?: string;
+        description?: string;
+        dueAt?: number;
+        dueAllDay?: boolean;
+        dueZone?: string;
+        remindAt?: number;
+      } = {};
       if (projectId) opts.projectId = projectId;
       if (description.length > 0) opts.description = description;
+      if (dueFields) {
+        opts.dueAt = dueFields.dueAt;
+        opts.dueAllDay = dueFields.dueAllDay;
+        opts.dueZone = dueFields.dueZone;
+      }
+      if (remindAt !== null) opts.remindAt = remindAt;
       void (async () => {
         try {
           const todo = await api.createTodo(title, opts);
@@ -497,7 +621,14 @@ export function App({
       const id = state.editingId;
       void (async () => {
         try {
-          const updated = await api.updateTodo(id, { title, description });
+          const updated = await api.updateTodo(id, {
+            title,
+            description,
+            dueAt: dueFields ? dueFields.dueAt : null,
+            dueAllDay: dueFields?.dueAllDay ?? false,
+            dueZone: dueFields?.dueZone ?? "",
+            remindAt,
+          });
           dispatch({ type: "TODO_UPDATED", todo: updated });
           dispatch({ type: "EXIT_MODE" });
         } catch (err) {
@@ -629,6 +760,8 @@ export function App({
             ? state.editingDescription || editingTodo?.description || ""
             : ""
         }
+        defaultDue={state.mode === "edit" ? state.editingDue : undefined}
+        defaultRemind={state.mode === "edit" ? state.editingRemind : undefined}
         onSubmit={handleSubmit}
         onCancel={() => dispatch({ type: "EXIT_MODE" })}
       />
@@ -810,6 +943,17 @@ export function App({
     );
   }
 
+  if (state.mode === "notifications") {
+    return (
+      <NotificationsView
+        reminders={state.reminders}
+        projects={state.projects}
+        nowMs={nowMs}
+        onClose={() => dispatch({ type: "CLOSE_NOTIFICATIONS" })}
+      />
+    );
+  }
+
   if (state.mode === "about") {
     return (
       <AboutView
@@ -926,13 +1070,35 @@ export function App({
               </Text>
               <Text color={color.muted}>{" done today"}</Text>
               <Box flexGrow={1} />
+              {state.unreadReminders > 0 && (
+                <Box marginRight={2}>
+                  <Text color={color.warn}>{icon.due} </Text>
+                  <Text color={color.warn} bold>
+                    {state.unreadReminders}
+                  </Text>
+                  <Text color={color.muted} dimColor>
+                    {" new"}
+                  </Text>
+                </Box>
+              )}
               <Text color={color.muted} dimColor>
-                sorted by updated
+                {state.filter === "today"
+                  ? "sorted by due"
+                  : "sorted by updated"}
               </Text>
             </Box>
             <Box marginTop={1}>
               <Tabs
                 tabs={[
+                  {
+                    key: "today",
+                    label: "Due",
+                    count: state.todos.filter(
+                      (t) => !t.done && dueTodayOrOverdue(t, nowMs),
+                    ).length,
+                    kind: "system",
+                    prefixIcon: icon.due,
+                  },
                   {
                     key: "inbox",
                     label: "Private",
@@ -990,6 +1156,11 @@ export function App({
                 state.filter === "done" ? (
                   <Text color={color.muted} dimColor>
                     {"  "}no completions yet — finished todos land here
+                  </Text>
+                ) : state.filter === "today" ? (
+                  <Text color={color.muted} dimColor>
+                    {"  "}nothing due today — give a todo a due date with{" "}
+                    <Text color={color.accent}>e</Text>
                   </Text>
                 ) : (
                   <Text color={color.muted} dimColor>
@@ -1206,6 +1377,14 @@ function TodoRow({
   const bar = highlighted ? icon.selectBar : " ";
   const age = relativeTime(nowMs, todo.updatedAt);
   const ageWidth = 4;
+  const dueAt = todo.dueAt === undefined ? undefined : Number(todo.dueAt);
+  const allDay = todo.dueAllDay ?? false;
+  const overdue = dueAt !== undefined && isOverdue(dueAt, allDay, nowMs);
+  const dueTint = overdue
+    ? color.danger
+    : dueAt !== undefined && dueAt - nowMs < 86_400_000
+      ? color.warn
+      : color.muted;
   return (
     <Box width={width}>
       <Text color={color.accent}>{bar}</Text>
@@ -1223,6 +1402,16 @@ function TodoRow({
           {todo.title}
         </Text>
       </Box>
+      <Box width={6} justifyContent="flex-end">
+        <Text color={todo.done ? color.muted : dueTint} dimColor={todo.done}>
+          {dueAt === undefined
+            ? todo.remindAt !== undefined
+              ? "⏰"
+              : ""
+            : dueLabel(dueAt, allDay, nowMs, todo.dueZone)}
+        </Text>
+      </Box>
+      <Text> </Text>
       <Box width={ageWidth} justifyContent="flex-end">
         <Text color={color.muted}>{age}</Text>
       </Box>
@@ -1236,6 +1425,7 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
   ["p", "project"],
   ["m", "manage"],
   ["/", "search"],
+  ["n", "reminders"],
   ["h/l", "tab"],
   ["s", "settings"],
   ["?", "help"],

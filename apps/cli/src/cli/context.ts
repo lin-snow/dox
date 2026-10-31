@@ -2,6 +2,7 @@ import {
   HumanOutput,
   InviteClient,
   JsonOutput,
+  NotificationClient,
   type Output,
   ProjectClient,
   TodoClient,
@@ -16,6 +17,7 @@ export interface CliContext {
   projects: ProjectClient;
   users: UserClient;
   invites: InviteClient;
+  notifications: NotificationClient;
   output: Output;
   server: string;
   userName: string;
@@ -42,6 +44,7 @@ async function buildContext(opts: GlobalOpts): Promise<CliContext> {
     projects: new ProjectClient(fetcher, cfg.server),
     users: new UserClient(fetcher, cfg.server),
     invites: new InviteClient(fetcher, cfg.server),
+    notifications: new NotificationClient(fetcher, cfg.server),
     output: opts.json ? new JsonOutput(io) : new HumanOutput(io),
     server: cfg.server,
     userName: cfg.userName,

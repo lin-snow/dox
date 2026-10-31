@@ -30,6 +30,18 @@ type Invite struct {
 	UsedBy    sql.NullString
 }
 
+type Notification struct {
+	ID           string
+	UserID       string
+	TodoID       string
+	Kind         string
+	ScheduledFor int64
+	TodoTitle    string
+	ProjectID    sql.NullString
+	ReadAt       sql.NullInt64
+	CreatedAt    int64
+}
+
 type Project struct {
 	ID          string
 	OwnerID     string
@@ -63,6 +75,10 @@ type Todo struct {
 	CreatedBy   string
 	CreatedAt   int64
 	UpdatedAt   int64
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 }
 
 type User struct {

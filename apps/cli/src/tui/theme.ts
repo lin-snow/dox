@@ -24,6 +24,7 @@ export const icon = {
   chevron: "›",
   spinner: "◐",
   on: "●",
+  due: "⌛",
 } as const;
 
 export function keyHint(key: string, label: string): string {

@@ -1,3 +1,15 @@
+import type { Todo } from "@dox/core";
+import { formatWhenInput } from "@dox/core";
+
+/**
+ * Editor text for a todo's deadline: a bare date for all-day, date + time for
+ * an instant, empty when there is none.
+ */
+export function dueInput(t: Todo): string {
+  if (t.dueAt === undefined) return "";
+  return formatWhenInput(Number(t.dueAt), t.dueAllDay ?? false, t.dueZone);
+}
+
 export function relativeTime(now: number, raw: unknown): string {
   const ms =
     typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;

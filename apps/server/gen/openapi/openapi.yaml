@@ -240,6 +240,64 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/notifications:
+        get:
+            tags:
+                - NotificationService
+            description: ListNotifications returns the caller's reminders, newest trigger first.
+            operationId: NotificationService_ListNotifications
+            parameters:
+                - name: limit
+                  in: query
+                  description: Max rows to return. Server clamps to [1, 100]; 0 falls back to 20.
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: unreadOnly
+                  in: query
+                  description: Only return unread reminders.
+                  schema:
+                    type: boolean
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListNotificationsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /v1/notifications/ack:
+        post:
+            tags:
+                - NotificationService
+            description: |-
+                AckNotifications marks reminders read. An empty ids list acks every unread
+                 reminder, which is what clients use when the user opens the list.
+            operationId: NotificationService_AckNotifications
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AckNotificationsRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AckNotificationsResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/projects:
         get:
             tags:
@@ -673,6 +731,21 @@ components:
                          which AcceptInvite rejects (server invites are only redeemable via Register).
                 role:
                     type: string
+        AckNotificationsRequest:
+            type: object
+            properties:
+                ids:
+                    type: array
+                    items:
+                        type: string
+                    description: Reminder ids to mark read. Empty = all unread.
+        AckNotificationsResponse:
+            type: object
+            properties:
+                acked:
+                    type: integer
+                    description: Rows transitioned from unread to read by this call.
+                    format: uint32
         ChangePasswordRequest:
             type: object
             properties:
@@ -715,6 +788,18 @@ components:
                 description:
                     type: string
                     description: Optional markdown description. Empty string is treated as unset.
+                dueAt:
+                    type: string
+                    description: Deadline, UTC unix milliseconds. 0 = no deadline.
+                remindAt:
+                    type: string
+                    description: Reminder instant, UTC unix milliseconds. 0 = remind at due_at.
+                dueAllDay:
+                    type: boolean
+                    description: Marks due_at as a calendar date. Requires due_at.
+                dueZone:
+                    type: string
+                    description: IANA zone for an all-day due_at. Requires due_at.
         DeleteProjectResponse:
             type: object
             properties: {}
@@ -801,6 +886,19 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Event'
+        ListNotificationsResponse:
+            type: object
+            properties:
+                notifications:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Notification'
+                unreadCount:
+                    type: integer
+                    description: |-
+                        Total unread count for the caller, independent of limit/filters, so a
+                         single poll drives both the list and the badge.
+                    format: uint32
         ListOutgoingInvitesResponse:
             type: object
             properties:
@@ -854,6 +952,40 @@ components:
                     type: string
                 role:
                     type: string
+        Notification:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: ULID, primary key.
+                todoId:
+                    type: string
+                    description: Todo the reminder points at. Missing todos cascade-delete the row.
+                todoTitle:
+                    type: string
+                    description: |-
+                        Title snapshot taken when the reminder fired, so renames don't rewrite
+                         history.
+                projectId:
+                    type: string
+                    description: Project the todo belongs to. Unset = Inbox.
+                kind:
+                    type: string
+                    description: '"due" today; more kinds may appear without a schema change.'
+                scheduledFor:
+                    type: string
+                    description: The instant this reminder was scheduled for, UTC unix milliseconds.
+                readAt:
+                    type: string
+                    description: When the caller acknowledged it; unset = unread.
+                createdAt:
+                    type: string
+                    description: Row creation time, UTC unix milliseconds.
+            description: |-
+                Notification is one reminder that fired for the caller. Rows are written by
+                 the server-side reminder sweep (never by clients) exactly once per
+                 (todo, kind, trigger instant), so the list is a durable ledger the thin
+                 client can poll without local cache.
         OutgoingInvite:
             type: object
             properties:
@@ -1055,6 +1187,28 @@ components:
                         Optional long-form body, rendered as markdown by clients. Populated only
                          by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
                          payloads small.
+                dueAt:
+                    type: string
+                    description: |-
+                        Optional deadline, UTC unix milliseconds. Drives sorting, Today, and the
+                         overdue badge. Unset = no deadline.
+                dueAllDay:
+                    type: boolean
+                    description: |-
+                        True when due_at is a calendar date rather than an exact instant. Only
+                         meaningful while due_at is set.
+                dueZone:
+                    type: string
+                    description: |-
+                        IANA zone the all-day deadline belongs to (e.g. "Asia/Shanghai"), so
+                         clients in other zones render the same calendar day. Display-only: the
+                         reminder instant is carried by remind_at.
+                remindAt:
+                    type: string
+                    description: |-
+                        Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
+                         May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
+                         all-day todo this must be set explicitly, otherwise no reminder fires.
             description: Todo is a single todo item, owned by a user and optionally scoped to a project.
         UpdateProjectRequest:
             type: object
@@ -1093,6 +1247,20 @@ components:
                 description:
                     type: string
                     description: Patch the markdown description. Empty string clears it.
+                dueAt:
+                    type: string
+                    description: |-
+                        Patch the deadline. Absent = unchanged; 0 = clear, which also clears
+                         due_all_day and due_zone; > 0 = set (UTC unix milliseconds).
+                remindAt:
+                    type: string
+                    description: Patch the reminder. Absent = unchanged; 0 = clear (fall back to due_at).
+                dueAllDay:
+                    type: boolean
+                    description: Mark due_at as a calendar date. Requires a deadline after this patch.
+                dueZone:
+                    type: string
+                    description: IANA zone for an all-day deadline. Empty string clears it.
         User:
             type: object
             properties:
@@ -1127,6 +1295,10 @@ tags:
          AuthService.Register. A project invite (project_id set) is project-owner-only
          and either brings a new user onto the server + into the project (via
          Register) or just adds an existing user to the project (via AcceptInvite).
+    - name: NotificationService
+      description: |-
+        NotificationService exposes the caller's reminder ledger. Read/ack only:
+         rows are produced by the server's due-date sweep.
     - name: ProjectService
       description: |-
         ProjectService manages projects. All mutations are owner-only; members can

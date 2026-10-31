@@ -26,6 +26,20 @@ message Todo {
   // by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
   // payloads small.
   optional string description = 8;
+  // Optional deadline, UTC unix milliseconds. Drives sorting, Today, and the
+  // overdue badge. Unset = no deadline.
+  optional int64 due_at = 9;
+  // True when due_at is a calendar date rather than an exact instant. Only
+  // meaningful while due_at is set.
+  optional bool due_all_day = 10;
+  // IANA zone the all-day deadline belongs to (e.g. "Asia/Shanghai"), so
+  // clients in other zones render the same calendar day. Display-only: the
+  // reminder instant is carried by remind_at.
+  optional string due_zone = 11;
+  // Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
+  // May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
+  // all-day todo this must be set explicitly, otherwise no reminder fires.
+  optional int64 remind_at = 12;
 }
 
 // TodoService manages todos for the authenticated user.
@@ -80,6 +94,14 @@ message CreateTodoRequest {
   optional string project_id = 2;
   // Optional markdown description. Empty string is treated as unset.
   optional string description = 3;
+  // Deadline, UTC unix milliseconds. 0 = no deadline.
+  optional int64 due_at = 4;
+  // Reminder instant, UTC unix milliseconds. 0 = remind at due_at.
+  optional int64 remind_at = 5;
+  // Marks due_at as a calendar date. Requires due_at.
+  optional bool due_all_day = 6;
+  // IANA zone for an all-day due_at. Requires due_at.
+  optional string due_zone = 7;
 }
 
 message UpdateTodoRequest {
@@ -88,6 +110,15 @@ message UpdateTodoRequest {
   optional bool done = 3;
   // Patch the markdown description. Empty string clears it.
   optional string description = 4;
+  // Patch the deadline. Absent = unchanged; 0 = clear, which also clears
+  // due_all_day and due_zone; > 0 = set (UTC unix milliseconds).
+  optional int64 due_at = 5;
+  // Patch the reminder. Absent = unchanged; 0 = clear (fall back to due_at).
+  optional int64 remind_at = 6;
+  // Mark due_at as a calendar date. Requires a deadline after this patch.
+  optional bool due_all_day = 7;
+  // IANA zone for an all-day deadline. Empty string clears it.
+  optional string due_zone = 8;
 }
 
 message DeleteTodoRequest {

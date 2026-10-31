@@ -13,5 +13,7 @@ sql:
         overrides:
           - column: "todos.done"
             go_type: "bool"
+          - column: "todos.due_all_day"
+            go_type: "bool"
           - column: "projects.archived"
             go_type: "bool"

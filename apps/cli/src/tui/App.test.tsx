@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
-import type { ActivityEvent, EventsApi, Todo, TodoApi } from "@dox/core";
+import type {
+  ActivityEvent,
+  EventsApi,
+  NotificationsApi,
+  Todo,
+  TodoApi,
+} from "@dox/core";
 
 import { App } from "./App";
 import { mount } from "./test-utils";
@@ -74,8 +80,14 @@ describe("App (integration smokes)", () => {
     for (const inst of instances) inst.unmount();
   });
 
-  function mountApp(api: TodoApi, events?: EventsApi) {
-    const inst = mount(<App api={api} events={events} />);
+  function mountApp(
+    api: TodoApi,
+    events?: EventsApi,
+    notifications?: NotificationsApi,
+  ) {
+    const inst = mount(
+      <App api={api} events={events} notifications={notifications} />,
+    );
     instances.push(inst);
     return inst;
   }
@@ -154,6 +166,72 @@ describe("App (integration smokes)", () => {
     const events: EventsApi = { list: async () => [event] };
     const { settle } = mountApp(api, events);
     await settle((f) => f.includes("alice") && f.includes("fix login bug"));
+  });
+
+  test("Due tab lists only today + overdue todos", async () => {
+    const { api } = makeFakeApi([
+      makeTodo({
+        title: "overdue thing",
+        dueAt: String(Date.now() - 86_400_000),
+      }),
+      makeTodo({
+        title: "far future",
+        dueAt: String(Date.now() + 5 * 86_400_000),
+      }),
+    ]);
+    const { press, settle, lastFrame } = mountApp(api);
+    await settle(
+      (f) => f.includes("overdue thing") && f.includes("far future"),
+    );
+    // Filters ring today -> inbox -> done, so stepping back from inbox lands
+    // on the Due tab.
+    press("h");
+    await settle(
+      (f) => f.includes("sorted by due") && f.includes("overdue thing"),
+    );
+    expect(lastFrame() ?? "").not.toContain("far future");
+  });
+
+  test("n opens reminders and acknowledges them", async () => {
+    const { api } = makeFakeApi([
+      makeTodo({ title: "due soon", dueAt: String(Date.now() + 3_600_000) }),
+    ]);
+    let acked = 0;
+    const notifications: NotificationsApi = {
+      list: async () => ({
+        notifications: [
+          {
+            id: "01REMINDER0000000000000000",
+            todoId: "01TODO0000000000000000000",
+            todoTitle: "due soon",
+            kind: "due",
+            scheduledFor: String(Date.now() - 60_000),
+            createdAt: String(Date.now() - 60_000),
+          },
+        ],
+        unreadCount: acked === 0 ? 1 : 0,
+      }),
+      ack: async () => {
+        acked += 1;
+        return 1;
+      },
+    };
+    const { press, settle, lastFrame } = mountApp(
+      api,
+      undefined,
+      notifications,
+    );
+    await settle((f) => f.includes("due soon"));
+    // The unread count is a badge, not decorative state: it's the only signal
+    // that something fired before you open the list.
+    await settle((f) => f.includes("⌛") && f.includes("new"));
+    press("n");
+    await settle((f) => f.includes("Reminders") && f.includes("due soon"));
+    expect(acked).toBe(1);
+    press("\x1b");
+    await settle((f) => f.includes("NORMAL"));
+    // Acking on open clears the badge as well as the rows.
+    expect(lastFrame() ?? "").not.toContain("new");
   });
 
   test("long lists window with a more-below indicator", async () => {

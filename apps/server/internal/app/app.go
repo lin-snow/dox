@@ -20,6 +20,7 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/db"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 	"github.com/lin-snow/dox/apps/server/internal/handler"
+	"github.com/lin-snow/dox/apps/server/internal/notifier"
 	"github.com/lin-snow/dox/apps/server/internal/version"
 )
 
@@ -49,6 +50,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	inv := handler.NewInvite(dbConn, q, b, secret)
 	td := handler.NewTodo(dbConn, q, b)
 	ev := handler.NewEvent(q)
+	nt := handler.NewNotification(q)
 
 	mux := runtime.NewServeMux()
 	if err := doxv1.RegisterAuthServiceHandlerServer(ctx, mux, user); err != nil {
@@ -68,6 +70,9 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 	if err := doxv1.RegisterEventServiceHandlerServer(ctx, mux, ev); err != nil {
 		return fmt.Errorf("register event: %w", err)
+	}
+	if err := doxv1.RegisterNotificationServiceHandlerServer(ctx, mux, nt); err != nil {
+		return fmt.Errorf("register notification: %w", err)
 	}
 
 	authLimiter := authn.NewRateLimiter(cfg.TrustProxyHeaders)
@@ -90,6 +95,21 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	go func() {
 		defer close(sweepDone)
 		runEventRetention(sweepCtx, q, cfg.EventRetention, time.Now)
+	}()
+
+	// The reminder sweep owns its own goroutine for the same reason: it talks to
+	// the DB outside any request transaction and must drain before the pool
+	// closes.
+	reminderCtx, stopReminders := context.WithCancel(ctx)
+	defer stopReminders()
+	reminderDone := make(chan struct{})
+	go func() {
+		defer close(reminderDone)
+		notifier.New(q, notifier.Config{
+			Interval: cfg.ReminderInterval,
+			Grace:    cfg.ReminderGrace,
+			Now:      time.Now,
+		}).Run(reminderCtx)
 	}()
 
 	v := version.Get()
@@ -119,5 +139,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	err = srv.Shutdown(shutdownCtx)
 	stopSweep()
 	<-sweepDone
+	stopReminders()
+	<-reminderDone
 	return err
 }

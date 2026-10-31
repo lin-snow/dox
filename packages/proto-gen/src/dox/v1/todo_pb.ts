@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/todo.proto.
  */
 export const file_dox_v1_todo: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIr0BCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJEhgKC2Rlc2NyaXB0aW9uGAggASgJSAGIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uIjoKEExpc3RUb2Rvc1JlcXVlc3QSFwoKcHJvamVjdF9pZBgBIAEoCUgAiAEBQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAkidAoRQ3JlYXRlVG9kb1JlcXVlc3QSDQoFdGl0bGUYASABKAkSFwoKcHJvamVjdF9pZBgCIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAMgASgJSAGIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uIoMBChFVcGRhdGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEhEKBGRvbmUYAyABKAhIAYgBARIYCgtkZXNjcmlwdGlvbhgEIAEoCUgCiAEBQggKBl90aXRsZUIHCgVfZG9uZUIOCgxfZGVzY3JpcHRpb24iHwoRRGVsZXRlVG9kb1JlcXVlc3QSCgoCaWQYASABKAkiFAoSRGVsZXRlVG9kb1Jlc3BvbnNlMqcDCgtUb2RvU2VydmljZRJTCglMaXN0VG9kb3MSGC5kb3gudjEuTGlzdFRvZG9zUmVxdWVzdBoZLmRveC52MS5MaXN0VG9kb3NSZXNwb25zZSIRgtPkkwILEgkvdjEvdG9kb3MSRwoHR2V0VG9kbxIWLmRveC52MS5HZXRUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhaC0+STAhASDi92MS90b2Rvcy97aWR9EksKCkNyZWF0ZVRvZG8SGS5kb3gudjEuQ3JlYXRlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIUgtPkkwIOOgEqIgkvdjEvdG9kb3MSUAoKVXBkYXRlVG9kbxIZLmRveC52MS5VcGRhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhmC0+STAhM6ASoyDi92MS90b2Rvcy97aWR9ElsKCkRlbGV0ZVRvZG8SGS5kb3gudjEuRGVsZXRlVG9kb1JlcXVlc3QaGi5kb3gudjEuRGVsZXRlVG9kb1Jlc3BvbnNlIhaC0+STAhAqDi92MS90b2Rvcy97aWR9QjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxItECCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJEhgKC2Rlc2NyaXB0aW9uGAggASgJSAGIAQESEwoGZHVlX2F0GAkgASgDSAKIAQESGAoLZHVlX2FsbF9kYXkYCiABKAhIA4gBARIVCghkdWVfem9uZRgLIAEoCUgEiAEBEhYKCXJlbWluZF9hdBgMIAEoA0gFiAEBQg0KC19wcm9qZWN0X2lkQg4KDF9kZXNjcmlwdGlvbkIJCgdfZHVlX2F0Qg4KDF9kdWVfYWxsX2RheUILCglfZHVlX3pvbmVCDAoKX3JlbWluZF9hdCI6ChBMaXN0VG9kb3NSZXF1ZXN0EhcKCnByb2plY3RfaWQYASABKAlIAIgBAUINCgtfcHJvamVjdF9pZCIwChFMaXN0VG9kb3NSZXNwb25zZRIbCgV0b2RvcxgBIAMoCzIMLmRveC52MS5Ub2RvIhwKDkdldFRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJIogCChFDcmVhdGVUb2RvUmVxdWVzdBINCgV0aXRsZRgBIAEoCRIXCgpwcm9qZWN0X2lkGAIgASgJSACIAQESGAoLZGVzY3JpcHRpb24YAyABKAlIAYgBARITCgZkdWVfYXQYBCABKANIAogBARIWCglyZW1pbmRfYXQYBSABKANIA4gBARIYCgtkdWVfYWxsX2RheRgGIAEoCEgEiAEBEhUKCGR1ZV96b25lGAcgASgJSAWIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uQgkKB19kdWVfYXRCDAoKX3JlbWluZF9hdEIOCgxfZHVlX2FsbF9kYXlCCwoJX2R1ZV96b25lIpcCChFVcGRhdGVUb2RvUmVxdWVzdBIKCgJpZBgBIAEoCRISCgV0aXRsZRgCIAEoCUgAiAEBEhEKBGRvbmUYAyABKAhIAYgBARIYCgtkZXNjcmlwdGlvbhgEIAEoCUgCiAEBEhMKBmR1ZV9hdBgFIAEoA0gDiAEBEhYKCXJlbWluZF9hdBgGIAEoA0gEiAEBEhgKC2R1ZV9hbGxfZGF5GAcgASgISAWIAQESFQoIZHVlX3pvbmUYCCABKAlIBogBAUIICgZfdGl0bGVCBwoFX2RvbmVCDgoMX2Rlc2NyaXB0aW9uQgkKB19kdWVfYXRCDAoKX3JlbWluZF9hdEIOCgxfZHVlX2FsbF9kYXlCCwoJX2R1ZV96b25lIh8KEURlbGV0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJIhQKEkRlbGV0ZVRvZG9SZXNwb25zZTKnAwoLVG9kb1NlcnZpY2USUwoJTGlzdFRvZG9zEhguZG94LnYxLkxpc3RUb2Rvc1JlcXVlc3QaGS5kb3gudjEuTGlzdFRvZG9zUmVzcG9uc2UiEYLT5JMCCxIJL3YxL3RvZG9zEkcKB0dldFRvZG8SFi5kb3gudjEuR2V0VG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIWgtPkkwIQEg4vdjEvdG9kb3Mve2lkfRJLCgpDcmVhdGVUb2RvEhkuZG94LnYxLkNyZWF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFILT5JMCDjoBKiIJL3YxL3RvZG9zElAKClVwZGF0ZVRvZG8SGS5kb3gudjEuVXBkYXRlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIZgtPkkwITOgEqMg4vdjEvdG9kb3Mve2lkfRJbCgpEZWxldGVUb2RvEhkuZG94LnYxLkRlbGV0ZVRvZG9SZXF1ZXN0GhouZG94LnYxLkRlbGV0ZVRvZG9SZXNwb25zZSIWgtPkkwIQKg4vdjEvdG9kb3Mve2lkfUI2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
 
 /**
  * Todo is a single todo item, owned by a user and optionally scoped to a project.
@@ -76,6 +76,40 @@ export type Todo = Message<"dox.v1.Todo"> & {
    * @generated from field: optional string description = 8;
    */
   description?: string | undefined;
+
+  /**
+   * Optional deadline, UTC unix milliseconds. Drives sorting, Today, and the
+   * overdue badge. Unset = no deadline.
+   *
+   * @generated from field: optional int64 due_at = 9;
+   */
+  dueAt?: bigint | undefined;
+
+  /**
+   * True when due_at is a calendar date rather than an exact instant. Only
+   * meaningful while due_at is set.
+   *
+   * @generated from field: optional bool due_all_day = 10;
+   */
+  dueAllDay?: boolean | undefined;
+
+  /**
+   * IANA zone the all-day deadline belongs to (e.g. "Asia/Shanghai"), so
+   * clients in other zones render the same calendar day. Display-only: the
+   * reminder instant is carried by remind_at.
+   *
+   * @generated from field: optional string due_zone = 11;
+   */
+  dueZone?: string | undefined;
+
+  /**
+   * Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
+   * May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
+   * all-day todo this must be set explicitly, otherwise no reminder fires.
+   *
+   * @generated from field: optional int64 remind_at = 12;
+   */
+  remindAt?: bigint | undefined;
 };
 
 /**
@@ -161,6 +195,34 @@ export type CreateTodoRequest = Message<"dox.v1.CreateTodoRequest"> & {
    * @generated from field: optional string description = 3;
    */
   description?: string | undefined;
+
+  /**
+   * Deadline, UTC unix milliseconds. 0 = no deadline.
+   *
+   * @generated from field: optional int64 due_at = 4;
+   */
+  dueAt?: bigint | undefined;
+
+  /**
+   * Reminder instant, UTC unix milliseconds. 0 = remind at due_at.
+   *
+   * @generated from field: optional int64 remind_at = 5;
+   */
+  remindAt?: bigint | undefined;
+
+  /**
+   * Marks due_at as a calendar date. Requires due_at.
+   *
+   * @generated from field: optional bool due_all_day = 6;
+   */
+  dueAllDay?: boolean | undefined;
+
+  /**
+   * IANA zone for an all-day due_at. Requires due_at.
+   *
+   * @generated from field: optional string due_zone = 7;
+   */
+  dueZone?: string | undefined;
 };
 
 /**
@@ -195,6 +257,35 @@ export type UpdateTodoRequest = Message<"dox.v1.UpdateTodoRequest"> & {
    * @generated from field: optional string description = 4;
    */
   description?: string | undefined;
+
+  /**
+   * Patch the deadline. Absent = unchanged; 0 = clear, which also clears
+   * due_all_day and due_zone; > 0 = set (UTC unix milliseconds).
+   *
+   * @generated from field: optional int64 due_at = 5;
+   */
+  dueAt?: bigint | undefined;
+
+  /**
+   * Patch the reminder. Absent = unchanged; 0 = clear (fall back to due_at).
+   *
+   * @generated from field: optional int64 remind_at = 6;
+   */
+  remindAt?: bigint | undefined;
+
+  /**
+   * Mark due_at as a calendar date. Requires a deadline after this patch.
+   *
+   * @generated from field: optional bool due_all_day = 7;
+   */
+  dueAllDay?: boolean | undefined;
+
+  /**
+   * IANA zone for an all-day deadline. Empty string clears it.
+   *
+   * @generated from field: optional string due_zone = 8;
+   */
+  dueZone?: string | undefined;
 };
 
 /**

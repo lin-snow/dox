@@ -23,6 +23,11 @@ const (
 	maxDescriptionLen = 64 * 1024
 	ulidLen           = 26
 
+	// Sanity ceiling for due_at / remind_at: a typo like "2062" or a stray
+	// microsecond value should fail loudly instead of scheduling a reminder for
+	// the year 52000.
+	maxScheduleHorizonMs = 100 * 365 * 24 * 60 * 60 * 1000
+
 	projectInbox = "inbox"
 )
 
@@ -127,6 +132,19 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 		return nil, err
 	}
 
+	now := s.now()
+	due, err := normalizeDue(dueValues{}, req.DueAt, req.DueAllDay, req.DueZone, now)
+	if err != nil {
+		return nil, err
+	}
+	if due == nil {
+		due = &dueValues{}
+	}
+	remind, err := normalizeRemindAt(req.RemindAt, now)
+	if err != nil {
+		return nil, err
+	}
+
 	var projectID sql.NullString
 	if req.ProjectId != nil && *req.ProjectId != "" {
 		if err := authz.CanWriteProjectTodos(ctx, s.q, c.UserID, *req.ProjectId); err != nil {
@@ -136,7 +154,6 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 	}
 
 	id := ulid.Make().String()
-	now := s.now()
 	var row queries.CreateTodoRow
 	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
 		var err error
@@ -144,6 +161,10 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 			ID:          id,
 			Title:       title,
 			Description: description,
+			DueAt:       due.At,
+			DueAllDay:   due.AllDay,
+			DueZone:     due.Zone,
+			RemindAt:    remindAtOf(remind),
 			ProjectID:   projectID,
 			CreatedBy:   c.UserID,
 			CreatedAt:   now,
@@ -206,6 +227,17 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 			return err
 		}
 
+		// due/remind resolve against the current row, so patching only
+		// all_day or only due_zone validates against the effective deadline.
+		due, err := normalizeDue(dueOf(view), req.DueAt, req.DueAllDay, req.DueZone, now)
+		if err != nil {
+			return err
+		}
+		remind, err := normalizeRemindAt(req.RemindAt, now)
+		if err != nil {
+			return err
+		}
+
 		if title != nil {
 			row, err := q.UpdateTodoTitle(ctx, queries.UpdateTodoTitleParams{
 				Title: *title, UpdatedAt: now, ID: id,
@@ -227,6 +259,24 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		if req.Description != nil {
 			row, err := q.UpdateTodoDescription(ctx, queries.UpdateTodoDescriptionParams{
 				Description: description, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
+		}
+		if due != nil {
+			row, err := q.UpdateTodoDue(ctx, queries.UpdateTodoDueParams{
+				DueAt: due.At, DueAllDay: due.AllDay, DueZone: due.Zone, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
+		}
+		if remind != nil {
+			row, err := q.UpdateTodoRemind(ctx, queries.UpdateTodoRemindParams{
+				RemindAt: *remind, UpdatedAt: now, ID: id,
 			})
 			if err != nil {
 				return updateTodoError(err, id)
@@ -345,10 +395,109 @@ type todoView struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
 	UpdatedAt   int64
+}
+
+// dueOf extracts the deadline triple from a row so patches can be resolved
+// against what is stored.
+func dueOf(t todoView) dueValues {
+	return dueValues{At: t.DueAt, AllDay: t.DueAllDay, Zone: t.DueZone}
+}
+
+// dueValues is the deadline triple as stored. AllDay and Zone are
+// meaningless without At, which normalizeDue enforces.
+type dueValues struct {
+	At     sql.NullInt64
+	AllDay bool
+	Zone   sql.NullString
+}
+
+// normalizeDue resolves a create/patch request for due_at / due_all_day /
+// due_zone against the current values. Returns nil when the request touches
+// none of the three, so the caller skips the UPDATE entirely.
+//
+// Patch semantics match the rest of the service: an absent field is
+// "unchanged", 0 clears the deadline (and with it all_day/zone), an empty
+// string clears the zone.
+func normalizeDue(cur dueValues, at *int64, allDay *bool, zone *string, now int64) (*dueValues, error) {
+	if at == nil && allDay == nil && zone == nil {
+		return nil, nil
+	}
+	next := cur
+	if at != nil {
+		if *at == 0 {
+			next = dueValues{}
+		} else {
+			if err := validateInstant("due_at", *at, now); err != nil {
+				return nil, err
+			}
+			next.At = sql.NullInt64{Int64: *at, Valid: true}
+		}
+	}
+	if allDay != nil {
+		next.AllDay = *allDay
+	}
+	if zone != nil {
+		z := strings.TrimSpace(*zone)
+		switch {
+		case z == "":
+			next.Zone = sql.NullString{}
+		case next.At.Valid:
+			if _, err := time.LoadLocation(z); err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "due_zone %q is not a known IANA zone", z)
+			}
+			next.Zone = sql.NullString{String: z, Valid: true}
+		default:
+			return nil, status.Error(codes.InvalidArgument, "due_zone requires due_at")
+		}
+	}
+	if !next.At.Valid && (next.AllDay || next.Zone.Valid) {
+		return nil, status.Error(codes.InvalidArgument, "due_all_day and due_zone require due_at")
+	}
+	return &next, nil
+}
+
+// normalizeRemindAt resolves a remind_at patch. 0 clears it (falling back to
+// due_at in the reminder scan). Past instants are allowed: importing history or
+// dragging a deadline into the past must not fail; the notifier's grace window
+// decides whether they fire.
+func normalizeRemindAt(raw *int64, now int64) (*sql.NullInt64, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	if *raw == 0 {
+		cleared := sql.NullInt64{}
+		return &cleared, nil
+	}
+	if err := validateInstant("remind_at", *raw, now); err != nil {
+		return nil, err
+	}
+	set := sql.NullInt64{Int64: *raw, Valid: true}
+	return &set, nil
+}
+
+func remindAtOf(v *sql.NullInt64) sql.NullInt64 {
+	if v == nil {
+		return sql.NullInt64{}
+	}
+	return *v
+}
+
+func validateInstant(field string, ms, now int64) error {
+	if ms < 0 {
+		return status.Errorf(codes.InvalidArgument, "%s must be a unix millisecond timestamp", field)
+	}
+	if ms > now+maxScheduleHorizonMs {
+		return status.Errorf(codes.InvalidArgument, "%s is too far in the future", field)
+	}
+	return nil
 }
 
 func (t todoView) toProto(includeDescription bool) *doxv1.Todo {
@@ -367,6 +516,20 @@ func (t todoView) toProto(includeDescription bool) *doxv1.Todo {
 	if includeDescription && t.Description.Valid {
 		v := t.Description.String
 		out.Description = &v
+	}
+	if t.DueAt.Valid {
+		at := t.DueAt.Int64
+		out.DueAt = &at
+		allDay := t.DueAllDay
+		out.DueAllDay = &allDay
+		if t.DueZone.Valid {
+			z := t.DueZone.String
+			out.DueZone = &z
+		}
+	}
+	if t.RemindAt.Valid {
+		at := t.RemindAt.Int64
+		out.RemindAt = &at
 	}
 	return out
 }

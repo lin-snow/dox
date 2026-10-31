@@ -11,15 +11,19 @@ import (
 )
 
 const createTodo = `-- name: CreateTodo :one
-INSERT INTO todos (id, title, done, description, project_id, created_by, created_at, updated_at)
-VALUES (?, ?, 0, ?, ?, ?, ?, ?)
-RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+INSERT INTO todos (id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at)
+VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 `
 
 type CreateTodoParams struct {
 	ID          string
 	Title       string
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -31,6 +35,10 @@ type CreateTodoRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -42,6 +50,10 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (CreateT
 		arg.ID,
 		arg.Title,
 		arg.Description,
+		arg.DueAt,
+		arg.DueAllDay,
+		arg.DueZone,
+		arg.RemindAt,
 		arg.ProjectID,
 		arg.CreatedBy,
 		arg.CreatedAt,
@@ -53,6 +65,10 @@ func (q *Queries) CreateTodo(ctx context.Context, arg CreateTodoParams) (CreateT
 		&i.Title,
 		&i.Done,
 		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -114,7 +130,7 @@ func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, arg FindTodoIDsByPref
 }
 
 const getTodo = `-- name: GetTodo :one
-SELECT id, title, done, description, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE id = ?
 LIMIT 1
@@ -125,6 +141,10 @@ type GetTodoRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -139,6 +159,10 @@ func (q *Queries) GetTodo(ctx context.Context, id string) (GetTodoRow, error) {
 		&i.Title,
 		&i.Done,
 		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -147,8 +171,70 @@ func (q *Queries) GetTodo(ctx context.Context, id string) (GetTodoRow, error) {
 	return i, err
 }
 
+const listDueTriggers = `-- name: ListDueTriggers :many
+SELECT
+    id,
+    title,
+    project_id,
+    COALESCE(remind_at, due_at) AS trigger_at
+FROM todos
+WHERE done = 0
+  AND COALESCE(remind_at, due_at) IS NOT NULL
+  AND COALESCE(remind_at, due_at) >  ?1
+  AND COALESCE(remind_at, due_at) <= ?2
+  AND (due_all_day = 0 OR remind_at IS NOT NULL)
+ORDER BY trigger_at ASC
+`
+
+type ListDueTriggersParams struct {
+	Lo sql.NullInt64
+	Hi sql.NullInt64
+}
+
+type ListDueTriggersRow struct {
+	ID        string
+	Title     string
+	ProjectID sql.NullString
+	TriggerAt sql.NullInt64
+}
+
+// Reminder scan used by internal/notifier. The window is [lo, hi] so a server
+// that was down still delivers reminders that fell inside the grace period,
+// while anything older is skipped instead of spamming on startup.
+//
+// due_all_day todos are local calendar dates: the client computes their
+// reminder instant (09:00 in its own zone) and stores it in remind_at. Without
+// an explicit remind_at an all-day todo is never pinged -- never at midnight UTC.
+func (q *Queries) ListDueTriggers(ctx context.Context, arg ListDueTriggersParams) ([]ListDueTriggersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDueTriggers, arg.Lo, arg.Hi)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDueTriggersRow{}
+	for rows.Next() {
+		var i ListDueTriggersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.ProjectID,
+			&i.TriggerAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listInboxTodos = `-- name: ListInboxTodos :many
-SELECT id, title, done, description, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE project_id IS NULL AND created_by = ?1
 ORDER BY created_at DESC
@@ -159,6 +245,10 @@ type ListInboxTodosRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -179,6 +269,10 @@ func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]ListInbo
 			&i.Title,
 			&i.Done,
 			&i.Description,
+			&i.DueAt,
+			&i.DueAllDay,
+			&i.DueZone,
+			&i.RemindAt,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -198,7 +292,7 @@ func (q *Queries) ListInboxTodos(ctx context.Context, userID string) ([]ListInbo
 }
 
 const listTodosForUser = `-- name: ListTodosForUser :many
-SELECT t.id, t.title, t.done, t.description, t.project_id, t.created_by, t.created_at, t.updated_at
+SELECT t.id, t.title, t.done, t.description, t.due_at, t.due_all_day, t.due_zone, t.remind_at, t.project_id, t.created_by, t.created_at, t.updated_at
 FROM todos t
 WHERE (t.project_id IS NULL AND t.created_by = ?1)
    OR EXISTS (
@@ -217,6 +311,10 @@ type ListTodosForUserRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -237,6 +335,10 @@ func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]ListTo
 			&i.Title,
 			&i.Done,
 			&i.Description,
+			&i.DueAt,
+			&i.DueAllDay,
+			&i.DueZone,
+			&i.RemindAt,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -256,7 +358,7 @@ func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]ListTo
 }
 
 const listTodosInProject = `-- name: ListTodosInProject :many
-SELECT id, title, done, description, project_id, created_by, created_at, updated_at
+SELECT id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 FROM todos
 WHERE project_id = ?1
 ORDER BY created_at DESC
@@ -267,6 +369,10 @@ type ListTodosInProjectRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -287,6 +393,10 @@ func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullStri
 			&i.Title,
 			&i.Done,
 			&i.Description,
+			&i.DueAt,
+			&i.DueAllDay,
+			&i.DueZone,
+			&i.RemindAt,
 			&i.ProjectID,
 			&i.CreatedBy,
 			&i.CreatedAt,
@@ -309,7 +419,7 @@ const updateTodoDescription = `-- name: UpdateTodoDescription :one
 UPDATE todos
 SET description = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 `
 
 type UpdateTodoDescriptionParams struct {
@@ -323,6 +433,10 @@ type UpdateTodoDescriptionRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -337,6 +451,10 @@ func (q *Queries) UpdateTodoDescription(ctx context.Context, arg UpdateTodoDescr
 		&i.Title,
 		&i.Done,
 		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -349,7 +467,7 @@ const updateTodoDone = `-- name: UpdateTodoDone :one
 UPDATE todos
 SET done = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 `
 
 type UpdateTodoDoneParams struct {
@@ -363,6 +481,10 @@ type UpdateTodoDoneRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -377,6 +499,114 @@ func (q *Queries) UpdateTodoDone(ctx context.Context, arg UpdateTodoDoneParams) 
 		&i.Title,
 		&i.Done,
 		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
+		&i.ProjectID,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTodoDue = `-- name: UpdateTodoDue :one
+UPDATE todos
+SET due_at = ?, due_all_day = ?, due_zone = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
+`
+
+type UpdateTodoDueParams struct {
+	DueAt     sql.NullInt64
+	DueAllDay bool
+	DueZone   sql.NullString
+	UpdatedAt int64
+	ID        string
+}
+
+type UpdateTodoDueRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) UpdateTodoDue(ctx context.Context, arg UpdateTodoDueParams) (UpdateTodoDueRow, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoDue,
+		arg.DueAt,
+		arg.DueAllDay,
+		arg.DueZone,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	var i UpdateTodoDueRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
+		&i.ProjectID,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTodoRemind = `-- name: UpdateTodoRemind :one
+UPDATE todos
+SET remind_at = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
+`
+
+type UpdateTodoRemindParams struct {
+	RemindAt  sql.NullInt64
+	UpdatedAt int64
+	ID        string
+}
+
+type UpdateTodoRemindRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) UpdateTodoRemind(ctx context.Context, arg UpdateTodoRemindParams) (UpdateTodoRemindRow, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoRemind, arg.RemindAt, arg.UpdatedAt, arg.ID)
+	var i UpdateTodoRemindRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,
@@ -389,7 +619,7 @@ const updateTodoTitle = `-- name: UpdateTodoTitle :one
 UPDATE todos
 SET title = ?, updated_at = ?
 WHERE id = ?
-RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+RETURNING id, title, done, description, due_at, due_all_day, due_zone, remind_at, project_id, created_by, created_at, updated_at
 `
 
 type UpdateTodoTitleParams struct {
@@ -403,6 +633,10 @@ type UpdateTodoTitleRow struct {
 	Title       string
 	Done        bool
 	Description sql.NullString
+	DueAt       sql.NullInt64
+	DueAllDay   bool
+	DueZone     sql.NullString
+	RemindAt    sql.NullInt64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -417,6 +651,10 @@ func (q *Queries) UpdateTodoTitle(ctx context.Context, arg UpdateTodoTitleParams
 		&i.Title,
 		&i.Done,
 		&i.Description,
+		&i.DueAt,
+		&i.DueAllDay,
+		&i.DueZone,
+		&i.RemindAt,
 		&i.ProjectID,
 		&i.CreatedBy,
 		&i.CreatedAt,

@@ -1,6 +1,7 @@
 import { Box, Text, useInput, useWindowSize } from "ink";
 
 import type { Project, Todo } from "@dox/core";
+import { formatWhenInput, isOverdue } from "@dox/core";
 
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
@@ -109,6 +110,35 @@ export function TodoDetailView({
               <MetaRow label="Updated">
                 <Text>{relativeTime(nowMs, todo.updatedAt)} ago</Text>
               </MetaRow>
+              {todo.dueAt !== undefined && (
+                <MetaRow label="Due">
+                  <Text
+                    color={
+                      isOverdue(
+                        Number(todo.dueAt),
+                        todo.dueAllDay ?? false,
+                        nowMs,
+                      )
+                        ? color.danger
+                        : color.warn
+                    }
+                  >
+                    {formatWhenInput(
+                      Number(todo.dueAt),
+                      todo.dueAllDay ?? false,
+                      todo.dueZone,
+                    )}
+                    {todo.dueAllDay ? " (all-day)" : ""}
+                  </Text>
+                </MetaRow>
+              )}
+              {todo.remindAt !== undefined && (
+                <MetaRow label="Remind">
+                  <Text color={color.accent2}>
+                    {formatWhenInput(Number(todo.remindAt), false)}
+                  </Text>
+                </MetaRow>
+              )}
             </Box>
           </Box>
 

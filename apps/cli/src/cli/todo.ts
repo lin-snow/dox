@@ -1,5 +1,5 @@
 import { withContext, type GlobalOpts } from "./context";
-import { readDescription } from "./helpers";
+import { dueFields, parseFlagWhen, readDescription } from "./helpers";
 
 interface TodoListOpts extends GlobalOpts {
   project?: string;
@@ -9,6 +9,8 @@ interface TodoAddOpts extends GlobalOpts {
   project?: string;
   description?: string;
   descriptionFile?: string;
+  due?: string;
+  remind?: string;
 }
 
 interface TodoEditOpts extends GlobalOpts {
@@ -16,6 +18,10 @@ interface TodoEditOpts extends GlobalOpts {
   description?: string;
   descriptionFile?: string;
   clearDescription?: boolean;
+  due?: string;
+  clearDue?: boolean;
+  remind?: string;
+  clearRemind?: boolean;
 }
 
 function resolveFilter(
@@ -43,9 +49,17 @@ export const add = (title: string, opts: TodoAddOpts) =>
   withContext(opts, async ({ api, output, defaultProject }) => {
     const project = resolveFilter(opts, defaultProject);
     const description = await readDescription(opts);
+    const due =
+      opts.due === undefined
+        ? undefined
+        : dueFields(parseFlagWhen(opts.due, "--due"));
     const todo = await api.createTodo(title, {
       projectId: project === "inbox" ? undefined : project,
       description,
+      ...(due ?? {}),
+      ...(opts.remind === undefined
+        ? {}
+        : { remindAt: parseFlagWhen(opts.remind, "--remind").at }),
     });
     output.todo(todo);
   });
@@ -74,18 +88,38 @@ export const edit = (id: string, opts: TodoEditOpts) =>
         );
       }
     }
+    if (opts.clearDue && opts.due !== undefined) {
+      throw new Error("--clear-due cannot be combined with --due");
+    }
+    if (opts.clearRemind && opts.remind !== undefined) {
+      throw new Error("--clear-remind cannot be combined with --remind");
+    }
+
     const description = opts.clearDescription
       ? ""
       : await readDescription(opts);
-    if (opts.title === undefined && description === undefined) {
-      throw new Error(
-        "nothing to update — pass --title, --description, --description-file, or --clear-description",
-      );
-    }
-    const todo = await api.updateTodo(id, {
+    const patch = {
       title: opts.title,
       description,
-    });
+      // null clears; a parsed value sets. Absent leaves the field untouched.
+      ...(opts.due !== undefined
+        ? dueFields(parseFlagWhen(opts.due, "--due"))
+        : opts.clearDue
+          ? { dueAt: null }
+          : {}),
+      ...(opts.remind !== undefined
+        ? { remindAt: parseFlagWhen(opts.remind, "--remind").at }
+        : opts.clearRemind
+          ? { remindAt: null }
+          : {}),
+    };
+    const touched = Object.values(patch).some((v) => v !== undefined);
+    if (!touched) {
+      throw new Error(
+        "nothing to update - pass --title, a description flag, --due/--clear-due, or --remind/--clear-remind",
+      );
+    }
+    const todo = await api.updateTodo(id, patch);
     output.todo(todo);
   });
 

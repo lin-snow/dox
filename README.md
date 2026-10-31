@@ -18,6 +18,8 @@ few, when you'd like the company. Small enough to forget you're running it.
 
 - TUI by default, CLI for scripts — same server, no separate daemon
 - Projects + Inbox, markdown descriptions, done/undone
+- Due dates + reminders — exact instants or all-day dates, with a durable
+  in-app reminder ledger (no mail/push required)
 - Search across todos and projects
 - Multi-user — first to register owns the server, others join by invite link
 - Activity feed — see who changed what, when
@@ -52,13 +54,15 @@ after.
 
 ## Configuration
 
-| Variable              | Default         | Purpose                                                                                 |
-| --------------------- | --------------- | --------------------------------------------------------------------------------------- |
-| `DOX_DB_PATH`         | `./data/dox.db` | SQLite file location                                                                    |
-| `DOX_LISTEN_ADDR`     | `:6278`         | HTTP listen address                                                                     |
-| `DOX_LOG_LEVEL`       | `info`          | `debug`, `info`, `warn`, or `error`                                                     |
-| `DOX_EVENT_RETENTION` | `360h`          | Activity-feed retention; `0` disables the sweep                                         |
-| `DOX_TRUST_PROXY`     | `false`         | Trust `X-Forwarded-For` for auth rate limiting — only enable behind a proxy you control |
+| Variable                | Default         | Purpose                                                                                 |
+| ----------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `DOX_DB_PATH`           | `./data/dox.db` | SQLite file location                                                                    |
+| `DOX_LISTEN_ADDR`       | `:6278`         | HTTP listen address                                                                     |
+| `DOX_LOG_LEVEL`         | `info`          | `debug`, `info`, `warn`, or `error`                                                     |
+| `DOX_EVENT_RETENTION`   | `360h`          | Activity-feed retention; `0` disables the sweep                                         |
+| `DOX_REMINDER_INTERVAL` | `30s`           | How often the due-date reminder sweep runs; `0s` disables it                            |
+| `DOX_REMINDER_GRACE`    | `1h`            | How far back a sweep replays reminders missed while the server was down                 |
+| `DOX_TRUST_PROXY`       | `false`         | Trust `X-Forwarded-For` for auth rate limiting — only enable behind a proxy you control |
 
 The first account to register becomes the owner. After that, registration is
 invite-only by default; the owner can open it with

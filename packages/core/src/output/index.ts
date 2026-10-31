@@ -1,9 +1,12 @@
 import type { IO } from "../io";
+import type { ReminderList } from "../notifications/domain";
+import { dueLabel, elapsedLabel } from "../time";
 import type { Todo } from "../todo/domain";
 
 export interface Output {
   todo(t: Todo): void;
   todos(ts: Todo[]): void;
+  reminders(list: ReminderList): void;
   ok(message: string, details?: Record<string, unknown>): void;
   error(message: string): void;
 }
@@ -21,6 +24,22 @@ export class HumanOutput implements Output {
       return;
     }
     this.io.stdout.write(ts.map(formatTodo).join("\n") + "\n");
+  }
+
+  reminders(list: ReminderList): void {
+    if (list.notifications.length === 0) {
+      this.io.stdout.write("(no reminders)\n");
+      return;
+    }
+    for (const r of list.notifications) {
+      const unread = r.readAt === undefined ? "• " : "  ";
+      const when = elapsedLabel(Number(r.scheduledFor), Date.now());
+      const label = when === "now" ? "now" : `${when} ago`;
+      this.io.stdout.write(`${unread}${label.padStart(7)}  ${r.todoTitle}\n`);
+    }
+    this.io.stdout.write(
+      `${list.unreadCount} unread of ${list.notifications.length}\n`,
+    );
   }
 
   ok(message: string): void {
@@ -43,6 +62,10 @@ export class JsonOutput implements Output {
     this.io.stdout.write(JSON.stringify({ todos: ts }) + "\n");
   }
 
+  reminders(list: ReminderList): void {
+    this.io.stdout.write(JSON.stringify(list) + "\n");
+  }
+
   ok(message: string, details?: Record<string, unknown>): void {
     this.io.stdout.write(
       JSON.stringify({ ok: true, message, ...(details ?? {}) }) + "\n",
@@ -57,5 +80,20 @@ export class JsonOutput implements Output {
 function formatTodo(t: Todo): string {
   const mark = t.done ? "[x]" : "[ ]";
   const id = t.id.slice(0, 6);
-  return `${mark} ${id}…  ${t.title}`;
+  return `${mark} ${id}…  ${t.title}${formatDeadline(t)}`;
+}
+
+/**
+ * Trailing badge: `  ⌛-2h` / `  ⌛3h` for a deadline, `  ⏰1h` when only a
+ * reminder is set. Negative spans already read as overdue.
+ */
+function formatDeadline(t: Todo): string {
+  const now = Date.now();
+  if (t.dueAt !== undefined) {
+    return `  ⌛${dueLabel(Number(t.dueAt), t.dueAllDay ?? false, now, t.dueZone)}`;
+  }
+  if (t.remindAt !== undefined) {
+    return `  ⏰${dueLabel(Number(t.remindAt), false, now)}`;
+  }
+  return "";
 }

@@ -3,6 +3,7 @@ import type {
   OutgoingInvite,
   Project,
   ProjectMember,
+  Reminder,
   ServerSettings,
   Todo,
 } from "@dox/core";
@@ -21,6 +22,7 @@ export type Mode =
   | "todoDetail"
   | "search"
   | "searchDetail"
+  | "notifications"
   | "about";
 
 export type ManageEditing =
@@ -53,11 +55,15 @@ export interface State {
   todos: Todo[];
   projects: Project[];
   events: ActivityEvent[];
+  reminders: Reminder[];
+  unreadReminders: number;
   filter: Filter;
   cursor: number;
   sidebarCursor: number;
   editingTitle: string;
   editingDescription: string;
+  editingDue: string;
+  editingRemind: string;
   editingId: string | null;
   loading: boolean;
   error: string | null;
@@ -90,6 +96,11 @@ export type Action =
   | { type: "TODOS_LOADED"; todos: Todo[] }
   | { type: "PROJECTS_LOADED"; projects: Project[] }
   | { type: "EVENTS_LOADED"; events: ActivityEvent[] }
+  | {
+      type: "REMINDERS_LOADED";
+      reminders: Reminder[];
+      unreadCount: number;
+    }
   | { type: "LOAD_ERROR"; error: string }
   | { type: "SYNC_START" }
   | { type: "SYNC_END" }
@@ -107,6 +118,8 @@ export type Action =
       id: string;
       initialTitle: string;
       initialDescription: string;
+      initialDue: string;
+      initialRemind: string;
     }
   | { type: "ENTER_PROJECT_ADD" }
   | { type: "PROJECT_ADDED"; project: Project }
@@ -145,6 +158,8 @@ export type Action =
   | { type: "TODO_ADDED"; todo: Todo }
   | { type: "TODO_UPDATED"; todo: Todo }
   | { type: "TODO_DELETED"; id: string }
+  | { type: "OPEN_NOTIFICATIONS" }
+  | { type: "CLOSE_NOTIFICATIONS" }
   | { type: "OPEN_ABOUT" }
   | { type: "CLOSE_ABOUT" }
   | { type: "TOAST_SET"; toast: Toast }
@@ -156,11 +171,15 @@ export const initialState: State = {
   todos: [],
   projects: [],
   events: [],
+  reminders: [],
+  unreadReminders: 0,
   filter: "inbox",
   cursor: 0,
   sidebarCursor: 0,
   editingTitle: "",
   editingDescription: "",
+  editingDue: "",
+  editingRemind: "",
   editingId: null,
   loading: true,
   error: null,
@@ -189,8 +208,25 @@ export const initialState: State = {
   toast: null,
 };
 
+/**
+ * "Today" means due before the end of the local day, which deliberately
+ * includes overdue items: a task due yesterday still belongs on today's list.
+ */
+export function dueTodayOrOverdue(todo: Todo, now: number): boolean {
+  if (todo.dueAt === undefined) return false;
+  const end = new Date(now);
+  end.setHours(24, 0, 0, 0);
+  return Number(todo.dueAt) < end.getTime();
+}
+
 export function visibleTodos(state: State): Todo[] {
   const f = state.filter;
+  if (f === "today") {
+    const now = Date.now();
+    return state.todos
+      .filter((t) => !t.done && dueTodayOrOverdue(t, now))
+      .sort((a, b) => Number(a.dueAt) - Number(b.dueAt));
+  }
   if (f === "done") {
     return state.todos
       .filter((t) => t.done)
@@ -204,6 +240,7 @@ export function visibleTodos(state: State): Todo[] {
 
 export function filterList(projects: Project[]): Filter[] {
   return [
+    "today",
     "inbox",
     "done",
     ...projects.map((p) => ({ type: "project" as const, id: p.id })),
@@ -236,6 +273,12 @@ export function reducer(state: State, action: Action): State {
       return { ...state, projects: action.projects };
     case "EVENTS_LOADED":
       return { ...state, events: action.events };
+    case "REMINDERS_LOADED":
+      return {
+        ...state,
+        reminders: action.reminders,
+        unreadReminders: action.unreadCount,
+      };
     case "LOAD_ERROR":
       return { ...state, loading: false, syncing: false, error: action.error };
     case "SYNC_START":
@@ -302,6 +345,8 @@ export function reducer(state: State, action: Action): State {
         mode: "add",
         editingTitle: "",
         editingDescription: "",
+        editingDue: "",
+        editingRemind: "",
         error: null,
         helpOpen: false,
       };
@@ -312,6 +357,8 @@ export function reducer(state: State, action: Action): State {
         editingId: action.id,
         editingTitle: action.initialTitle,
         editingDescription: action.initialDescription,
+        editingDue: action.initialDue,
+        editingRemind: action.initialRemind,
         error: null,
         helpOpen: false,
       };
@@ -355,6 +402,8 @@ export function reducer(state: State, action: Action): State {
         mode: "list",
         editingTitle: "",
         editingDescription: "",
+        editingDue: "",
+        editingRemind: "",
         editingId: null,
         deletingProjectId: null,
       };
@@ -488,6 +537,8 @@ export function reducer(state: State, action: Action): State {
         mode: "list" as Mode,
         editingTitle: "",
         editingDescription: "",
+        editingDue: "",
+        editingRemind: "",
       };
       return { ...next, cursor: 0 };
     }
@@ -511,6 +562,10 @@ export function reducer(state: State, action: Action): State {
         cursor: clampCursor(state.cursor, visibleTodos(next).length),
       };
     }
+    case "OPEN_NOTIFICATIONS":
+      return { ...state, mode: "notifications", helpOpen: false, error: null };
+    case "CLOSE_NOTIFICATIONS":
+      return { ...state, mode: "list" };
     case "OPEN_ABOUT":
       return { ...state, mode: "about", helpOpen: false, error: null };
     case "CLOSE_ABOUT":

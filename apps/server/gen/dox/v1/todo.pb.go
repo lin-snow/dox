@@ -42,7 +42,21 @@ type Todo struct {
 	// Optional long-form body, rendered as markdown by clients. Populated only
 	// by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
 	// payloads small.
-	Description   *string `protobuf:"bytes,8,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,8,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// Optional deadline, UTC unix milliseconds. Drives sorting, Today, and the
+	// overdue badge. Unset = no deadline.
+	DueAt *int64 `protobuf:"varint,9,opt,name=due_at,json=dueAt,proto3,oneof" json:"due_at,omitempty"`
+	// True when due_at is a calendar date rather than an exact instant. Only
+	// meaningful while due_at is set.
+	DueAllDay *bool `protobuf:"varint,10,opt,name=due_all_day,json=dueAllDay,proto3,oneof" json:"due_all_day,omitempty"`
+	// IANA zone the all-day deadline belongs to (e.g. "Asia/Shanghai"), so
+	// clients in other zones render the same calendar day. Display-only: the
+	// reminder instant is carried by remind_at.
+	DueZone *string `protobuf:"bytes,11,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
+	// Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
+	// May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
+	// all-day todo this must be set explicitly, otherwise no reminder fires.
+	RemindAt      *int64 `protobuf:"varint,12,opt,name=remind_at,json=remindAt,proto3,oneof" json:"remind_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,6 +145,34 @@ func (x *Todo) GetDescription() string {
 		return *x.Description
 	}
 	return ""
+}
+
+func (x *Todo) GetDueAt() int64 {
+	if x != nil && x.DueAt != nil {
+		return *x.DueAt
+	}
+	return 0
+}
+
+func (x *Todo) GetDueAllDay() bool {
+	if x != nil && x.DueAllDay != nil {
+		return *x.DueAllDay
+	}
+	return false
+}
+
+func (x *Todo) GetDueZone() string {
+	if x != nil && x.DueZone != nil {
+		return *x.DueZone
+	}
+	return ""
+}
+
+func (x *Todo) GetRemindAt() int64 {
+	if x != nil && x.RemindAt != nil {
+		return *x.RemindAt
+	}
+	return 0
 }
 
 type ListTodosRequest struct {
@@ -273,7 +315,15 @@ type CreateTodoRequest struct {
 	// Unset = create in Inbox (private to caller).
 	ProjectId *string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	// Optional markdown description. Empty string is treated as unset.
-	Description   *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// Deadline, UTC unix milliseconds. 0 = no deadline.
+	DueAt *int64 `protobuf:"varint,4,opt,name=due_at,json=dueAt,proto3,oneof" json:"due_at,omitempty"`
+	// Reminder instant, UTC unix milliseconds. 0 = remind at due_at.
+	RemindAt *int64 `protobuf:"varint,5,opt,name=remind_at,json=remindAt,proto3,oneof" json:"remind_at,omitempty"`
+	// Marks due_at as a calendar date. Requires due_at.
+	DueAllDay *bool `protobuf:"varint,6,opt,name=due_all_day,json=dueAllDay,proto3,oneof" json:"due_all_day,omitempty"`
+	// IANA zone for an all-day due_at. Requires due_at.
+	DueZone       *string `protobuf:"bytes,7,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -329,13 +379,50 @@ func (x *CreateTodoRequest) GetDescription() string {
 	return ""
 }
 
+func (x *CreateTodoRequest) GetDueAt() int64 {
+	if x != nil && x.DueAt != nil {
+		return *x.DueAt
+	}
+	return 0
+}
+
+func (x *CreateTodoRequest) GetRemindAt() int64 {
+	if x != nil && x.RemindAt != nil {
+		return *x.RemindAt
+	}
+	return 0
+}
+
+func (x *CreateTodoRequest) GetDueAllDay() bool {
+	if x != nil && x.DueAllDay != nil {
+		return *x.DueAllDay
+	}
+	return false
+}
+
+func (x *CreateTodoRequest) GetDueZone() string {
+	if x != nil && x.DueZone != nil {
+		return *x.DueZone
+	}
+	return ""
+}
+
 type UpdateTodoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Title *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	Done  *bool                  `protobuf:"varint,3,opt,name=done,proto3,oneof" json:"done,omitempty"`
 	// Patch the markdown description. Empty string clears it.
-	Description   *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// Patch the deadline. Absent = unchanged; 0 = clear, which also clears
+	// due_all_day and due_zone; > 0 = set (UTC unix milliseconds).
+	DueAt *int64 `protobuf:"varint,5,opt,name=due_at,json=dueAt,proto3,oneof" json:"due_at,omitempty"`
+	// Patch the reminder. Absent = unchanged; 0 = clear (fall back to due_at).
+	RemindAt *int64 `protobuf:"varint,6,opt,name=remind_at,json=remindAt,proto3,oneof" json:"remind_at,omitempty"`
+	// Mark due_at as a calendar date. Requires a deadline after this patch.
+	DueAllDay *bool `protobuf:"varint,7,opt,name=due_all_day,json=dueAllDay,proto3,oneof" json:"due_all_day,omitempty"`
+	// IANA zone for an all-day deadline. Empty string clears it.
+	DueZone       *string `protobuf:"bytes,8,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -394,6 +481,34 @@ func (x *UpdateTodoRequest) GetDone() bool {
 func (x *UpdateTodoRequest) GetDescription() string {
 	if x != nil && x.Description != nil {
 		return *x.Description
+	}
+	return ""
+}
+
+func (x *UpdateTodoRequest) GetDueAt() int64 {
+	if x != nil && x.DueAt != nil {
+		return *x.DueAt
+	}
+	return 0
+}
+
+func (x *UpdateTodoRequest) GetRemindAt() int64 {
+	if x != nil && x.RemindAt != nil {
+		return *x.RemindAt
+	}
+	return 0
+}
+
+func (x *UpdateTodoRequest) GetDueAllDay() bool {
+	if x != nil && x.DueAllDay != nil {
+		return *x.DueAllDay
+	}
+	return false
+}
+
+func (x *UpdateTodoRequest) GetDueZone() string {
+	if x != nil && x.DueZone != nil {
+		return *x.DueZone
 	}
 	return ""
 }
@@ -482,7 +597,7 @@ var File_dox_v1_todo_proto protoreflect.FileDescriptor
 
 const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\x87\x02\n" +
+	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\xc0\x03\n" +
 	"\x04Todo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -495,9 +610,19 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"project_id\x18\x06 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"created_by\x18\a \x01(\tR\tcreatedBy\x12%\n" +
-	"\vdescription\x18\b \x01(\tH\x01R\vdescription\x88\x01\x01B\r\n" +
+	"\vdescription\x18\b \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x1a\n" +
+	"\x06due_at\x18\t \x01(\x03H\x02R\x05dueAt\x88\x01\x01\x12#\n" +
+	"\vdue_all_day\x18\n" +
+	" \x01(\bH\x03R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
+	"\bdue_zone\x18\v \x01(\tH\x04R\adueZone\x88\x01\x01\x12 \n" +
+	"\tremind_at\x18\f \x01(\x03H\x05R\bremindAt\x88\x01\x01B\r\n" +
 	"\v_project_idB\x0e\n" +
-	"\f_description\"E\n" +
+	"\f_descriptionB\t\n" +
+	"\a_due_atB\x0e\n" +
+	"\f_due_all_dayB\v\n" +
+	"\t_due_zoneB\f\n" +
+	"\n" +
+	"_remind_at\"E\n" +
 	"\x10ListTodosRequest\x12\"\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
@@ -505,22 +630,40 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\x11ListTodosResponse\x12\"\n" +
 	"\x05todos\x18\x01 \x03(\v2\f.dox.v1.TodoR\x05todos\" \n" +
 	"\x0eGetTodoRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x93\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xcc\x02\n" +
 	"\x11CreateTodoRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\"\n" +
 	"\n" +
 	"project_id\x18\x02 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01B\r\n" +
+	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x1a\n" +
+	"\x06due_at\x18\x04 \x01(\x03H\x02R\x05dueAt\x88\x01\x01\x12 \n" +
+	"\tremind_at\x18\x05 \x01(\x03H\x03R\bremindAt\x88\x01\x01\x12#\n" +
+	"\vdue_all_day\x18\x06 \x01(\bH\x04R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
+	"\bdue_zone\x18\a \x01(\tH\x05R\adueZone\x88\x01\x01B\r\n" +
 	"\v_project_idB\x0e\n" +
-	"\f_description\"\xa1\x01\n" +
+	"\f_descriptionB\t\n" +
+	"\a_due_atB\f\n" +
+	"\n" +
+	"_remind_atB\x0e\n" +
+	"\f_due_all_dayB\v\n" +
+	"\t_due_zone\"\xda\x02\n" +
 	"\x11UpdateTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x17\n" +
 	"\x04done\x18\x03 \x01(\bH\x01R\x04done\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x02R\vdescription\x88\x01\x01B\b\n" +
+	"\vdescription\x18\x04 \x01(\tH\x02R\vdescription\x88\x01\x01\x12\x1a\n" +
+	"\x06due_at\x18\x05 \x01(\x03H\x03R\x05dueAt\x88\x01\x01\x12 \n" +
+	"\tremind_at\x18\x06 \x01(\x03H\x04R\bremindAt\x88\x01\x01\x12#\n" +
+	"\vdue_all_day\x18\a \x01(\bH\x05R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
+	"\bdue_zone\x18\b \x01(\tH\x06R\adueZone\x88\x01\x01B\b\n" +
 	"\x06_titleB\a\n" +
 	"\x05_doneB\x0e\n" +
-	"\f_description\"#\n" +
+	"\f_descriptionB\t\n" +
+	"\a_due_atB\f\n" +
+	"\n" +
+	"_remind_atB\x0e\n" +
+	"\f_due_all_dayB\v\n" +
+	"\t_due_zone\"#\n" +
 	"\x11DeleteTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
 	"\x12DeleteTodoResponse2\xa7\x03\n" +

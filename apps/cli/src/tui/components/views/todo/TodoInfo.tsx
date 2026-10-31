@@ -1,6 +1,7 @@
 import { Box, Text } from "ink";
 
 import type { Project, Todo } from "@dox/core";
+import { dueLabel, isOverdue } from "@dox/core";
 
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
@@ -14,7 +15,7 @@ interface TodoInfoProps {
   panelHeight: number;
 }
 
-const FIXED_ROWS = 10;
+const BASE_FIXED_ROWS = 10;
 const DESC_HEADER = 2;
 const PANEL_CHROME = 4;
 
@@ -39,9 +40,19 @@ export function TodoInfo({
   const statusColor = todo.done ? color.success : color.accent;
   const statusLabel = todo.done ? "Done" : "Open";
 
+  const dueAt = todo.dueAt === undefined ? undefined : Number(todo.dueAt);
+  const allDay = todo.dueAllDay ?? false;
+  const remindAt =
+    todo.remindAt === undefined ? undefined : Number(todo.remindAt);
+  const metaRows =
+    (dueAt !== undefined ? 1 : 0) + (remindAt !== undefined ? 1 : 0);
+
   const contentW = Math.max(10, panelWidth - PANEL_CHROME);
   const contentH = Math.max(0, panelHeight - PANEL_CHROME);
-  const descBudget = Math.max(0, contentH - FIXED_ROWS - DESC_HEADER);
+  const descBudget = Math.max(
+    0,
+    contentH - BASE_FIXED_ROWS - metaRows - DESC_HEADER,
+  );
   const rawDesc = todo.description?.trim() ?? "";
   const preview =
     rawDesc && descBudget > 0
@@ -95,6 +106,25 @@ export function TodoInfo({
         <InfoRow label="Updated">
           <Text>{relativeTime(nowMs, todo.updatedAt)} ago</Text>
         </InfoRow>
+        {dueAt !== undefined && (
+          <InfoRow label="Due">
+            <Text
+              color={
+                isOverdue(dueAt, allDay, nowMs) ? color.danger : color.warn
+              }
+            >
+              {dueLabel(dueAt, allDay, nowMs, todo.dueZone)}
+              {allDay ? " (all-day)" : ""}
+            </Text>
+          </InfoRow>
+        )}
+        {remindAt !== undefined && (
+          <InfoRow label="Remind">
+            <Text color={color.accent2}>
+              {dueLabel(remindAt, false, nowMs)}
+            </Text>
+          </InfoRow>
+        )}
       </Box>
 
       {}

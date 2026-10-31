@@ -9,6 +9,8 @@ import {
 import { TextInput } from "@inkjs/ui";
 import { useState } from "react";
 
+import { parseWhen } from "@dox/core";
+
 import { color, icon } from "../../../theme";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
@@ -18,23 +20,35 @@ import { TitledPanel } from "../../primitives/TitledPanel";
 export interface TodoEditorPayload {
   title: string;
   description: string;
+  /** Raw deadline text; empty clears. */
+  due: string;
+  /** Raw reminder text; empty clears. */
+  remind: string;
 }
 
 interface TodoEditorViewProps {
   mode: "add" | "edit";
   defaultTitle?: string;
   defaultDescription?: string;
+  defaultDue?: string;
+  defaultRemind?: string;
   onSubmit: (payload: TodoEditorPayload) => void;
   onCancel: () => void;
 }
 
 const TITLE_FIELD = "todo-editor:title";
+const DUE_FIELD = "todo-editor:due";
+const REMIND_FIELD = "todo-editor:remind";
 const DESC_FIELD = "todo-editor:description";
+
+const WHEN_HINT = '2026-11-05 · "2026-11-05 09:30" · 09:30 · +2h';
 
 export function TodoEditorView({
   mode,
   defaultTitle,
   defaultDescription,
+  defaultDue,
+  defaultRemind,
   onSubmit,
   onCancel,
 }: TodoEditorViewProps) {
@@ -44,8 +58,13 @@ export function TodoEditorView({
 
   const [title, setTitle] = useState(defaultTitle ?? "");
   const [description, setDescription] = useState(defaultDescription ?? "");
+  const [due, setDue] = useState(defaultDue ?? "");
+  const [remind, setRemind] = useState(defaultRemind ?? "");
 
   const { focus } = useFocusManager();
+
+  const dueInvalid = due.trim().length > 0 && !parseWhen(due);
+  const remindInvalid = remind.trim().length > 0 && !parseWhen(remind);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -58,7 +77,9 @@ export function TodoEditorView({
         onCancel();
         return;
       }
-      onSubmit({ title: trimmed, description });
+      // Keep the sheet open on bad input so the user's typing survives.
+      if (dueInvalid || remindInvalid) return;
+      onSubmit({ title: trimmed, description, due, remind });
     }
   });
 
@@ -66,7 +87,7 @@ export function TodoEditorView({
   const subtitle =
     mode === "add"
       ? "Capture a new task. Ctrl+S to save · Esc cancels."
-      : "Update the title and optional markdown description.";
+      : "Update the title, deadline, reminder, and markdown description.";
 
   const cardWidth = Math.min(80, cols - 8);
 
@@ -96,11 +117,58 @@ export function TodoEditorView({
                 onChange={setTitle}
                 onSubmit={(value) => {
                   setTitle(value);
+                  focus(DUE_FIELD);
+                }}
+              />
+            )}
+          </Field>
+
+          <Field id={DUE_FIELD} label="due" value={due}>
+            {(focused) => (
+              <TextInput
+                isDisabled={!focused}
+                defaultValue={defaultDue}
+                placeholder={`optional · ${WHEN_HINT}`}
+                onChange={setDue}
+                onSubmit={(value) => {
+                  setDue(value);
+                  focus(REMIND_FIELD);
+                }}
+              />
+            )}
+          </Field>
+          {dueInvalid && (
+            <Box marginLeft={4}>
+              <Text color={color.danger}>unrecognised date · {WHEN_HINT}</Text>
+            </Box>
+          )}
+
+          <Field id={REMIND_FIELD} label="remind" value={remind}>
+            {(focused) => (
+              <TextInput
+                isDisabled={!focused}
+                defaultValue={defaultRemind}
+                placeholder="optional · defaults to the due time"
+                onChange={setRemind}
+                onSubmit={(value) => {
+                  setRemind(value);
                   focus(DESC_FIELD);
                 }}
               />
             )}
           </Field>
+          {remindInvalid && (
+            <Box marginLeft={4}>
+              <Text color={color.danger}>unrecognised time · {WHEN_HINT}</Text>
+            </Box>
+          )}
+          {!remindInvalid && due.trim() !== "" && remind.trim() === "" && (
+            <Box marginLeft={4}>
+              <Text color={color.muted} dimColor>
+                you will be reminded at the due time
+              </Text>
+            </Box>
+          )}
 
           <Field id={DESC_FIELD} label="description" value={description}>
             {(focused) => (
@@ -117,8 +185,7 @@ export function TodoEditorView({
 
           <Box marginTop={1}>
             <Text color={color.muted}>
-              Tab to switch fields · Enter inserts newline · Ctrl+S to save ·
-              Esc cancels
+              Enter jumps to the next field · Ctrl+S to save · Esc cancels
             </Text>
           </Box>
         </TitledPanel>
@@ -128,7 +195,7 @@ export function TodoEditorView({
         version={VERSION}
         outerPadX={1}
         hints={[
-          ["tab", "next field"],
+          ["⏎", "next field"],
           ["^S", "save"],
           ["esc", "cancel"],
         ]}

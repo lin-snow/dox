@@ -5,6 +5,7 @@ import {
   type Config,
   EventClient,
   InviteClient,
+  NotificationClient,
   ProjectClient,
   TodoClient,
   UserClient,
@@ -35,6 +36,7 @@ function Root({ initialConfig, initialReason }: RootProps) {
   const api = new TodoClient(fetcher, config.server);
   const projects = new ProjectClient(fetcher, config.server);
   const events = new EventClient(fetcher, config.server);
+  const notifications = new NotificationClient(fetcher, config.server);
   const users = new UserClient(fetcher, config.server);
   const invites = new InviteClient(fetcher, config.server);
   return (
@@ -42,6 +44,7 @@ function Root({ initialConfig, initialReason }: RootProps) {
       api={api}
       projects={projects}
       events={events}
+      notifications={notifications}
       users={users}
       invites={invites}
       identity={{

@@ -59,7 +59,8 @@ Package responsibilities (do not invent new ones — see `dox-server-layout` mem
 - `caller/` — `Caller{UserID, UserName, Role}` carried through `context.Context`. Middleware writes, handlers read via `MustFrom`.
 - `authn/` — JWT verification + middleware. `publicPaths` is the **only** allowlist: `/v1/auth/server-info`, `/v1/auth/register`, `/v1/auth/login`. Everything else requires a bearer token.
 - `authz/` — three project-scoped predicates: `CanReadProject`, `CanWriteProjectTodos`, `CanAdminProject`. Status-code policy is explicit: **reads on invisible objects return NotFound (no existence leak); writes by visible-but-unprivileged callers return PermissionDenied.**
-- `handler/` — RPC handlers. One file per service. Mutations that need to publish bus messages atomically wrap the write + `bus.Publish` in `runInTx` (`handler/events.go`) so a subscriber failure rolls the mutation back.
+- `notifier/` — the due-date reminder sweep: a ticker goroutine (same shape as the retention sweep) that scans open todos by `COALESCE(remind_at, due_at)`, writes idempotent `notifications` rows and hands them to optional `Deliverer`s. Deliberately **not** a `bus` subscriber: the bus is tx-bound and reentrant with mutations, reminders are time-triggered.
+- `handler/` — RPC handlers. One file per service. Mutations that need to publish bus messages atomically wrap the write + `bus.Publish` in `runInTx` (`handler/events.go`) so a subscriber failure rolls the mutation back. `handler/notification.go` is read/ack only — clients can never fabricate reminders.
 - `bus/` — in-process synchronous pub/sub. Mutation handlers publish typed `Msg` values; the default `ActivityRecorder` subscriber persists them as `events` rows. To add a new activity verb: declare a struct + `msg()` method in `bus/bus.go`, add a recorder case, publish from the handler. Adding a new subscriber (webhook/audit) means passing it to `bus.New(...)` in `app.go` — handler code is untouched.
 - `app/` — wiring + the retention sweep loop in `cleanup.go`.
 - `config/` — env-driven (`DOX_DB_PATH`, `DOX_LISTEN_ADDR`, `DOX_LOG_LEVEL`, `DOX_EVENT_RETENTION`).
@@ -76,9 +77,11 @@ SQLite, via sqlc, with goose-style migrations.
 
 IDs are ULIDs (`oklog/ulid/v2`). Timestamps are `int64` unix milliseconds. Inbox = `project_id IS NULL`.
 
+Deadlines: `todos.due_at` (the deadline), `todos.remind_at` (the ping instant, NULL = at `due_at`), `todos.due_all_day` + `todos.due_zone` (calendar date + display zone; an all-day todo without an explicit `remind_at` never fires). `notifications` is a delivery ledger keyed `UNIQUE (user_id, todo_id, kind, scheduled_for)` — rows are written only when a reminder fires, so editing a deadline self-invalidates and re-running a sweep is a no-op.
+
 ### Client (apps/cli/, packages/core/)
 
-`apps/cli/src/index.ts` is the entry: if invoked on a TTY with no subcommand, launches the Ink TUI; otherwise dispatches to `commander` subcommands. CLI commands and TUI components both call into `packages/core`, which holds the typed HTTP client, the `~/.config/dox/config.toml` reader/writer, and resource SDKs (`auth/`, `todo/`, `project/`, `invite/`, `event/`, `user/`).
+`apps/cli/src/index.ts` is the entry: if invoked on a TTY with no subcommand, launches the Ink TUI; otherwise dispatches to `commander` subcommands. CLI commands and TUI components both call into `packages/core`, which holds the typed HTTP client, the `~/.config/dox/config.toml` reader/writer, and resource SDKs (`auth/`, `todo/`, `project/`, `invite/`, `event/`, `user/`, `notifications/`). Due/remind input strings ("2026-11-05", "09:30", "+2h") are parsed by one shared module, `packages/core/src/time/` — never re-implement that parsing in a view.
 
 Onboarding is non-obvious: read **`docs/onboarding.md`** before touching anything under `apps/cli/src/tui/components/Onboarding.tsx` or the auth handlers. The state machine, why the branch picker is always shown, and the reauth path are all documented there.
 
@@ -98,4 +101,5 @@ Onboarding is non-obvious: read **`docs/onboarding.md`** before touching anythin
 - Adding a new RPC: edit the relevant `proto/dox/v1/*.proto`, run `just gen`, implement the handler in `apps/server/internal/handler/`, decide if it's public (add to `publicPaths`) or auth-required, then wire the client SDK in `packages/core/src/<resource>/`.
 - Adding a new schema change: write a new migration in `internal/db/migrations/`, add queries in `internal/db/queries/*.sql`, run `just gen`. Migrations run automatically on `db.Open`.
 - Adding a new activity verb: see the `bus/` description above — three small edits, no handler changes elsewhere.
+- Adding an out-of-band reminder channel (mail, webhook, ntfy): implement `notifier.Deliverer` and pass it to `notifier.New(...)` in `app.go`. The in-app channel needs nothing — clients poll `ListNotifications`.
 - Before opening a PR, run `just check && just test`. `just check` runs proto-lint, gofmt, go vet, golangci-lint, prettier, eslint, and tsc in one pass and prints a summary table.

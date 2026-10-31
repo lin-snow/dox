@@ -3,7 +3,8 @@ import type { Project } from "@dox/core";
 
 import { color, icon } from "../../theme";
 
-export type Filter = "inbox" | "done" | { type: "project"; id: string };
+export type Filter =
+  "inbox" | "done" | "today" | { type: "project"; id: string };
 
 export function filterKey(f: Filter): string {
   if (typeof f === "string") return f;
@@ -13,6 +14,7 @@ export function filterKey(f: Filter): string {
 export function filterLabel(f: Filter, projects: Project[]): string {
   if (f === "inbox") return "Private";
   if (f === "done") return "Done";
+  if (f === "today") return "Due";
   const p = projects.find((p) => p.id === f.id);
   return p?.name ?? "Project";
 }
@@ -22,7 +24,7 @@ interface SidebarProps {
   current: Filter;
   focused: boolean;
   cursor: number;
-  counts: { inbox: number; perProject: Record<string, number> };
+  counts: { inbox: number; today: number; perProject: Record<string, number> };
 }
 
 interface Row {
@@ -40,7 +42,10 @@ export function Sidebar({
   cursor,
   counts,
 }: SidebarProps) {
-  const rows: Row[] = [{ key: "inbox", label: "Private", count: counts.inbox }];
+  const rows: Row[] = [
+    { key: "today", label: "Due", count: counts.today },
+    { key: "inbox", label: "Private", count: counts.inbox },
+  ];
   if (projects.length > 0) {
     rows.push({ key: "__divider__", label: "", count: 0, divider: true });
     for (const p of projects) {

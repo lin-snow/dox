@@ -5,6 +5,7 @@ import { renderVersionBanner } from "./banner";
 import * as auth from "./cli/auth";
 import * as config from "./cli/config";
 import * as invite from "./cli/invite";
+import * as notifications from "./cli/notifications";
 import * as project from "./cli/project";
 import * as server from "./cli/server";
 import * as todo from "./cli/todo";
@@ -91,6 +92,11 @@ program
     "--description-file <path>",
     "read markdown body from file ('-' for stdin)",
   )
+  .option(
+    "--due <when>",
+    'deadline: 2026-11-05 | "2026-11-05 09:30" | 09:30 | +2h',
+  )
+  .option("--remind <when>", "remind at: same forms as --due (default: at due)")
   .action(function (this: Command, title: string) {
     return todo.add(title, this.optsWithGlobals());
   });
@@ -128,6 +134,10 @@ program
     "read new markdown body from file ('-' for stdin)",
   )
   .option("--clear-description", "remove the markdown body")
+  .option("--due <when>", "set the deadline (bare date = all-day)")
+  .option("--clear-due", "remove the deadline (and its all-day flag/zone)")
+  .option("--remind <when>", "set the reminder instant")
+  .option("--clear-remind", "remove the reminder (falls back to the deadline)")
   .action(function (this: Command, id: string) {
     return todo.edit(id, this.optsWithGlobals());
   });
@@ -138,6 +148,20 @@ program
   .description("Delete a todo permanently")
   .action(function (this: Command, id: string) {
     return todo.rm(id, this.optsWithGlobals());
+  });
+
+program
+  .command("notifications")
+  .alias("reminders")
+  .description("List reminders that fired for you")
+  .option("--unread", "only unread reminders")
+  .option("--limit <n>", "max rows to return (server clamps to 100)")
+  .option("--ack [ids...]", "mark reminders read (omit ids to ack all unread)")
+  .action(function (this: Command) {
+    const opts = this.optsWithGlobals<{ ack?: boolean | string[] }>();
+    const ids = Array.isArray(opts.ack) ? opts.ack : [];
+    if (opts.ack !== undefined) return notifications.ack(ids, opts);
+    return notifications.list(opts);
   });
 
 const proj = program

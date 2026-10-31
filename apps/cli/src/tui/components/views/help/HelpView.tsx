@@ -25,6 +25,7 @@ const act: ReadonlyArray<readonly [string, string]> = [
   ["m", "manage project"],
   ["D", "delete project"],
   ["/", "search todos"],
+  ["n", "reminders"],
   ["r", "refresh"],
 ];
 
