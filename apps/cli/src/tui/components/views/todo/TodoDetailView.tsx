@@ -1,8 +1,7 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 
 import type { Project, Todo } from "@dox/core";
 
-import { useTerminalSize } from "../../../hooks";
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
 import { VERSION } from "../../../../version";
@@ -35,7 +34,7 @@ export function TodoDetailView({
   onEdit,
   onDelete,
 }: TodoDetailViewProps) {
-  const { cols, rows } = useTerminalSize();
+  const { columns: cols, rows } = useWindowSize();
   // Card dimensions: wide enough for the two-column metadata grid + a
   // comfortable description column, but capped so the layout reads as a
   // focused page rather than a full-screen surface.

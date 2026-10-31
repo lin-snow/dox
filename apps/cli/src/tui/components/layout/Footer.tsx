@@ -1,6 +1,5 @@
-import { Box, Text } from "ink";
+import { Box, Text, useWindowSize } from "ink";
 
-import { useTerminalSize } from "../../hooks";
 import { color, icon } from "../../theme";
 
 interface FooterProps {
@@ -20,7 +19,7 @@ const POWERED_BY = "powered by dox";
 //                                      labels in muted           mode       in 2-tone
 //                                      `·` separators
 export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
-  const { cols } = useTerminalSize();
+  const { columns: cols } = useWindowSize();
 
   // Plain-text length used to size the dash run. Mirror the visible cells of
   // the right-side cluster precisely; the renderer below uses the same content.

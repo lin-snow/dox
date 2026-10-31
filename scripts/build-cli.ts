@@ -124,7 +124,8 @@ const manifest = {
   // plain filename instead. (Verified against npm bundled with Node 25.)
   bin: { dox: "dox.js" },
   files: ["dox.js", "README.md"],
-  engines: { node: ">=20" },
+  // Node 26 is Active LTS; CI builds/publishes on the same major.
+  engines: { node: ">=26" },
   publishConfig: { access: "public" },
 };
 writeFileSync(`${DIST}/package.json`, JSON.stringify(manifest, null, 2) + "\n");

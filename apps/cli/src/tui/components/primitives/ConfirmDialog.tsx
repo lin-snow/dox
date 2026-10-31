@@ -1,4 +1,4 @@
-import { Box, Text, useStdout } from "ink";
+import { Box, Text, useWindowSize } from "ink";
 import type { ReactNode } from "react";
 
 import { color, icon } from "../../theme";
@@ -35,9 +35,9 @@ export function ConfirmDialog({
   cancelLabel = "No",
   footerMode = "confirm",
 }: ConfirmDialogProps) {
-  const { stdout } = useStdout();
-  const cols = Math.max(40, stdout?.columns ?? 100);
-  const rows = Math.max(10, stdout?.rows ?? 30);
+  const { columns, rows: windowRows } = useWindowSize();
+  const cols = Math.max(40, columns);
+  const rows = Math.max(10, windowRows);
   const cardWidth = Math.min(60, cols - 8);
 
   return (

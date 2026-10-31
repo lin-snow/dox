@@ -1,8 +1,5 @@
 import { Text } from "ink";
 import { Marked } from "marked";
-// marked-terminal ships no type declarations; the runtime is well-behaved JS
-// and we only need the default plugin factory.
-// @ts-expect-error - no types published
 import { markedTerminal } from "marked-terminal";
 import { useMemo } from "react";
 

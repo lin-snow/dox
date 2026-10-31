@@ -1,6 +1,5 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 
-import { useTerminalSize } from "../../../hooks";
 import { color, icon } from "../../../theme";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
@@ -41,7 +40,7 @@ const app: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export function HelpView({ onClose }: HelpViewProps) {
-  const { cols, rows: totalRows } = useTerminalSize();
+  const { columns: cols, rows: totalRows } = useWindowSize();
 
   useInput((input, key) => {
     if (input === "?" || key.escape || key.return) onClose();

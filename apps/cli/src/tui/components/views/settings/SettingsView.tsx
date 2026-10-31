@@ -1,8 +1,7 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 
 import type { SettingsTabSpec, SettingsRow } from "../../../settings";
 import type { SettingsTabKey } from "../../../state";
-import { useTerminalSize } from "../../../hooks";
 import { color } from "../../../theme";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
@@ -38,7 +37,7 @@ export function SettingsView({
   onClose,
   inputPaused = false,
 }: SettingsViewProps) {
-  const { cols, rows } = useTerminalSize();
+  const { columns: cols, rows } = useWindowSize();
   // Card dimensions: the two-column body (RowList + Detail) wants real width
   // to breathe, hence a higher cap than search/detail. Min keeps the layout
   // legible on 80×24 terminals.

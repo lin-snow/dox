@@ -1,4 +1,4 @@
-import { Box, Text, useInput, useStdout } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 import { TextInput } from "@inkjs/ui";
 import { useRef, useState } from "react";
 
@@ -45,9 +45,9 @@ export function SettingsFormModal({
   onSubmit,
   onCancel,
 }: SettingsFormModalProps) {
-  const { stdout } = useStdout();
-  const cols = Math.max(60, stdout?.columns ?? 100);
-  const rows = Math.max(15, stdout?.rows ?? 30);
+  const { columns, rows: windowRows } = useWindowSize();
+  const cols = Math.max(60, columns);
+  const rows = Math.max(15, windowRows);
   const cardWidth = Math.min(72, cols - 8);
 
   // Accumulator for each field's submitted value. Lives in a ref because we

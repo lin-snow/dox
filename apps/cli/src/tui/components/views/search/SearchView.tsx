@@ -1,10 +1,9 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 import { TextInput } from "@inkjs/ui";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { Project, Todo } from "@dox/core";
 
-import { useTerminalSize } from "../../../hooks";
 import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
 import { VERSION } from "../../../../version";
@@ -45,7 +44,7 @@ export function SearchView({
   onOpen,
   onClose,
 }: SearchViewProps) {
-  const { cols, rows } = useTerminalSize();
+  const { columns: cols, rows } = useWindowSize();
   // Card dimensions: capped so wide terminals don't stretch the input + result
   // list into uncomfortable line lengths. The min keeps the layout legible on
   // 80×24 terminals — anything smaller would degrade regardless.

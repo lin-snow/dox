@@ -1,4 +1,4 @@
-import { Box, Text, useApp, useInput } from "ink";
+import { Box, Text, useApp, useInput, useWindowSize } from "ink";
 import { Spinner } from "@inkjs/ui";
 import { homedir } from "node:os";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
@@ -33,7 +33,7 @@ import { TodoDetailView } from "./components/views/todo/TodoDetailView";
 import { TodoEditorView } from "./components/views/todo/TodoEditorView";
 import { TodoInfo } from "./components/views/todo/TodoInfo";
 import { SettingsModal } from "./components/views/settings/SettingsModal";
-import { useMinHold, useSpinnerFrame, useTerminalSize } from "./hooks";
+import { useMinHold, useSpinnerFrame } from "./hooks";
 import { relativeTime, swatchColor } from "./util";
 import { buildSettingsTabs } from "./settings";
 import { color, icon } from "./theme";
@@ -92,7 +92,7 @@ export function App({
   const [state, dispatch] = useReducer(reducer, initialState);
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const { exit } = useApp();
-  const { cols: totalCols, rows: totalRows } = useTerminalSize();
+  const { columns: totalCols, rows: totalRows } = useWindowSize();
 
   const refresh = useCallback(async () => {
     dispatch({ type: "SYNC_START" });

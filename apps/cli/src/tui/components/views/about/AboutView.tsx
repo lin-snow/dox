@@ -1,6 +1,5 @@
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useWindowSize } from "ink";
 
-import { useTerminalSize } from "../../../hooks";
 import { color, icon } from "../../../theme";
 import { Footer } from "../../layout/Footer";
 import { Logo } from "../../layout/Logo";
@@ -15,7 +14,7 @@ const REPO = "https://github.com/lin-snow/dox";
 const LICENSE = "AGPL-3.0";
 
 export function AboutView({ version, onClose }: AboutViewProps) {
-  const { rows: totalRows } = useTerminalSize();
+  const { rows: totalRows } = useWindowSize();
 
   useInput((_input, key) => {
     if (key.escape || key.return) onClose();
