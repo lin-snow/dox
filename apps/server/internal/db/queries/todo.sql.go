@@ -305,22 +305,20 @@ func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullStri
 	return items, nil
 }
 
-const updateTodo = `-- name: UpdateTodo :one
+const updateTodoDescription = `-- name: UpdateTodoDescription :one
 UPDATE todos
-SET title = ?, done = ?, description = ?, updated_at = ?
+SET description = ?, updated_at = ?
 WHERE id = ?
 RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
 `
 
-type UpdateTodoParams struct {
-	Title       string
-	Done        bool
+type UpdateTodoDescriptionParams struct {
 	Description sql.NullString
 	UpdatedAt   int64
 	ID          string
 }
 
-type UpdateTodoRow struct {
+type UpdateTodoDescriptionRow struct {
 	ID          string
 	Title       string
 	Done        bool
@@ -331,15 +329,89 @@ type UpdateTodoRow struct {
 	UpdatedAt   int64
 }
 
-func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (UpdateTodoRow, error) {
-	row := q.db.QueryRowContext(ctx, updateTodo,
-		arg.Title,
-		arg.Done,
-		arg.Description,
-		arg.UpdatedAt,
-		arg.ID,
+func (q *Queries) UpdateTodoDescription(ctx context.Context, arg UpdateTodoDescriptionParams) (UpdateTodoDescriptionRow, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoDescription, arg.Description, arg.UpdatedAt, arg.ID)
+	var i UpdateTodoDescriptionRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.Description,
+		&i.ProjectID,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
-	var i UpdateTodoRow
+	return i, err
+}
+
+const updateTodoDone = `-- name: UpdateTodoDone :one
+UPDATE todos
+SET done = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+`
+
+type UpdateTodoDoneParams struct {
+	Done      bool
+	UpdatedAt int64
+	ID        string
+}
+
+type UpdateTodoDoneRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) UpdateTodoDone(ctx context.Context, arg UpdateTodoDoneParams) (UpdateTodoDoneRow, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoDone, arg.Done, arg.UpdatedAt, arg.ID)
+	var i UpdateTodoDoneRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Done,
+		&i.Description,
+		&i.ProjectID,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTodoTitle = `-- name: UpdateTodoTitle :one
+UPDATE todos
+SET title = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at
+`
+
+type UpdateTodoTitleParams struct {
+	Title     string
+	UpdatedAt int64
+	ID        string
+}
+
+type UpdateTodoTitleRow struct {
+	ID          string
+	Title       string
+	Done        bool
+	Description sql.NullString
+	ProjectID   sql.NullString
+	CreatedBy   string
+	CreatedAt   int64
+	UpdatedAt   int64
+}
+
+func (q *Queries) UpdateTodoTitle(ctx context.Context, arg UpdateTodoTitleParams) (UpdateTodoTitleRow, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoTitle, arg.Title, arg.UpdatedAt, arg.ID)
+	var i UpdateTodoTitleRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,

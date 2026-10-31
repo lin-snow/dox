@@ -1,12 +1,15 @@
 package authn
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -23,6 +26,60 @@ const (
 	argonKeyLen  = 32
 	argonSaltLen = 16
 )
+
+// ErrHashBusy is returned when the password-hashing gate stays saturated past
+// hashQueueTimeout. argon2id at 64 MiB per call is intentionally expensive;
+// without a cap, a burst of login attempts can exhaust server memory.
+var ErrHashBusy = errors.New("authn: password hashing saturated")
+
+const hashQueueTimeout = 5 * time.Second
+
+// hashSlots caps concurrent argon2 work. Each call allocates 64 MiB, so the
+// cap is deliberately small: four slots bound the worst case at 256 MiB.
+var hashSlots = make(chan struct{}, min(4, max(2, runtime.NumCPU())))
+
+// HashPasswordContext is HashPassword bounded by the global hashing gate and
+// the caller's context. Handlers use this instead of HashPassword directly.
+func HashPasswordContext(ctx context.Context, plain string) (string, error) {
+	var encoded string
+	err := withHashSlot(ctx, func() error {
+		var err error
+		encoded, err = HashPassword(plain)
+		return err
+	})
+	return encoded, err
+}
+
+// VerifyPasswordContext is VerifyPassword bounded by the same gate.
+func VerifyPasswordContext(ctx context.Context, candidate, encoded string) (bool, error) {
+	var ok bool
+	err := withHashSlot(ctx, func() error {
+		ok = VerifyPassword(candidate, encoded)
+		return nil
+	})
+	return ok, err
+}
+
+func withHashSlot(ctx context.Context, fn func() error) error {
+	select {
+	case hashSlots <- struct{}{}:
+		defer func() { <-hashSlots }()
+		return fn()
+	default:
+	}
+
+	timer := time.NewTimer(hashQueueTimeout)
+	defer timer.Stop()
+	select {
+	case hashSlots <- struct{}{}:
+		defer func() { <-hashSlots }()
+		return fn()
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return ErrHashBusy
+	}
+}
 
 // HashPassword returns an argon2id PHC-encoded string. Salt is per-call random.
 func HashPassword(plain string) (string, error) {

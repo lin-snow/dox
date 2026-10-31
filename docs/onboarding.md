@@ -126,10 +126,13 @@ The server has no users. The caller will be the **owner**.
 - After password confirmation, optional `server_name` / `server_description`
   are prompted; submit an empty value (just press Enter) to skip either.
   Both can be set later via `dox server set-name` / `set-description`.
-- `Register` request: server runs in a single best-effort sequence —
-  inserts the user with `role=owner`, upserts `settings.server_owner_id`,
-  upserts the optional identity fields, seeds three onboarding example
-  todos into the new owner's Inbox.
+- `Register` request: the server runs the whole first-user setup in one
+  transaction — inserts the user with `role=owner`, upserts
+  `settings.server_owner_id`, upserts the optional identity fields, and seeds
+  three onboarding example todos into the new owner's Inbox. Identity and
+  seed failures stay non-fatal (the account still commits); the invite
+  redemption path is also transactional, so a failed registration leaves the
+  code unused.
 
 ### `login`
 

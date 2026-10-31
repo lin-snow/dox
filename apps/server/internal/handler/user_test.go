@@ -33,7 +33,7 @@ func newUserFixture(t *testing.T) (*handler.User, *queries.Queries) {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 	q := queries.New(conn)
-	return handler.NewUser(q, testSecret), q
+	return handler.NewUser(conn, q, testBus(), testSecret), q
 }
 
 // callerCtxFor returns a context with the caller derived from a JWT issued

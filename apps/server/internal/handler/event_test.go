@@ -44,7 +44,7 @@ func newEventFixture(t *testing.T) *eventFixture {
 	b := testBus()
 	return &eventFixture{
 		todo:  handler.NewTodo(conn, q, b),
-		inv:   handler.NewInvite(conn, q, b),
+		inv:   handler.NewInvite(conn, q, b, testSecret),
 		ev:    handler.NewEvent(q),
 		proj:  handler.NewProject(q),
 		q:     q,

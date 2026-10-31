@@ -172,15 +172,8 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 	if err != nil {
 		return nil, err
 	}
-	existing, err := s.q.GetTodo(ctx, id)
-	if err != nil {
-		return nil, translateGetTodoErr(err, id)
-	}
-	if err := s.assertWritable(ctx, c.UserID, todoView(existing)); err != nil {
-		return nil, err
-	}
 
-	title := existing.Title
+	var title *string
 	if req.Title != nil {
 		t := strings.TrimSpace(*req.Title)
 		if t == "" {
@@ -189,52 +182,80 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		if len(t) > maxTitleLen {
 			return nil, status.Errorf(codes.InvalidArgument, "title exceeds %d bytes", maxTitleLen)
 		}
-		title = t
+		title = &t
 	}
-	done := existing.Done
-	if req.Done != nil {
-		done = *req.Done
-	}
-	description := existing.Description
+	var description sql.NullString
 	if req.Description != nil {
-		next, err := normalizeDescription(req.Description)
+		description, err = normalizeDescription(req.Description)
 		if err != nil {
 			return nil, err
 		}
-		description = next
 	}
 
 	now := s.now()
-	emitCompleted := !existing.Done && done
-
-	var row queries.UpdateTodoRow
+	var view todoView
 	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
-		var err error
-		row, err = q.UpdateTodo(ctx, queries.UpdateTodoParams{
-			Title:       title,
-			Done:        done,
-			Description: description,
-			UpdatedAt:   now,
-			ID:          id,
-		})
+		// Read, authorize, patch, and publish inside one transaction so the
+		// completion event and each partial update see the same row version.
+		current, err := q.GetTodo(ctx, id)
 		if err != nil {
+			return translateGetTodoErr(err, id)
+		}
+		view = todoView(current)
+		if err := assertWritable(ctx, q, c.UserID, view); err != nil {
 			return err
 		}
-		if !emitCompleted {
-			return nil
+
+		if title != nil {
+			row, err := q.UpdateTodoTitle(ctx, queries.UpdateTodoTitleParams{
+				Title: *title, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
 		}
-		return s.bus.Publish(ctx, q, bus.TodoCompleted{
-			ActorID:   c.UserID,
-			TodoID:    id,
-			Title:     title,
-			ProjectID: existing.ProjectID,
-			At:        now,
-		})
+		if req.Done != nil {
+			row, err := q.UpdateTodoDone(ctx, queries.UpdateTodoDoneParams{
+				Done: *req.Done, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
+		}
+		if req.Description != nil {
+			row, err := q.UpdateTodoDescription(ctx, queries.UpdateTodoDescriptionParams{
+				Description: description, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
+		}
+
+		if !current.Done && view.Done {
+			return s.bus.Publish(ctx, q, bus.TodoCompleted{
+				ActorID:   c.UserID,
+				TodoID:    id,
+				Title:     view.Title,
+				ProjectID: view.ProjectID,
+				At:        now,
+			})
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "update todo: %v", err)
+		return nil, err
 	}
-	return todoView(row).toProto(true), nil
+	return view.toProto(true), nil
+}
+
+func updateTodoError(err error, id string) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return status.Errorf(codes.NotFound, "todo %q not found", id)
+	}
+	return status.Errorf(codes.Internal, "update todo: %v", err)
 }
 
 func (s *Todo) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*doxv1.DeleteTodoResponse, error) {
@@ -247,7 +268,7 @@ func (s *Todo) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*d
 	if err != nil {
 		return nil, translateGetTodoErr(err, id)
 	}
-	if err := s.assertWritable(ctx, c.UserID, todoView(existing)); err != nil {
+	if err := assertWritable(ctx, s.q, c.UserID, todoView(existing)); err != nil {
 		return nil, err
 	}
 	if _, err := s.q.DeleteTodo(ctx, id); err != nil {
@@ -299,14 +320,14 @@ func (s *Todo) assertVisible(ctx context.Context, userID string, t todoView) err
 
 // assertWritable returns NotFound for invisible todos and PermissionDenied for
 // read-only access.
-func (s *Todo) assertWritable(ctx context.Context, userID string, t todoView) error {
+func assertWritable(ctx context.Context, q *queries.Queries, userID string, t todoView) error {
 	if !t.ProjectID.Valid {
 		if t.CreatedBy == userID {
 			return nil
 		}
 		return status.Errorf(codes.NotFound, "todo %q not found", t.ID)
 	}
-	return authz.CanWriteProjectTodos(ctx, s.q, userID, t.ProjectID.String)
+	return authz.CanWriteProjectTodos(ctx, q, userID, t.ProjectID.String)
 }
 
 func translateGetTodoErr(err error, id string) error {

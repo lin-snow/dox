@@ -11,6 +11,9 @@ type Config struct {
 	ListenAddr     string
 	LogLevel       slog.Level
 	EventRetention time.Duration
+	// TrustProxyHeaders makes the auth rate limiter read X-Forwarded-For.
+	// Enable only when a reverse proxy you control overwrites the header.
+	TrustProxyHeaders bool
 }
 
 const defaultEventRetention = 15 * 24 * time.Hour
@@ -44,6 +47,10 @@ func Load() (*Config, error) {
 		cfg.LogLevel = slog.LevelError
 	default:
 		cfg.LogLevel = slog.LevelInfo
+	}
+	switch os.Getenv("DOX_TRUST_PROXY") {
+	case "1", "true", "TRUE":
+		cfg.TrustProxyHeaders = true
 	}
 	return cfg, nil
 }

@@ -35,9 +35,21 @@ INSERT INTO todos (id, title, done, description, project_id, created_by, created
 VALUES (?, ?, 0, ?, ?, ?, ?, ?)
 RETURNING id, title, done, description, project_id, created_by, created_at, updated_at;
 
--- name: UpdateTodo :one
+-- name: UpdateTodoTitle :one
 UPDATE todos
-SET title = ?, done = ?, description = ?, updated_at = ?
+SET title = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at;
+
+-- name: UpdateTodoDone :one
+UPDATE todos
+SET done = ?, updated_at = ?
+WHERE id = ?
+RETURNING id, title, done, description, project_id, created_by, created_at, updated_at;
+
+-- name: UpdateTodoDescription :one
+UPDATE todos
+SET description = ?, updated_at = ?
 WHERE id = ?
 RETURNING id, title, done, description, project_id, created_by, created_at, updated_at;
 

@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -26,18 +25,20 @@ const defaultInviteTTL = 24 * time.Hour
 //     via Register; existing users redeem via AcceptInvite.
 type Invite struct {
 	doxv1.UnimplementedInviteServiceServer
-	db  *sql.DB
-	q   *queries.Queries
-	bus *bus.Bus
-	now func() int64
+	db     *sql.DB
+	q      *queries.Queries
+	bus    *bus.Bus
+	secret []byte
+	now    func() int64
 }
 
-func NewInvite(db *sql.DB, q *queries.Queries, b *bus.Bus) *Invite {
+func NewInvite(db *sql.DB, q *queries.Queries, b *bus.Bus, secret []byte) *Invite {
 	return &Invite{
-		db:  db,
-		q:   q,
-		bus: b,
-		now: func() int64 { return time.Now().UTC().UnixMilli() },
+		db:     db,
+		q:      q,
+		bus:    b,
+		secret: secret,
+		now:    func() int64 { return time.Now().UTC().UnixMilli() },
 	}
 }
 
@@ -75,7 +76,7 @@ func (s *Invite) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReques
 	now := s.now()
 	expires := now + ttl.Milliseconds()
 	if err := s.q.CreateInvite(ctx, queries.CreateInviteParams{
-		CodeHash:  authn.HashInviteCode(code),
+		CodeHash:  authn.KeyedHashInviteCode(s.secret, code),
 		IssuedBy:  c.UserID,
 		ProjectID: projectID,
 		Role:      role,
@@ -100,34 +101,34 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		return nil, status.Error(codes.InvalidArgument, "code is required")
 	}
 	now := s.now()
-	row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
-		Now:      now,
-		UsedAt:   sql.NullInt64{Int64: now, Valid: true},
-		UsedBy:   sql.NullString{String: c.UserID, Valid: true},
-		CodeHash: authn.HashInviteCode(req.GetCode()),
-	})
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Error(codes.NotFound, "invite code is invalid, expired, or already used")
+	var projectID, role string
+	err := runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		row, err := consumeInvite(ctx, q, s.secret, req.GetCode(), sql.NullString{String: c.UserID, Valid: true}, now)
+		if err != nil {
+			return err
 		}
-		return nil, status.Errorf(codes.Internal, "consume invite: %v", err)
-	}
-	if !row.ProjectID.Valid {
-		return nil, status.Error(codes.FailedPrecondition, "server invites must be redeemed via Register on a fresh client")
-	}
-	projectID := row.ProjectID.String
-	if err := runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		if !row.ProjectID.Valid {
+			// Rollback restores used_at: rejecting a server invite here must
+			// not burn a code the owner can still hand to a new user.
+			return status.Error(codes.FailedPrecondition, "server invites must be redeemed via Register on a fresh client")
+		}
+		projectID = row.ProjectID.String
+		role = row.Role.String
+
 		if err := q.AddProjectMember(ctx, queries.AddProjectMemberParams{
 			ProjectID: projectID,
 			UserID:    c.UserID,
-			Role:      row.Role.String,
+			Role:      role,
 			AddedAt:   now,
 		}); err != nil {
-			return err
+			if isUniqueConstraint(err) {
+				return status.Error(codes.AlreadyExists, "already a member of this project")
+			}
+			return status.Errorf(codes.Internal, "add member: %v", err)
 		}
 		proj, err := q.GetProject(ctx, projectID)
 		if err != nil {
-			return err
+			return status.Errorf(codes.Internal, "load project: %v", err)
 		}
 		return s.bus.Publish(ctx, q, bus.MemberJoined{
 			ActorID:     c.UserID,
@@ -135,12 +136,13 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 			ProjectName: proj.Name,
 			At:          now,
 		})
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "add member: %v", err)
+	})
+	if err != nil {
+		return nil, err
 	}
 	return &doxv1.AcceptInviteResponse{
 		ProjectId: projectID,
-		Role:      row.Role.String,
+		Role:      role,
 	}, nil
 }
 

@@ -43,10 +43,10 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("load jwt secret: %w", err)
 	}
 
-	user := handler.NewUser(q, secret)
-	proj := handler.NewProject(q)
 	b := bus.New(bus.NewActivityRecorder())
-	inv := handler.NewInvite(dbConn, q, b)
+	user := handler.NewUser(dbConn, q, b, secret)
+	proj := handler.NewProject(q)
+	inv := handler.NewInvite(dbConn, q, b, secret)
 	td := handler.NewTodo(dbConn, q, b)
 	ev := handler.NewEvent(q)
 
@@ -70,9 +70,17 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("register event: %w", err)
 	}
 
+	authLimiter := authn.NewRateLimiter(cfg.TrustProxyHeaders)
+
+	// /healthz is mounted outside the auth chain: probes never carry a token,
+	// and keeping it off the gateway leaves publicPaths untouched.
+	root := http.NewServeMux()
+	root.HandleFunc("/healthz", healthHandler(dbConn))
+	root.Handle("/", authn.Middleware(authn.NewJWTVerifier(secret))(authLimiter.Middleware(mux)))
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           authn.Middleware(authn.NewJWTVerifier(secret))(mux),
+		Handler:           root,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

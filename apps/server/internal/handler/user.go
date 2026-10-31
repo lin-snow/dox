@@ -16,6 +16,7 @@ import (
 
 	doxv1 "github.com/lin-snow/dox/apps/server/gen/dox/v1"
 	"github.com/lin-snow/dox/apps/server/internal/authn"
+	"github.com/lin-snow/dox/apps/server/internal/bus"
 	"github.com/lin-snow/dox/apps/server/internal/caller"
 	"github.com/lin-snow/dox/apps/server/internal/db/queries"
 	"github.com/lin-snow/dox/apps/server/internal/version"
@@ -38,14 +39,18 @@ const (
 type User struct {
 	doxv1.UnimplementedAuthServiceServer
 	doxv1.UnimplementedUserServiceServer
+	db     *sql.DB
 	q      *queries.Queries
+	bus    *bus.Bus
 	secret []byte
 	now    func() int64
 }
 
-func NewUser(q *queries.Queries, jwtSecret []byte) *User {
+func NewUser(db *sql.DB, q *queries.Queries, b *bus.Bus, jwtSecret []byte) *User {
 	return &User{
+		db:     db,
 		q:      q,
+		bus:    b,
 		secret: jwtSecret,
 		now:    func() int64 { return time.Now().UTC().UnixMilli() },
 	}
@@ -93,6 +98,10 @@ func (s *User) ServerInfo(ctx context.Context, _ *doxv1.ServerInfoRequest) (*dox
 // Register creates a new user. The first-ever caller becomes the owner and
 // may inline-set the server's display name/description. Subsequent callers
 // need an invite code, or registration_open=true.
+//
+// Everything that depends on the invite — consuming it, creating the user,
+// joining the project, publishing the join event — runs in one transaction.
+// A failure anywhere rolls the invite back to unused instead of burning it.
 func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1.RegisterResponse, error) {
 	userName := strings.TrimSpace(req.GetUserName())
 	if userName == "" {
@@ -105,93 +114,106 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 		return nil, status.Errorf(codes.InvalidArgument, "password must be at least %d characters", authn.MinPasswordLen)
 	}
 
-	count, err := s.q.CountUsers(ctx)
+	// Hash before opening the transaction: argon2id takes ~30ms and the DB
+	// pool has a single connection, so hashing inside the tx would stall every
+	// other request.
+	pwHash, err := authn.HashPasswordContext(ctx, req.GetPassword())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "count users: %v", err)
-	}
-	isFirstUser := count == 0
-
-	var (
-		role            = caller.RoleMember
-		joinProjectID   sql.NullString
-		joinProjectRole sql.NullString
-	)
-	switch {
-	case isFirstUser:
-		role = caller.RoleOwner
-	case req.InviteCode != nil && *req.InviteCode != "":
-		now := s.now()
-		row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
-			Now:      now,
-			UsedAt:   sql.NullInt64{Int64: now, Valid: true},
-			UsedBy:   sql.NullString{},
-			CodeHash: authn.HashInviteCode(*req.InviteCode),
-		})
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, status.Error(codes.NotFound, "invite code is invalid, expired, or already used")
-			}
-			return nil, status.Errorf(codes.Internal, "consume invite: %v", err)
-		}
-		joinProjectID = row.ProjectID
-		joinProjectRole = row.Role
-	default:
-		open, err := registrationOpen(ctx, s.q)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "load settings: %v", err)
-		}
-		if !open {
-			return nil, status.Error(codes.PermissionDenied, "registration is closed; ask the server owner for an invite code")
-		}
+		return nil, passwordHashError("hash password", err)
 	}
 
-	pwHash, err := authn.HashPassword(req.GetPassword())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "hash password: %v", err)
-	}
 	userID := ulid.Make().String()
-	if _, err := s.q.CreateUser(ctx, queries.CreateUserParams{
-		ID:           userID,
-		Name:         userName,
-		PasswordHash: pwHash,
-		Role:         role,
-		CreatedAt:    s.now(),
-	}); err != nil {
-		return nil, status.Errorf(codes.AlreadyExists, "user_name is taken or db error: %v", err)
-	}
+	now := s.now()
+	role := caller.RoleMember
+	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		count, err := q.CountUsers(ctx)
+		if err != nil {
+			return status.Errorf(codes.Internal, "count users: %v", err)
+		}
+		isFirstUser := count == 0
+		var joinProjectID, joinProjectRole sql.NullString
 
-	if joinProjectID.Valid && joinProjectRole.Valid {
-		if err := s.q.AddProjectMember(ctx, queries.AddProjectMemberParams{
-			ProjectID: joinProjectID.String,
-			UserID:    userID,
-			Role:      joinProjectRole.String,
-			AddedAt:   s.now(),
+		switch {
+		case isFirstUser:
+			role = caller.RoleOwner
+		case req.InviteCode != nil && *req.InviteCode != "":
+			row, err := consumeInvite(ctx, q, s.secret, *req.InviteCode, sql.NullString{}, now)
+			if err != nil {
+				return err
+			}
+			joinProjectID = row.ProjectID
+			joinProjectRole = row.Role
+		default:
+			open, err := registrationOpen(ctx, q)
+			if err != nil {
+				return status.Errorf(codes.Internal, "load settings: %v", err)
+			}
+			if !open {
+				return status.Error(codes.PermissionDenied, "registration is closed; ask the server owner for an invite code")
+			}
+		}
+
+		if _, err := q.CreateUser(ctx, queries.CreateUserParams{
+			ID:           userID,
+			Name:         userName,
+			PasswordHash: pwHash,
+			Role:         role,
+			CreatedAt:    now,
 		}); err != nil {
-			return nil, status.Errorf(codes.Internal, "add project member: %v", err)
+			return createUserError(err)
 		}
-	}
 
-	if isFirstUser {
-		_ = s.q.UpsertSetting(ctx, queries.UpsertSettingParams{
-			Key: settingServerOwnerID, Value: userID,
-		})
-		if req.ServerName != nil {
-			name := strings.TrimSpace(*req.ServerName)
-			if name != "" && len(name) <= maxServerNameLen {
-				_ = s.q.UpsertSetting(ctx, queries.UpsertSettingParams{
-					Key: settingServerName, Value: name,
-				})
+		if joinProjectID.Valid && joinProjectRole.Valid {
+			if err := q.AddProjectMember(ctx, queries.AddProjectMemberParams{
+				ProjectID: joinProjectID.String,
+				UserID:    userID,
+				Role:      joinProjectRole.String,
+				AddedAt:   now,
+			}); err != nil {
+				return status.Errorf(codes.Internal, "add project member: %v", err)
+			}
+			proj, err := q.GetProject(ctx, joinProjectID.String)
+			if err != nil {
+				return status.Errorf(codes.Internal, "load joined project: %v", err)
+			}
+			if err := s.bus.Publish(ctx, q, bus.MemberJoined{
+				ActorID:     userID,
+				ProjectID:   joinProjectID.String,
+				ProjectName: proj.Name,
+				At:          now,
+			}); err != nil {
+				return status.Errorf(codes.Internal, "publish member joined: %v", err)
 			}
 		}
-		if req.ServerDescription != nil {
-			desc := strings.TrimSpace(*req.ServerDescription)
-			if desc != "" && len(desc) <= maxServerDescLen {
-				_ = s.q.UpsertSetting(ctx, queries.UpsertSettingParams{
-					Key: settingServerDesc, Value: desc,
-				})
+
+		if isFirstUser {
+			if err := q.UpsertSetting(ctx, queries.UpsertSettingParams{
+				Key: settingServerOwnerID, Value: userID,
+			}); err != nil {
+				return status.Errorf(codes.Internal, "set server owner: %v", err)
 			}
+			if req.ServerName != nil {
+				name := strings.TrimSpace(*req.ServerName)
+				if name != "" && len(name) <= maxServerNameLen {
+					_ = q.UpsertSetting(ctx, queries.UpsertSettingParams{
+						Key: settingServerName, Value: name,
+					})
+				}
+			}
+			if req.ServerDescription != nil {
+				desc := strings.TrimSpace(*req.ServerDescription)
+				if desc != "" && len(desc) <= maxServerDescLen {
+					_ = q.UpsertSetting(ctx, queries.UpsertSettingParams{
+						Key: settingServerDesc, Value: desc,
+					})
+				}
+			}
+			seedExampleTodos(ctx, q, userID, now)
 		}
-		s.seedExampleTodos(ctx, userID)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	token, err := authn.IssueToken(s.secret, userID, userName, role, authn.DefaultTokenTTL)
@@ -219,7 +241,11 @@ func (s *User) Login(ctx context.Context, req *doxv1.LoginRequest) (*doxv1.Login
 		}
 		return nil, status.Errorf(codes.Internal, "lookup user: %v", err)
 	}
-	if !authn.VerifyPassword(req.GetPassword(), u.PasswordHash) {
+	ok, err := authn.VerifyPasswordContext(ctx, req.GetPassword(), u.PasswordHash)
+	if err != nil {
+		return nil, passwordHashError("verify password", err)
+	}
+	if !ok {
 		return nil, status.Error(codes.Unauthenticated, uniformAuthFailMsg)
 	}
 	token, err := authn.IssueToken(s.secret, u.ID, u.Name, u.Role, authn.DefaultTokenTTL)
@@ -256,12 +282,16 @@ func (s *User) ChangePassword(ctx context.Context, req *doxv1.ChangePasswordRequ
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get user: %v", err)
 	}
-	if !authn.VerifyPassword(req.GetOldPassword(), u.PasswordHash) {
+	ok, err := authn.VerifyPasswordContext(ctx, req.GetOldPassword(), u.PasswordHash)
+	if err != nil {
+		return nil, passwordHashError("verify password", err)
+	}
+	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "old password is incorrect")
 	}
-	hash, err := authn.HashPassword(req.GetNewPassword())
+	hash, err := authn.HashPasswordContext(ctx, req.GetNewPassword())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "hash password: %v", err)
+		return nil, passwordHashError("hash password", err)
 	}
 	if _, err := s.q.UpdateUserPassword(ctx, queries.UpdateUserPasswordParams{
 		PasswordHash: hash,
@@ -342,9 +372,9 @@ func (s *User) ResetUserPassword(ctx context.Context, req *doxv1.ResetUserPasswo
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "generate temp password: %v", err)
 	}
-	hash, err := authn.HashPassword(temp)
+	hash, err := authn.HashPasswordContext(ctx, temp)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "hash temp password: %v", err)
+		return nil, passwordHashError("hash temp password", err)
 	}
 	if _, err := s.q.UpdateUserPassword(ctx, queries.UpdateUserPasswordParams{
 		PasswordHash: hash,
@@ -415,8 +445,7 @@ func (s *User) UpdateServerSettings(ctx context.Context, req *doxv1.UpdateServer
 //
 // created_at is staggered by 1ms so the "Welcome" todo sorts to the top of
 // the DESC-ordered list.
-func (s *User) seedExampleTodos(ctx context.Context, userID string) {
-	now := s.now()
+func seedExampleTodos(ctx context.Context, q *queries.Queries, userID string, now int64) {
 	seeds := []struct {
 		title       string
 		description string
@@ -436,7 +465,7 @@ func (s *User) seedExampleTodos(ctx context.Context, userID string) {
 	}
 	for i, seed := range seeds {
 		ts := now + int64(i)
-		if _, err := s.q.CreateTodo(ctx, queries.CreateTodoParams{
+		if _, err := q.CreateTodo(ctx, queries.CreateTodoParams{
 			ID:          ulid.Make().String(),
 			Title:       seed.title,
 			Description: sql.NullString{String: seed.description, Valid: true},

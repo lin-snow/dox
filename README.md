@@ -50,6 +50,25 @@ dox
 The TUI handles onboarding (register · login · accept invite) and everything
 after.
 
+## Configuration
+
+| Variable              | Default         | Purpose                                                                                 |
+| --------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `DOX_DB_PATH`         | `./data/dox.db` | SQLite file location                                                                    |
+| `DOX_LISTEN_ADDR`     | `:6278`         | HTTP listen address                                                                     |
+| `DOX_LOG_LEVEL`       | `info`          | `debug`, `info`, `warn`, or `error`                                                     |
+| `DOX_EVENT_RETENTION` | `360h`          | Activity-feed retention; `0` disables the sweep                                         |
+| `DOX_TRUST_PROXY`     | `false`         | Trust `X-Forwarded-For` for auth rate limiting — only enable behind a proxy you control |
+
+The first account to register becomes the owner. After that, registration is
+invite-only by default; the owner can open it with
+`dox server set-registration true`. Login and registration are rate-limited per
+client address, and passwords are hashed with argon2id.
+
+`GET /healthz` is unauthenticated: it returns `200 {"status":"ok"}` when the
+process can reach SQLite, `503` otherwise. The container image uses it as its
+`HEALTHCHECK`.
+
 ## Dev
 
 ```
