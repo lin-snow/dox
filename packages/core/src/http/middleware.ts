@@ -18,8 +18,6 @@ export const withErrorMap: Middleware = (next) => async (req) => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Retry only on transient failures: 5xx responses (wrapped as ApiError by
-// withErrorMap) and network-level errors. 4xx is a caller bug — fail fast.
 const isRetryable = (e: unknown): boolean => {
   if (e instanceof ApiError) return e.status >= 500;
   return true;
@@ -31,8 +29,6 @@ export const withRetry =
   async (req) => {
     for (let attempt = 0; ; attempt++) {
       try {
-        // Bun's Request.clone() returns the Web-standard Request type, which TS
-        // narrows compared to Bun's extended Request. Runtime behavior matches.
         return await next(req.clone() as Request);
       } catch (e) {
         if (attempt >= max || !isRetryable(e)) throw e;
@@ -51,8 +47,6 @@ export const withLog =
     return res;
   };
 
-// withErrorMap sits inside withRetry: 4xx must not be retried, and the retry
-// loop needs the thrown ApiError to decide whether to back off or bail.
 export const buildFetcher = (cfg: Config, io: IO): Fetcher =>
   compose(
     withAuth(cfg.token),

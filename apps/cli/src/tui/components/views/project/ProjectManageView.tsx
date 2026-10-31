@@ -17,8 +17,6 @@ interface ProjectManageViewProps {
   busy: boolean;
   error: string | null;
   nowMs: number;
-  // True if the current viewer owns the project. Drives whether the invite
-  // action is offered.
   isOwner: boolean;
   onClose: () => void;
   onOpenInvitePicker: () => void;
@@ -26,9 +24,6 @@ interface ProjectManageViewProps {
   onDismissModal: () => void;
 }
 
-// Per-project management screen. Shows the project's members + (for the
-// owner) lets you mint a new invite. The "Invite user to project" action
-// the user asked for lives here rather than in Settings.
 export function ProjectManageView({
   project,
   members,
@@ -46,8 +41,6 @@ export function ProjectManageView({
   const { columns, rows: windowRows } = useWindowSize();
   const cols = Math.max(60, columns);
   const rows = Math.max(20, windowRows);
-  // Centered card sized like ProjectEditorView — wide enough for member rows
-  // (~72 cols), with breathing room from the terminal edges.
   const cardWidth = Math.min(72, cols - 8);
 
   useInput((input, key) => {
@@ -57,7 +50,6 @@ export function ProjectManageView({
         if (input === "e" || input === "E") return onPickInviteRole("editor");
         if (input === "v" || input === "V") return onPickInviteRole("viewer");
       } else if (editing.kind === "codeReveal") {
-        // Any key dismisses the reveal.
         onDismissModal();
       }
       return;

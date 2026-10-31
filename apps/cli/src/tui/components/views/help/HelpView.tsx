@@ -8,9 +8,6 @@ interface HelpViewProps {
   onClose: () => void;
 }
 
-// Standalone keybindings page. Mirrors AboutView's centered-card layout — the
-// content sits in a bordered card pushed to the visual middle of the terminal,
-// with the Footer pinned below for consistent chrome across overlay-style pages.
 const navigate: ReadonlyArray<readonly [string, string]> = [
   ["j / ↓", "move down"],
   ["k / ↑", "move up"],
@@ -46,12 +43,7 @@ export function HelpView({ onClose }: HelpViewProps) {
     if (input === "?" || key.escape || key.return) onClose();
   });
 
-  // Width grows with the terminal but caps at 86 so the card stays card-like
-  // on ultra-wide screens. Min 60 keeps the two-column body legible.
   const cardWidth = Math.min(86, Math.max(60, cols - 4));
-  // Approx card height: title (1) + spacer (1) + tallest column (Act = 11)
-  // + paddingY top/bottom (2) + border top/bottom (2). Used only to derive
-  // topPad — the actual height is content-driven.
   const cardRows = 17;
   const topPad = Math.max(1, Math.floor((totalRows - cardRows - 3) / 2));
 
@@ -71,8 +63,7 @@ export function HelpView({ onClose }: HelpViewProps) {
             {icon.brand} keybindings
           </Text>
           <Box marginTop={1}>
-            {/* Left column stacks Navigate + App so the right column (the
-                largest section by row count) sets the card's height. */}
+            {}
             <Box flexDirection="column" flexGrow={1} flexBasis={0}>
               <Section title="Navigate" rows={navigate} />
               <Section title="App" rows={app} marginTop />

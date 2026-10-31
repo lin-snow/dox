@@ -73,7 +73,6 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 	f := newEventFixture(t)
 	bob := seedUser(t, f.q, "bob", caller.RoleMember)
 
-	// Alice creates a project + a todo inside it. Bob is not a member.
 	proj := f.createProject(t, f.ctx, "secret")
 	if _, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{
 		Title:     "private work",
@@ -82,7 +81,6 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 
-	// Alice sees the event with project metadata populated.
 	aliceList, err := f.ev.ListEvents(f.ctx, &doxv1.ListEventsRequest{})
 	if err != nil {
 		t.Fatalf("ListEvents(alice): %v", err)
@@ -94,9 +92,6 @@ func TestListEvents_filtersByVisibility(t *testing.T) {
 		t.Errorf("joined fields wrong: %+v", aliceList.Events[0])
 	}
 
-	// Bob sees nothing — project visibility excludes him AND Alice's event
-	// isn't personal-scope, so he can't see it through the actor predicate
-	// either.
 	bobCtx := f.withUser(t, bob)
 	bobList, err := f.ev.ListEvents(bobCtx, &doxv1.ListEventsRequest{})
 	if err != nil {
@@ -111,8 +106,6 @@ func TestListEvents_privateActivityVisibleOnlyToActor(t *testing.T) {
 	f := newEventFixture(t)
 	bob := seedUser(t, f.q, "bob", caller.RoleMember)
 
-	// Alice creates a private (Inbox) todo + completes it. Both events should
-	// be personal-scope (project_id NULL) and visible only to Alice.
 	created, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{Title: "buy milk"})
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
@@ -137,13 +130,11 @@ func TestListEvents_privateActivityVisibleOnlyToActor(t *testing.T) {
 			t.Errorf("actor_name = %q, want alice", e.ActorName)
 		}
 	}
-	// Newest first: completion sits above creation.
 	if aliceList.Events[0].Verb != "todo_completed" || aliceList.Events[1].Verb != "todo_created" {
 		t.Errorf("verbs = [%s %s], want [todo_completed todo_created]",
 			aliceList.Events[0].Verb, aliceList.Events[1].Verb)
 	}
 
-	// Bob can't see Alice's personal events.
 	bobCtx := f.withUser(t, bob)
 	bobList, err := f.ev.ListEvents(bobCtx, &doxv1.ListEventsRequest{})
 	if err != nil {
@@ -157,8 +148,6 @@ func TestListEvents_privateActivityVisibleOnlyToActor(t *testing.T) {
 func TestListEvents_mergesPersonalAndProjectScopes(t *testing.T) {
 	f := newEventFixture(t)
 
-	// Alice creates a project + a project todo, then a private todo. Both
-	// should appear in her feed, ordered by created_at desc.
 	proj := f.createProject(t, f.ctx, "work")
 	if _, err := f.todo.CreateTodo(f.ctx, &doxv1.CreateTodoRequest{
 		Title:     "ship feature",
@@ -177,9 +166,6 @@ func TestListEvents_mergesPersonalAndProjectScopes(t *testing.T) {
 	if len(list.Events) != 2 {
 		t.Fatalf("want 2 events, got %d", len(list.Events))
 	}
-	// Both project and personal scopes share one chronological stream. The
-	// private todo created second should sort first; only it lacks project
-	// metadata.
 	if list.Events[0].TargetLabel != "buy milk" {
 		t.Errorf("first event target = %q, want %q", list.Events[0].TargetLabel, "buy milk")
 	}
@@ -202,18 +188,15 @@ func TestListEvents_completionEmitsTransitionOnly(t *testing.T) {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 
-	// Flip done false→true: should emit todo_completed.
 	done := true
 	if _, err := f.todo.UpdateTodo(f.ctx, &doxv1.UpdateTodoRequest{Id: created.Id, Done: &done}); err != nil {
 		t.Fatalf("UpdateTodo done=true: %v", err)
 	}
 
-	// Idempotent re-mark: already done, should NOT emit another event.
 	if _, err := f.todo.UpdateTodo(f.ctx, &doxv1.UpdateTodoRequest{Id: created.Id, Done: &done}); err != nil {
 		t.Fatalf("UpdateTodo done=true again: %v", err)
 	}
 
-	// Flip back to open: also should NOT emit (we only care about false→true).
 	notDone := false
 	if _, err := f.todo.UpdateTodo(f.ctx, &doxv1.UpdateTodoRequest{Id: created.Id, Done: &notDone}); err != nil {
 		t.Fatalf("UpdateTodo done=false: %v", err)
@@ -223,12 +206,10 @@ func TestListEvents_completionEmitsTransitionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListEvents: %v", err)
 	}
-	// Expect exactly 2 events: todo_created + one todo_completed transition.
 	if len(list.Events) != 2 {
 		t.Fatalf("want 2 events, got %d: %+v", len(list.Events), list.Events)
 	}
 	verbs := []string{list.Events[0].Verb, list.Events[1].Verb}
-	// Newest first.
 	if verbs[0] != "todo_completed" || verbs[1] != "todo_created" {
 		t.Errorf("verbs = %v, want [todo_completed todo_created]", verbs)
 	}
@@ -238,7 +219,6 @@ func TestListEvents_acceptInviteEmitsMemberJoined(t *testing.T) {
 	f := newEventFixture(t)
 	bob := seedUser(t, f.q, "bob", caller.RoleMember)
 
-	// Alice creates a project and issues an editor invite Bob can accept.
 	proj := f.createProject(t, f.ctx, "shared")
 	role := authz.RoleEditor
 	invite, err := f.inv.CreateInvite(f.ctx, &doxv1.CreateInviteRequest{
@@ -249,14 +229,11 @@ func TestListEvents_acceptInviteEmitsMemberJoined(t *testing.T) {
 		t.Fatalf("CreateInvite: %v", err)
 	}
 
-	// Bob accepts.
 	bobCtx := f.withUser(t, bob)
 	if _, err := f.inv.AcceptInvite(bobCtx, &doxv1.AcceptInviteRequest{Code: invite.Code}); err != nil {
 		t.Fatalf("AcceptInvite: %v", err)
 	}
 
-	// Alice (project owner) should now see a member_joined event with Bob as
-	// the actor and the project's name snapshotted in target_label.
 	list, err := f.ev.ListEvents(f.ctx, &doxv1.ListEventsRequest{})
 	if err != nil {
 		t.Fatalf("ListEvents: %v", err)
@@ -278,7 +255,6 @@ func TestListEvents_acceptInviteEmitsMemberJoined(t *testing.T) {
 		t.Errorf("project_id = %q, want %q", e.ProjectId, proj.Id)
 	}
 
-	// Bob now a member, should also see the same event from his side.
 	bobList, err := f.ev.ListEvents(bobCtx, &doxv1.ListEventsRequest{})
 	if err != nil {
 		t.Fatalf("ListEvents(bob): %v", err)
@@ -287,7 +263,6 @@ func TestListEvents_acceptInviteEmitsMemberJoined(t *testing.T) {
 		t.Errorf("bob want 1 event, got %d", len(bobList.Events))
 	}
 
-	// Sanity: project_members row was actually written by AcceptInvite.
 	if _, err := f.q.GetProjectMembership(context.Background(), queries.GetProjectMembershipParams{
 		ProjectID: proj.Id,
 		UserID:    bob.ID,

@@ -24,7 +24,6 @@ FROM users
 ORDER BY created_at ASC;
 
 -- name: DeleteUserByID :execrows
--- Owner protection at SQL level (defense-in-depth); service layer should also enforce.
 DELETE FROM users
 WHERE id = ? AND role != 'owner';
 

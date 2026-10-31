@@ -6,13 +6,10 @@ import (
 )
 
 func TestResolve_DefaultsWhenAllEmpty(t *testing.T) {
-	// resolve() reads package vars directly, so save & clear them.
 	defer restore(version, commit, date, builtBy)
 	version, commit, date, builtBy = "", "", "", ""
 
 	got := resolve()
-	// Under `go test` debug.ReadBuildInfo() returns Main.Version="(devel)"
-	// for the test binary; either that or our "dev" fallback is acceptable.
 	if got.Version == "" {
 		t.Errorf("Version should not be empty")
 	}

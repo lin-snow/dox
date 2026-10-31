@@ -5,12 +5,8 @@ import { color } from "../../theme";
 
 interface TitledPanelProps {
   title: string;
-  // Fixed width is required: we have to draw the top border by hand to inline
-  // the title, and that means knowing exactly how many cells the row spans.
   width: number;
   focused?: boolean;
-  // Override the resting border color (when not focused). Useful for accent
-  // panels that should pop without claiming focus.
   borderTint?: string;
   paddingX?: number;
   paddingY?: number;
@@ -18,10 +14,6 @@ interface TitledPanelProps {
   children: ReactNode;
 }
 
-// SurgeDM-style panel: title floats in the top border at the right inset,
-// e.g. `╭───────────────── Server ──╮`. Built by composing the top border as a
-// Text row, then using Ink's per-side border flags to draw the remaining three
-// sides on the content Box below.
 export function TitledPanel({
   title,
   width,
@@ -35,9 +27,6 @@ export function TitledPanel({
   const borderColor = focused ? color.accent : (borderTint ?? color.muted);
   const titleColor = focused ? color.accent : color.accent2;
 
-  // Layout inside the top border (excluding the two corner glyphs):
-  //   leadDashes   " title "   trailDashes
-  // `trailDashes` is small (2-3) for the SurgeDM-style "inset from right" look.
   const trailDashes = 3;
   const inner = Math.max(2, width - 2);
   const titleStr = ` ${title} `;

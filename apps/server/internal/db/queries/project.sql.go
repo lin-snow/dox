@@ -135,7 +135,6 @@ type GetProjectMembershipParams struct {
 	UserID    string
 }
 
-// Returns the caller's role for the project, or no row if not a member.
 func (q *Queries) GetProjectMembership(ctx context.Context, arg GetProjectMembershipParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, getProjectMembership, arg.ProjectID, arg.UserID)
 	var role string
@@ -158,8 +157,6 @@ type ListProjectMembersRow struct {
 	AddedAt  int64
 }
 
-// Joins on users so the client can render names without an extra round-trip
-// (and without needing the owner-only /v1/users list).
 func (q *Queries) ListProjectMembers(ctx context.Context, projectID string) ([]ListProjectMembersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listProjectMembers, projectID)
 	if err != nil {
@@ -199,7 +196,6 @@ WHERE p.owner_id = ?1
 ORDER BY p.sort_order ASC, p.created_at ASC
 `
 
-// All projects the user can see: owned + member-of.
 func (q *Queries) ListProjectsVisibleTo(ctx context.Context, userID string) ([]Project, error) {
 	rows, err := q.db.QueryContext(ctx, listProjectsVisibleTo, userID)
 	if err != nil {

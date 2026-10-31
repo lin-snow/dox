@@ -1,25 +1,13 @@
--- Mock data for dox.db. Idempotent-ish: only inserts rows whose IDs start with
--- `01MOCK`; rerunning would error on PK collision (intentional — manual reset
--- via DELETE … WHERE id LIKE '01MOCK%').
---
--- Owner is auto-discovered: we assume there's exactly one user with role=owner
--- and bind everything to them.
 
 BEGIN;
 
--- Capture the owner id once.
 CREATE TEMP TABLE _owner AS SELECT id FROM users WHERE role = 'owner' LIMIT 1;
 
--- ── projects ──────────────────────────────────────────────────────────────
 INSERT INTO projects (id, owner_id, name, description, color, archived, sort_order, created_at, updated_at)
 SELECT 'PROJ01WORK0000000000000000', id, 'Work',     'Day-job tasks',          'blue',    0, 0, unixepoch('now','-30 days')*1000, unixepoch('now','-30 days')*1000 FROM _owner UNION ALL
 SELECT 'PROJ02PERSONAL000000000000', id, 'Personal', 'Life admin & errands',   'green',   0, 1, unixepoch('now','-25 days')*1000, unixepoch('now','-25 days')*1000 FROM _owner UNION ALL
 SELECT 'PROJ03SIDE0000000000000000', id, 'Side',     'Hobby projects & misc.', 'magenta', 0, 2, unixepoch('now','-20 days')*1000, unixepoch('now','-20 days')*1000 FROM _owner;
 
--- ── todos ─────────────────────────────────────────────────────────────────
--- Distributed across the last 14 days. `done=1` rows have updated_at later
--- than created_at to simulate "closed N days after open". `project_id` mixes
--- inbox (NULL) with the 3 mock projects so filters all have data.
 
 INSERT INTO todos (id, title, done, project_id, created_by, created_at, updated_at)
 SELECT 'TODO01MOCK000000000000000A', 'Buy groceries',             0, NULL,                          id, unixepoch('now','-1 hours')*1000,  unixepoch('now','-30 minutes')*1000 FROM _owner UNION ALL

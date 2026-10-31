@@ -14,9 +14,6 @@ function loadOrExit(): Promise<Config> {
   });
 }
 
-// setDefaultProject writes [ui] default_project in ~/.config/dox/config.toml.
-// Pass "none" / "clear" / "" to remove the setting (CLI/TUI then shows "All").
-// Pass "inbox" or a project id to lock the default to that filter.
 export async function setDefaultProject(
   value: string,
   _opts: GlobalOpts,

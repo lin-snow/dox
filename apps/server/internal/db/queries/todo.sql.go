@@ -90,7 +90,6 @@ type FindTodoIDsByPrefixParams struct {
 	UserID string
 }
 
-// Restricted to the caller's visible todos so prefix collisions don't leak existence.
 func (q *Queries) FindTodoIDsByPrefix(ctx context.Context, arg FindTodoIDsByPrefixParams) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, findTodoIDsByPrefix, arg.Prefix, arg.UserID)
 	if err != nil {
@@ -224,7 +223,6 @@ type ListTodosForUserRow struct {
 	UpdatedAt   int64
 }
 
-// Everything visible to the caller: their Inbox + todos in projects they own or are a member of.
 func (q *Queries) ListTodosForUser(ctx context.Context, userID string) ([]ListTodosForUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTodosForUser, userID)
 	if err != nil {
@@ -275,7 +273,6 @@ type ListTodosInProjectRow struct {
 	UpdatedAt   int64
 }
 
-// Caller must have already verified project visibility via authz.
 func (q *Queries) ListTodosInProject(ctx context.Context, projectID sql.NullString) ([]ListTodosInProjectRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTodosInProject, projectID)
 	if err != nil {

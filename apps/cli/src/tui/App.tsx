@@ -44,8 +44,6 @@ import { filterKey } from "./components/layout/Sidebar";
 import { VERSION } from "../version";
 
 const POLL_INTERVAL_MS = 30_000;
-// Activity feed updates passively; a slower cadence keeps the events query
-// load proportional to its UX value (a glance, not the working surface).
 const EVENTS_POLL_INTERVAL_MS = 60_000;
 const ACTIVITY_DAYS = 14;
 
@@ -57,8 +55,6 @@ interface ProjectsApi {
     color?: string;
   }): Promise<Project>;
   remove(id: string): Promise<void>;
-  // Optional so the test harness can keep its slim fake; the real ProjectClient
-  // implements it.
   listMembers?: (projectId: string) => Promise<ProjectMember[]>;
 }
 
@@ -75,8 +71,6 @@ interface AppProps {
     server?: string;
     configPath?: string;
   };
-  // Called after sign-out clears local credentials. Parent routes back to the
-  // onboarding flow on the same process — no exit needed.
   onSignedOut?: () => void;
 }
 
@@ -117,17 +111,12 @@ export function App({
     return () => clearInterval(timer);
   }, [refresh]);
 
-  // Separate, slower poll for the activity feed — see EVENTS_POLL_INTERVAL_MS.
-  // Silently swallows errors so a 500 on /v1/events doesn't paint a banner over
-  // the main todos view; the panel just keeps showing the last good snapshot.
   const refreshEvents = useCallback(async () => {
     if (!events) return;
     try {
       const list = await events.list();
       dispatch({ type: "EVENTS_LOADED", events: list });
-    } catch {
-      // Intentional: events are a non-critical sidebar; main flows keep working.
-    }
+    } catch {}
   }, [events]);
 
   useEffect(() => {
@@ -140,15 +129,11 @@ export function App({
     return () => clearInterval(timer);
   }, [events, refreshEvents]);
 
-  // Project manage hydration. Fires on enter; the *Loaded flag keeps the
-  // fetch one-shot for the session of that screen.
   useEffect(() => {
     if (state.mode !== "projectManage") return;
     if (state.manageMembersLoaded) return;
     const pid = state.manageProjectId;
     if (!pid || !projects?.listMembers) {
-      // Without a listMembers fn we can't populate the panel; mark loaded so
-      // the view stops showing "loading…" and renders an empty list instead.
       dispatch({ type: "MANAGE_MEMBERS_SET", members: [] });
       return;
     }
@@ -163,9 +148,6 @@ export function App({
     })();
   }, [state.mode, state.manageProjectId, state.manageMembersLoaded, projects]);
 
-  // Settings data hydration. Fires whenever the settings screen opens (OPEN_SETTINGS
-  // resets *Loaded back to false). Owner-only `settingsServer` fetch is gated on
-  // the cached role; the server still enforces, this just skips a guaranteed 403.
   useEffect(() => {
     if (state.mode !== "settings") return;
     if (!state.settingsServerLoaded && users && identity?.role === "owner") {
@@ -179,9 +161,6 @@ export function App({
         }
       })();
     } else if (!state.settingsServerLoaded && identity?.role !== "owner") {
-      // Non-owners can't read /v1/settings; backfill from the public
-      // ServerInfo so the Server tab can render real values + mark loaded so
-      // the tab stops showing "loading…".
       dispatch({
         type: "SETTINGS_SERVER_SET",
         settings: serverInfo
@@ -214,9 +193,6 @@ export function App({
     serverInfo,
   ]);
 
-  // One-shot fetch: server build identity doesn't change at runtime, so we
-  // don't poll. Failures stay silent — the Status panel just shows "—" until a
-  // future mount succeeds.
   useEffect(() => {
     const url = identity?.server;
     if (!url) return;
@@ -225,18 +201,13 @@ export function App({
       try {
         const info = await fetchServerInfo(url);
         if (!cancelled) setServerInfo(info);
-      } catch {
-        // Intentionally swallow — the panel renders a placeholder when null.
-      }
+      } catch {}
     })();
     return () => {
       cancelled = true;
     };
   }, [identity?.server]);
 
-  // Auto-clear the transient settings notice. The reducer also drops it on
-  // tab change / settings close, so this only fires when the user lingers on
-  // the screen after the action that produced it.
   useEffect(() => {
     if (!state.settingsNotice) return;
     const timer = setTimeout(
@@ -246,11 +217,6 @@ export function App({
     return () => clearTimeout(timer);
   }, [state.settingsNotice]);
 
-  // ── description hydration ───────────────────────────────────────────────
-  // ListTodos omits the description body, so any UI that wants to display
-  // markdown (TodoDetailView, TodoEditorView seed) has to issue a GetTodo
-  // first. We funnel that through these two helpers so the cache merge logic
-  // lives in exactly one place.
   const hydrateTodoDescription = useCallback(
     async (id: string) => {
       try {
@@ -264,16 +230,12 @@ export function App({
   );
   const enterEditWithFullTodo = useCallback(
     async (id: string, fallbackTitle: string, cachedDescription?: string) => {
-      // Optimistically open the editor with whatever we already know so the
-      // user doesn't stare at a loading state for one round-trip.
       dispatch({
         type: "ENTER_EDIT",
         id,
         initialTitle: fallbackTitle,
         initialDescription: cachedDescription ?? "",
       });
-      // Then upgrade with the server-canonical description if we didn't have
-      // one cached yet. Re-dispatching ENTER_EDIT replaces the seed values.
       if (cachedDescription !== undefined) return;
       try {
         const full = await api.getTodo(id);
@@ -290,12 +252,6 @@ export function App({
     [api],
   );
 
-  // Background-hydrate descriptions when the user opens search. ListTodos
-  // omits the description body, so without this the search would only match
-  // titles. We fire one getTodo per row in parallel; the cache merge in
-  // TODO_UPDATED makes the result list reactively pick up matches as bodies
-  // land. `hydrating` flips false once every request settles so SearchView can
-  // show a "loading descriptions…" hint while it's true.
   const [hydratingSearch, setHydratingSearch] = useState(false);
   useEffect(() => {
     if (state.mode !== "search") return;
@@ -309,10 +265,7 @@ export function App({
           try {
             const full = await api.getTodo(t.id);
             if (!cancelled) dispatch({ type: "TODO_UPDATED", todo: full });
-          } catch {
-            // Silently skip — a failed hydrate just means that one row stays
-            // title-only for matching, not a fatal error.
-          }
+          } catch {}
         }),
       );
       if (!cancelled) setHydratingSearch(false);
@@ -320,18 +273,11 @@ export function App({
     return () => {
       cancelled = true;
     };
-    // Intentionally only depend on mode + api: re-running on every todos
-    // mutation would re-fetch rows we just updated. New rows created while in
-    // search mode will be hydrated next time the user re-enters search.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.mode, api]);
 
   const visible = useMemo(() => visibleTodos(state), [state]);
 
-  // Hydrate the cursored todo's description so the TodoInfo preview can show
-  // the body inline. Fires only when the cursor lands on a todo whose body
-  // hasn't been fetched yet — cached rows short-circuit. Silent on error: the
-  // preview just stays empty and the "press ⏎ for details" hint covers it.
   const cursoredTodo = visible[state.cursor];
   const cursoredId = cursoredTodo?.id;
   const cursoredDescriptionLoaded = cursoredTodo?.description !== undefined;
@@ -343,9 +289,7 @@ export function App({
       try {
         const full = await api.getTodo(cursoredId);
         if (!cancelled) dispatch({ type: "TODO_UPDATED", todo: full });
-      } catch {
-        // Intentional: preview is optional, error is handled by leaving it blank.
-      }
+      } catch {}
     })();
     return () => {
       cancelled = true;
@@ -360,12 +304,6 @@ export function App({
     [state.todos],
   );
 
-  // Single mutation path for "toggle done" — used by the list space key, the
-  // todo-detail view, and the search-detail view. Either direction makes the
-  // row vanish from its current scope (working tab loses open→done; Done tab
-  // loses done→open), so the same 5s toast pattern carries the undo
-  // affordance in both directions; the banner text picks up the new state
-  // via prevDone.
   const toggleDone = useCallback(
     async (todo: Todo) => {
       const prevDone = todo.done;
@@ -389,8 +327,6 @@ export function App({
     [api],
   );
 
-  // Auto-dismiss the toast at expiresAt. Recreated on every toast change so a
-  // rapid re-toggle (toast B replacing toast A) resets the timer correctly.
   useEffect(() => {
     const t = state.toast;
     if (!t) return;
@@ -422,9 +358,6 @@ export function App({
         dispatch({ type: "OPEN_SEARCH" });
         return;
       }
-      // Undo the most-recent done toggle while the toast is still up. Handled
-      // before cursor / filter keys so the affordance always works in the
-      // 5-second window regardless of where the cursor has moved since.
       if (input === "z" && state.toast?.kind === "doneToggled") {
         const t = state.toast;
         void (async () => {
@@ -489,9 +422,6 @@ export function App({
       if (!current) return;
       if (key.return) {
         dispatch({ type: "OPEN_TODO_DETAIL" });
-        // The list payload omits description; fetch the full row so the
-        // detail view can render the markdown body on this same render pass
-        // once the request resolves.
         void hydrateTodoDescription(current.id);
         return;
       }
@@ -517,7 +447,6 @@ export function App({
     { isActive: state.mode === "list" },
   );
 
-  // Yes/no input for the delete-project confirmation. Y deletes; N/Esc bails.
   useInput(
     (input, key) => {
       const id = state.deletingProjectId;
@@ -550,10 +479,6 @@ export function App({
       dispatch({ type: "EXIT_MODE" });
       return;
     }
-    // The form field always returns a string; "" means "no description".
-    // On create, we only send it when non-empty (otherwise the server applies
-    // its default of NULL). On edit, we always send it so an emptied-out field
-    // clears any existing body.
     const description = payload.description;
     if (state.mode === "add") {
       const projectId = activeProjectId(state.filter);
@@ -582,37 +507,20 @@ export function App({
     }
   };
 
-  // ── layout widths ─────────────────────────────────────────────────────────
-  // Two columns side-by-side. Left column stacks the Server|Status header row
-  // on top of a tall Todos list. Right column has a tall combined Activity
-  // panel on top (chart + Recent feed inside one TitledPanel) with the
-  // contextual Todo Info below it. Subtract 2 cols for outer paddingX={1}.
   const usable = Math.max(60, totalCols - 2);
   const colGap = 2;
   const leftColW = Math.max(40, Math.floor(usable * 0.6));
-  // Min width = 4 (y-axis gutter) + ACTIVITY_DAYS*2 (bar pairs) + 4 (panel
-  // border + paddingX) so the Activity chart never truncates at narrow widths.
   const rightColW = Math.max(36, usable - leftColW - colGap);
   const topGap = 2;
   const topCombined = leftColW - topGap;
-  // Server panel needs to fit the 19-cell-wide logo + 1-cell padding either
-  // side + 1-cell border either side → minimum width 23.
   const serverW = Math.max(23, Math.floor(topCombined * 0.46));
   const statusW = Math.max(26, topCombined - serverW);
 
-  // ── layout heights ────────────────────────────────────────────────────────
-  // Grow with the terminal so a tall window translates directly into a taller
-  // Todos viewport, but cap at MAX so an oversized terminal stops stretching
-  // the list/info panes past the point where the extra rows stop being useful
-  // (and start feeling like dead space inside a panel border).
   const MAX_INNER_H = 48;
   const innerH = Math.min(MAX_INNER_H, Math.max(32, totalRows - 4));
   const topRowH = 14;
   const rowGap = 1;
   const todosH = Math.max(18, innerH - topRowH - rowGap);
-  // Right column splits into Activity (top — chart + a short Recent strip,
-  // kept tight) and TodoInfo (bottom, absorbs the rest). Sums to innerH so
-  // both columns end on the same row.
   const activityH = Math.max(17, Math.min(22, Math.floor(innerH * 0.46)));
   const todoInfoH = Math.max(11, innerH - activityH - rowGap);
 
@@ -623,10 +531,6 @@ export function App({
   );
   const openCount = state.todos.filter((t) => !t.done).length;
   const nowMs = Date.now();
-  // "Done today" = todos completed since local midnight, using updatedAt as a
-  // proxy for the completion time (the server doesn't store completed-at as a
-  // separate column). Mirrors `activityByDay(kind: "done")`'s definition so
-  // the header counter and the chart's last bucket agree.
   const todayMs = startOfDay(nowMs);
   const doneTodayCount = state.todos.filter(
     (t) => t.done && Number(t.updatedAt ?? 0) >= todayMs,
@@ -634,25 +538,14 @@ export function App({
 
   const showSpinner = state.loading && state.todos.length === 0;
 
-  // Help is its own centered page rather than an overlay on the list — keeps
-  // the keybindings card from competing visually with the main grid below.
   if (state.helpOpen) {
     return <HelpView onClose={() => dispatch({ type: "CLOSE_HELP" })} />;
   }
 
-  // ── Todos list viewport ───────────────────────────────────────────────────
-  // Panel chrome above the list eats: border-top 1 + paddingY-top 1 + meta 1
-  // + marginTop 1 + tabs 1 + marginTop 1 = 6, plus paddingY-bottom 1 +
-  // border-bottom 1 = 2 below — 8 rows total. Capping the rendered slice to
-  // what fits keeps the panel from pushing the footer off-screen.
-  // While the undo toast is up it claims one extra row (itself + marginTop),
-  // so shave 2 more off the available height to keep the panel stable.
   const toastChromeH = state.toast?.kind === "doneToggled" ? 2 : 0;
   const LIST_VIEWPORT_H = Math.max(5, todosH - 8 - toastChromeH);
   const listWindow = sliceWindow(visible, state.cursor, LIST_VIEWPORT_H);
 
-  // Full-screen settings view replaces the main grid when active. Kept as an
-  // early return so we don't have to gate every grid sub-render below.
   if (state.mode === "settings") {
     const settingsTabs = buildSettingsTabs({
       identity: {
@@ -830,10 +723,6 @@ export function App({
         }
         onOpen={(id) => {
           dispatch({ type: "SEARCH_OPEN_DETAIL", id });
-          // Description is most likely already cached at this point (the
-          // search-mode hydration covers it), but call hydrate anyway so a
-          // late-arriving body or a stale cache still gets refreshed before
-          // the detail page reads it.
           void hydrateTodoDescription(id);
         }}
         onClose={() => dispatch({ type: "CLOSE_SEARCH" })}
@@ -846,8 +735,6 @@ export function App({
       ? (state.todos.find((t) => t.id === state.searchDetailTodoId) ?? null)
       : null;
     if (!current) {
-      // Row vanished (deleted from another client, or cleared by a filter);
-      // bounce back to the search list rather than rendering an empty page.
       dispatch({ type: "SEARCH_CLOSE_DETAIL" });
       return null;
     }
@@ -887,7 +774,6 @@ export function App({
   if (state.mode === "todoDetail") {
     const current = visible[state.cursor] ?? null;
     if (!current) {
-      // Cursor moved off (delete / filter change); fall back to list.
       dispatch({ type: "CLOSE_TODO_DETAIL" });
       return null;
     }
@@ -972,7 +858,7 @@ export function App({
   return (
     <Box flexDirection="column" paddingX={1}>
       <Box>
-        {/* ── left column: Server|Status header row + tall Todos list ─── */}
+        {}
         <Box flexDirection="column" width={leftColW}>
           <Box>
             <TitledPanel
@@ -1025,10 +911,7 @@ export function App({
             height={todosH}
             focused
           >
-            {/* Meta line — at-a-glance summary that survives even when the list
-              scrolls offscreen on tiny terminals. "Done today" replaces the
-              all-time done count: it gives the satisfying daily-progress
-              reading without competing with the open list for attention. */}
+            {}
             <Box>
               <Text color={color.accent2} bold>
                 {openCount}
@@ -1058,11 +941,6 @@ export function App({
                     kind: "system",
                     prefixIcon: icon.brand,
                   },
-                  // Review-only archive sits with Private as a "system"
-                  // surface — both are always present and don't belong to
-                  // any project. The `│` divider Tabs.tsx auto-inserts
-                  // before the first `kind: "project"` lands cleanly to
-                  // Done's right when projects exist.
                   {
                     key: "done",
                     label: "Done",
@@ -1086,9 +964,6 @@ export function App({
             </Box>
             {state.toast?.kind === "doneToggled" &&
               (() => {
-                // prevDone === false → just completed (open→done). prevDone
-                // === true → just reopened (done→open, typically from the
-                // Done tab). Same affordance either way — `z` reverts.
                 const reopened = state.toast.prevDone;
                 const glyph = reopened ? icon.open : icon.done;
                 const tint = reopened ? color.accent2 : color.success;
@@ -1156,9 +1031,7 @@ export function App({
 
         <Box width={colGap} />
 
-        {/* Right column: a single tall Activity panel (chart on top, Recent
-            feed below the divider) sits at the top — free to exceed the
-            Server/Status header row. TodoInfo sits at the bottom-right. */}
+        {}
         <Box flexDirection="column" width={rightColW}>
           <TitledPanel
             title="Activity"
@@ -1167,7 +1040,7 @@ export function App({
             height={activityH}
             borderTint={color.accent2}
           >
-            {/* Header: legend + totals — a one-line read of what the chart shows. */}
+            {}
             <Box>
               <Text color={color.muted} dimColor>
                 ▒
@@ -1188,12 +1061,9 @@ export function App({
                 ySteps={2}
               />
             </Box>
-            {/* X-axis ruler + endpoints. Width matches `rows*2 chars wide chart`
-                + 4 chars for the y-axis gutter. */}
+            {}
             <XAxis days={ACTIVITY_DAYS} />
-            {/* In-panel divider separating the trend chart from the live feed.
-                Keeps both sub-sections inside one TitledPanel so the right
-                column reads as a single Activity module. */}
+            {}
             <Box marginTop={1}>
               <Text color={color.muted} dimColor>
                 {"─ Recent ".padEnd(Math.max(0, rightColW - 4), "─")}
@@ -1249,8 +1119,6 @@ function StatusPanel({
   clientVersion: string;
   syncing: boolean;
 }) {
-  // Each datum on its own row with a short label so narrow panels never
-  // truncate values like "v0.3.1" or a short sha. Label column = 5 cells.
   const rows: ReadonlyArray<readonly [string, string, string | undefined]> = [
     ["user", userName ?? "—", color.accent2],
     ["host", server ? stripScheme(server) : "local", color.accent2],
@@ -1277,8 +1145,6 @@ function StatusPanel({
       ? color.warn
       : color.muted;
   const connLabel = serverInfo ? "connected" : server ? "probing…" : "local";
-  // Hold the indicator on-screen long enough for the animation to register
-  // even on fast LANs where a single poll round-trip can be < 100ms.
   const showSyncing = useMinHold(syncing, 600);
   const spinnerFrame = useSpinnerFrame(showSyncing);
   return (
@@ -1304,22 +1170,14 @@ function StatusPanel({
   );
 }
 
-// Drop "http(s)://" so the host:port fits comfortably in the narrow Status
-// panel. Full URL is still printed under the logo in the Server panel.
 function stripScheme(url: string): string {
   return url.replace(/^https?:\/\//, "");
 }
 
-// Git-style short SHA (7 chars). Full hash is 40 hex chars; the leading 7 are
-// effectively unique within any project we'd realistically host here, and they
-// fit the narrow Status panel without the right edge getting hard-truncated.
-// Non-hex inputs (e.g. "unknown") fall through untouched.
 function shortSha(sha: string): string {
   return /^[0-9a-f]{7,}$/i.test(sha) ? sha.slice(0, 7) : sha;
 }
 
-// Replace the user's home directory with `~` so config paths read naturally in
-// the narrow Status panel ("~/.config/dox/config.toml" vs "/Users/.../...").
 function tildifyPath(path: string): string {
   const home = homedir();
   if (home && path.startsWith(home)) {
@@ -1384,9 +1242,6 @@ const listHints: ReadonlyArray<readonly [string, string]> = [
 ];
 
 function activeProjectId(filter: Filter): string | undefined {
-  // Only project filters seed `project_id` on newly-created todos. Adding from
-  // the Done archive falls back to no-project (inbox), mirroring "no scope" —
-  // creating a todo from a review surface shouldn't tie it to that surface.
   if (typeof filter === "string") return undefined;
   return filter.id;
 }
@@ -1395,12 +1250,6 @@ function filterToTabKey(filter: Filter): string {
   return filterKey(filter);
 }
 
-// Cursor-centered windowing for long lists. No separate scroll-offset state —
-// the window is derived from the cursor each render so j/k naturally drag the
-// viewport along once the cursor reaches the middle.
-//
-// Returns the visible slice along with the count of hidden items on each side,
-// so callers can render "↑ N more / N more ↓" hints.
 interface WindowSlice<T> {
   items: T[];
   start: number;
@@ -1433,11 +1282,6 @@ function sum(xs: number[]): number {
   return total;
 }
 
-// X-axis ruler under the dual bar chart. `days × 2` cells matches the chart
-// width (each day is rendered as `▒█`); 4-cell leading gutter aligns with the
-// y-axis labels inside DualBarChart. Total row width is pinned to gutter +
-// chart so the right-edge "today" label lines up with today's bar instead of
-// drifting to the parent panel's right border.
 function XAxis({ days }: { days: number }) {
   const gutter = 4;
   const chartWidth = days * 2;
@@ -1466,8 +1310,6 @@ function activityByDay(
   const today = startOfDay(Date.now());
   const buckets = new Array(days).fill(0);
   for (const t of todos) {
-    // "done" bucket = day the todo was last updated (proxy for completion day,
-    // since we don't store the completion timestamp separately).
     if (kind === "done" && !t.done) continue;
     const raw = kind === "created" ? t.createdAt : t.updatedAt;
     const ms = typeof raw === "string" ? Number(raw) : Number(raw ?? 0);

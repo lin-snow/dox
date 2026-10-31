@@ -1,7 +1,5 @@
-# Default: send nothing to the build context...
 **
 
-# ...then allow only the pre-built binaries the Dockerfile copies in.
 !artifacts
 !.dockerignore
 

@@ -4,16 +4,10 @@ import { color } from "../../theme";
 
 interface SectionHeaderProps {
   title: string;
-  // Optional subtitle / status chip rendered after the title in muted.
   hint?: string;
-  // Width of the lead dash run before the title.
   leadWidth?: number;
 }
 
-// External panel label, rendered as `─── Title ─── hint ────────────────────`
-// with the title in accent and the dashes in muted. The whole row is a single
-// truncate-wrapped Text so it always fills the parent's width without flex
-// measurement quirks wrapping the title onto a second line.
 export function SectionHeader({
   title,
   hint,

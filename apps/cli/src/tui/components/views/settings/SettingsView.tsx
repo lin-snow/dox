@@ -11,22 +11,13 @@ interface SettingsViewProps {
   tabs: SettingsTabSpec[];
   activeTab: SettingsTabKey;
   cursor: number;
-  // Transient one-line confirmation banner (e.g. after a successful redeem).
-  // App.tsx clears it on a timer and on tab/close.
   notice?: string | null;
   onTabChange: (next: SettingsTabKey) => void;
   onCursorChange: (next: number) => void;
   onClose: () => void;
-  // True while a modal is open; key handling stays paused so the modal owns
-  // input. Cursor / tab navigation still re-render correctly because the
-  // parent re-mounts SettingsView when editing is null again.
   inputPaused?: boolean;
 }
 
-// Centered settings panel. Outer chrome (TitledPanel + tab strip + footer) is
-// owned here; per-tab content is data-driven via `tabs` so adding a new tab is
-// one entry in settings.ts. Panel is sized as a card (capped width + height)
-// so it reads as a focused page rather than a full-screen surface.
 export function SettingsView({
   tabs,
   activeTab,
@@ -38,17 +29,9 @@ export function SettingsView({
   inputPaused = false,
 }: SettingsViewProps) {
   const { columns: cols, rows } = useWindowSize();
-  // Card dimensions: the two-column body (RowList + Detail) wants real width
-  // to breathe, hence a higher cap than search/detail. Min keeps the layout
-  // legible on 80×24 terminals.
   const panelWidth = Math.min(110, Math.max(72, cols - 4));
   const innerHeight = Math.min(28, Math.max(18, rows - 6));
-  // Push the card toward the visual middle; subtract ~3 rows for the footer.
   const topPad = Math.max(1, Math.floor((rows - innerHeight - 3) / 2));
-  // Inner two-column split: sidebar (label menu) on the left, Detail on the
-  // right with a 2-cell gutter. TitledPanel chrome eats 4 cells (border +
-  // paddingX=1 each side). Detail uses the remainder so its separators don't
-  // overflow on narrow terminals.
   const innerW = Math.max(8, panelWidth - 4);
   const sidebarW = Math.max(16, Math.floor(panelWidth * 0.36));
   const detailW = Math.max(20, innerW - sidebarW - 2);
@@ -95,7 +78,6 @@ export function SettingsView({
       current.secondary.action();
       return;
     }
-    // Numeric tab jump: keep the legacy `[1] General` style binding.
     const n = Number(input);
     if (Number.isInteger(n) && n >= 1 && n <= tabs.length) {
       const target = tabs[n - 1];
@@ -178,9 +160,6 @@ function RowList({
   cursor: number;
   width: number;
 }) {
-  // Labels-only sidebar: keeps the column at a stable width regardless of
-  // each tab's longest `value`. The Detail pane on the right is the single
-  // source of truth for values, so showing them inline here was redundant.
   return (
     <Box
       flexDirection="column"
@@ -228,8 +207,6 @@ function Detail({
   row: SettingsRow | undefined;
   width: number;
 }) {
-  // Separator width = inner content width (paddingX=2 on both sides). Width
-  // can briefly be ≤ 4 during initial layout — guard against negative repeat.
   const sepW = Math.max(0, width - 4);
   const sep = (
     <Text color={color.muted} dimColor>
@@ -265,10 +242,7 @@ function Detail({
             : row.detail}
         </Text>
       </Box>
-      {/* Spacer pushes the tip strip to the bottom of the pane so the labeled
-          separator visually anchors the row hints. Render always (even for
-          read-only rows) so the panel layout is consistent across selections —
-          read-only rows get a small "view only" chip in place of keybindings. */}
+      {}
       <Box flexGrow={1} />
       <Box>
         <Text color={color.muted} dimColor>

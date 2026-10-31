@@ -4,15 +4,10 @@ import { Fragment } from "react";
 import { color } from "../../theme";
 
 interface DualBarChartProps {
-  // Two parallel series of equal length. Rendered side-by-side per column:
-  // secondary (▒) draws first, primary (█) draws second. Negatives clamp to 0.
   primary: number[];
   secondary: number[];
-  // Height of the chart body in rows. Each row resolves to 8 vertical eighths.
   rows?: number;
-  // Y-axis label every N rows. 0 disables y-axis labels.
   ySteps?: number;
-  // Manual peak. Defaults to max of both series so they share a y-scale.
   max?: number;
 }
 
@@ -21,9 +16,6 @@ const FULL_SECONDARY = "▒";
 const EIGHTHS_PRIMARY = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇"];
 const EIGHTHS_SECONDARY = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇"];
 
-// 2-series stacked bar chart in box-drawing chars. Each day occupies 2 cells:
-// `▒█` for that day — left cell shows `secondary` (created), right cell shows
-// `primary` (done). Both share the same y-axis so eye comparison is honest.
 export function DualBarChart({
   primary,
   secondary,
@@ -45,10 +37,6 @@ export function DualBarChart({
       {ySteps > 0 && <YAxis rows={rows} peak={peak} step={ySteps} />}
       <Box flexDirection="column" width={chartW} flexShrink={0}>
         {Array.from({ length: rows }).map((_, rowIdx) => (
-          // One Text per row (not one per column) so Yoga can't treat each
-          // bar as a shrinkable flex item — when it did, narrow panels caused
-          // the trailing column to wrap onto a second visual line, doubling
-          // chart height and squishing the bars into a clump.
           <Text key={rowIdx} wrap="truncate-end">
             {Array.from({ length: len }).map((_, colIdx) => (
               <Fragment key={colIdx}>
@@ -81,9 +69,6 @@ function YAxis({
       {Array.from({ length: rows }).map((_, idx) => {
         const showLabel = idx % step === 0;
         const value = peak * (1 - idx / Math.max(1, rows - 1));
-        // Render a literal space (not "") when no label — Ink collapses empty
-        // Text nodes to zero height, which slides remaining labels upward and
-        // breaks alignment with the chart rows.
         const text = showLabel ? formatY(value) : " ";
         return (
           <Box key={idx} width={3} justifyContent="flex-end">

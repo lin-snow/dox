@@ -20,10 +20,6 @@ interface TodoDetailViewProps {
   onDelete: () => void;
 }
 
-// Centered Todo detail page. A TitledPanel sized as a card (capped width +
-// height) holds structured sections; a key-hint Footer pins the bottom. Hosts
-// the long-form description once the server returns it; falls back to a muted
-// placeholder so the section is always present for layout consistency.
 export function TodoDetailView({
   todo,
   project,
@@ -35,12 +31,8 @@ export function TodoDetailView({
   onDelete,
 }: TodoDetailViewProps) {
   const { columns: cols, rows } = useWindowSize();
-  // Card dimensions: wide enough for the two-column metadata grid + a
-  // comfortable description column, but capped so the layout reads as a
-  // focused page rather than a full-screen surface.
   const panelWidth = Math.min(96, Math.max(60, cols - 4));
   const panelHeight = Math.min(28, Math.max(16, rows - 6));
-  // Push the card toward the visual middle; subtract ~3 rows for the footer.
   const topPad = Math.max(1, Math.floor((rows - panelHeight - 3) / 2));
 
   useInput((input, key) => {
@@ -66,7 +58,7 @@ export function TodoDetailView({
           paddingY={1}
           focused
         >
-          {/* Status pill + short ID — same shape as TodoInfo but with more breathing room. */}
+          {}
           <Box>
             <Box borderStyle="round" borderColor={statusColor} paddingX={2}>
               <Text color={statusColor} bold>
@@ -79,14 +71,14 @@ export function TodoDetailView({
             </Box>
           </Box>
 
-          {/* Title — full width, bold accent. */}
+          {}
           <Box marginTop={1}>
             <Text color={color.accent} bold wrap="truncate">
               {todo.title}
             </Text>
           </Box>
 
-          {/* Two-column metadata grid. */}
+          {}
           <Box marginTop={1}>
             <Box
               flexDirection="column"
@@ -120,8 +112,7 @@ export function TodoDetailView({
             </Box>
           </Box>
 
-          {/* Description section — placeholder when missing so the section header
-            always renders, making the field's eventual arrival a no-op visually. */}
+          {}
           <Box marginTop={1}>
             <Text color={color.muted}>
               {"─".repeat(Math.max(10, panelWidth - 6))}

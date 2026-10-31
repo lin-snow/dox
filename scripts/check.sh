@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-#
-# scripts/check.sh — Orchestrate the `just check` pipeline.
-#
-# Each step runs even if a prior step fails, so a single pass surfaces every
-# problem at once. A summary table is printed at the end. Exits non-zero if
-# any step failed.
 
 set -u
 
@@ -19,7 +13,6 @@ else
   C_HDR_PROTO=""; C_HDR_GO=""; C_HDR_TS=""; C_OK=""; C_FAIL=""; C_RESET=""
 fi
 
-# step_key | banner_color | banner | shell command
 STEPS=(
   "proto-lint|$C_HDR_PROTO|Proto: lint (buf lint)|buf lint"
   "proto-fmt|$C_HDR_PROTO|Proto: format (buf format -w)|buf format -w"
@@ -63,13 +56,12 @@ done
 
 total_elapsed=$(fmt_dur $(($(date +%s) - total_start)))
 
-# Column widths.
-key_w=4      # "Step"
+key_w=4
 for k in "${keys[@]}"; do
   if [ "${#k}" -gt "$key_w" ]; then key_w=${#k}; fi
 done
-status_w=6   # "Status"
-dur_w=8      # "Duration"
+status_w=6
+dur_w=8
 for d in "${durations[@]}"; do
   if [ "${#d}" -gt "$dur_w" ]; then dur_w=${#d}; fi
 done
@@ -107,7 +99,6 @@ for i in "${!keys[@]}"; do
     color="$C_FAIL"
     fail_count=$((fail_count + 1))
   fi
-  # Pad status manually so embedded color codes don't skew the column width.
   pad=$((status_w - ${#s}))
   printf '| %-*s | %s%s%s%*s | %*s |\n' \
     "$key_w" "${keys[$i]}" \

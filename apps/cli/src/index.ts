@@ -12,16 +12,12 @@ import { VERSION } from "./version";
 
 const args = process.argv.slice(2);
 
-// TTY without subcommand → launch TUI mode.
 if (args.length === 0 && process.stdout.isTTY) {
   const { runTui } = await import("./tui");
   await runTui();
   process.exit(0);
 }
 
-// Intercept --version / -V / `version` before commander so we can render the
-// logo banner instead of commander's plain one-liner. `version` as a bare
-// subcommand mirrors `go version`, `node --version`, etc.
 if (args[0] === "--version" || args[0] === "-V" || args[0] === "version") {
   process.stdout.write(renderVersionBanner() + "\n");
   process.exit(0);
@@ -34,7 +30,6 @@ program
   .version(VERSION)
   .option("--json", "output JSON for machine consumption");
 
-// ── auth ───────────────────────────────────────────────────────────────────
 program
   .command("register")
   .description(
@@ -78,7 +73,6 @@ program
   .option("--server <url>", "server URL (only needed if not logged in)")
   .action(auth.acceptInviteCmd);
 
-// ── todos ──────────────────────────────────────────────────────────────────
 program
   .command("list")
   .alias("ls")
@@ -146,7 +140,6 @@ program
     return todo.rm(id, this.optsWithGlobals());
   });
 
-// ── projects ───────────────────────────────────────────────────────────────
 const proj = program
   .command("project")
   .alias("p")
@@ -212,7 +205,6 @@ proj
     return project.removeMember(projectId, userId, this.optsWithGlobals());
   });
 
-// ── server (owner-only) ────────────────────────────────────────────────────
 const srv = program
   .command("server")
   .description("Server-wide operations (owner-only)");
@@ -264,9 +256,6 @@ srv
     return server.resetUserPassword(name, this.optsWithGlobals());
   });
 
-// ── invites (manage outgoing) ──────────────────────────────────────────────
-// Distinct from `project invite` and `server invite` (which *issue* codes).
-// This group is for listing / revoking codes you previously issued.
 const inv = program
   .command("invite")
   .description("Manage outgoing invite codes");
@@ -284,7 +273,6 @@ inv
     return invite.revoke(hash, this.optsWithGlobals());
   });
 
-// ── local config ───────────────────────────────────────────────────────────
 const cfg = program
   .command("config")
   .description("Read / write ~/.config/dox/config.toml");

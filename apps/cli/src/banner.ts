@@ -1,8 +1,5 @@
 import { COMMIT, VERSION } from "./version";
 
-// Same 5-row figlet the TUI's Logo component and the server's version.Banner
-// render. Keep these three in sync (see apps/cli/src/tui/components/layout/Logo.tsx
-// and apps/server/internal/version/version.go) so dox has one visual identity.
 const LOGO_ROWS = [
   "       __          ",
   "  ____/ /___  _  __",
@@ -11,8 +8,6 @@ const LOGO_ROWS = [
   "\\__,_/\\____/_/|_|  ",
 ] as const;
 
-// ANSI: bold + magentaBright, matching theme.color.brand. Only emitted on a
-// TTY so `dox --version | grep` and CI log scrapers stay clean.
 const BRAND_ON = "\x1b[1;95m";
 const ANSI_OFF = "\x1b[0m";
 

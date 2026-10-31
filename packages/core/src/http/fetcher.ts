@@ -53,9 +53,7 @@ export class ApiError extends Error {
     let body: ApiErrorBody = {};
     try {
       body = JSON.parse(rawBody) as ApiErrorBody;
-    } catch {
-      // Non-JSON body; fall through with empty body.
-    }
+    } catch {}
     super(friendlyMessage(status, body));
     this.name = "ApiError";
     this.grpcCode = body.code;

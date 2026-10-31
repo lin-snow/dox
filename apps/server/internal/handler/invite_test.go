@@ -49,7 +49,6 @@ func TestListOutgoingInvites_filtersToCaller(t *testing.T) {
 	alice := seedUser(t, f.q, "alice", caller.RoleOwner)
 	bob := seedUser(t, f.q, "bob", caller.RoleMember)
 
-	// Alice issues a server invite. Bob shouldn't see it.
 	if _, err := f.inv.CreateInvite(ctxFor(alice), &doxv1.CreateInviteRequest{}); err != nil {
 		t.Fatalf("alice CreateInvite: %v", err)
 	}
@@ -76,13 +75,11 @@ func TestRevokeInvite_scopedToIssuer(t *testing.T) {
 	alice := seedUser(t, f.q, "alice", caller.RoleOwner)
 	bob := seedUser(t, f.q, "bob", caller.RoleMember)
 
-	// Alice issues a server invite.
 	created, err := f.inv.CreateInvite(ctxFor(alice), &doxv1.CreateInviteRequest{})
 	if err != nil {
 		t.Fatalf("CreateInvite: %v", err)
 	}
 
-	// Look up the row so the test can supply the code_hash.
 	got, err := f.inv.ListOutgoingInvites(ctxFor(alice), &doxv1.ListOutgoingInvitesRequest{})
 	if err != nil {
 		t.Fatalf("ListOutgoingInvites: %v", err)
@@ -92,8 +89,6 @@ func TestRevokeInvite_scopedToIssuer(t *testing.T) {
 	}
 	codeHash := got.GetInvites()[0].GetCodeHash()
 
-	// Bob tries to revoke Alice's invite → NotFound (we deliberately don't
-	// leak the difference between "not yours" and "doesn't exist").
 	_, err = f.inv.RevokeInvite(ctxFor(bob), &doxv1.RevokeInviteRequest{CodeHash: codeHash})
 	if err == nil {
 		t.Fatal("expected error when bob revokes alice's invite, got nil")
@@ -102,8 +97,6 @@ func TestRevokeInvite_scopedToIssuer(t *testing.T) {
 		t.Fatalf("expected NotFound, got %v", st.Code())
 	}
 
-	// Code is still alive — accepting it via Register-style flow would still
-	// work (we don't fully exercise that here; just verify the row exists).
 	stillThere, err := f.inv.ListOutgoingInvites(ctxFor(alice), &doxv1.ListOutgoingInvitesRequest{})
 	if err != nil {
 		t.Fatalf("re-list: %v", err)
@@ -112,7 +105,6 @@ func TestRevokeInvite_scopedToIssuer(t *testing.T) {
 		t.Fatalf("invite should survive bob's failed revoke, got %d rows", len(stillThere.GetInvites()))
 	}
 
-	// Alice revokes her own — succeeds, row disappears.
 	if _, err := f.inv.RevokeInvite(ctxFor(alice), &doxv1.RevokeInviteRequest{CodeHash: codeHash}); err != nil {
 		t.Fatalf("alice RevokeInvite: %v", err)
 	}
@@ -124,7 +116,6 @@ func TestRevokeInvite_scopedToIssuer(t *testing.T) {
 		t.Fatalf("expected 0 invites after revoke, got %d", len(after.GetInvites()))
 	}
 
-	// Accept now fails (sanity: code really is dead).
 	if _, err := f.inv.AcceptInvite(ctxFor(bob), &doxv1.AcceptInviteRequest{Code: created.GetCode()}); err == nil {
 		t.Fatal("expected AcceptInvite to fail after revoke")
 	}

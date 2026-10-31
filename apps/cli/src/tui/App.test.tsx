@@ -5,18 +5,6 @@ import type { ActivityEvent, EventsApi, Todo, TodoApi } from "@dox/core";
 import { App } from "./App";
 import { mount } from "./test-utils";
 
-// Integration smokes. The reducer is exhaustively covered in state.test.ts —
-// these only verify the parts the reducer can't see: that the Ink tree
-// renders, that single-keystroke modes (help, search, editor cancel) wire up,
-// and that async API calls (delete, events) reach the backend with the right
-// args.
-//
-// Tests that depend on multi-keystroke flows landing in a freshly-mounted
-// child input (cursor movement, toast, TextInput-fed creation) were removed:
-// they were flaky on slower machines because Ink's useInput subscribes inside
-// useEffect and the post-commit settle window varies with load. Cover those
-// paths by hand in the running TUI.
-
 function makeTodo(overrides: Partial<Todo> = {}): Todo {
   return {
     id:
@@ -39,7 +27,6 @@ interface FakeApi {
 }
 
 function makeFakeApi(initial: Todo[] = []): FakeApi {
-  // Mutable store so the fake reflects mutations across sequential calls.
   const store = new Map(initial.map((t) => [t.id, t]));
   const createMock = mock(async (title: string) => {
     const t = makeTodo({ title });
@@ -115,7 +102,7 @@ describe("App (integration smokes)", () => {
     await settle((f) => f.includes("nothing here"));
     press("i");
     await settle((f) => f.includes("New todo"));
-    press("\x13"); // empty title — treated as cancel
+    press("\x13");
     await settle((f) => f.includes("NORMAL"));
     expect(createMock).not.toHaveBeenCalled();
   });

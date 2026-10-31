@@ -17,8 +17,6 @@ import { TitledPanel } from "../../primitives/TitledPanel";
 
 export interface TodoEditorPayload {
   title: string;
-  // Empty string is the explicit "no description" signal — the caller decides
-  // whether to send it as a clear vs. leave-unchanged depending on mode.
   description: string;
 }
 
@@ -33,12 +31,6 @@ interface TodoEditorViewProps {
 const TITLE_FIELD = "todo-editor:title";
 const DESC_FIELD = "todo-editor:description";
 
-// Full-screen editor page for adding / editing a todo. Title is required; the
-// markdown description below it is optional. Tab swaps focus between the two
-// fields; Enter on title advances focus to description; Enter inside the
-// description inserts a newline. Ctrl+S saves from either field — a dedicated
-// save key avoids the terminal-level limitation that prevents Shift+Enter
-// from being distinguished from plain Enter in most terminals.
 export function TodoEditorView({
   mode,
   defaultTitle,
@@ -55,8 +47,6 @@ export function TodoEditorView({
 
   const { focus } = useFocusManager();
 
-  // Editor-level shortcuts: Esc cancels, Ctrl+S saves. Both fire regardless of
-  // which field has focus — @inkjs/ui's TextInput doesn't capture either key.
   useInput((input, key) => {
     if (key.escape) {
       onCancel();
@@ -64,8 +54,6 @@ export function TodoEditorView({
     }
     if (key.ctrl && input === "s") {
       const trimmed = title.trim();
-      // Empty title + save behaves like cancel — matches the original
-      // "blank title submits empty" gesture without ambiguity.
       if (trimmed === "") {
         onCancel();
         return;
@@ -80,8 +68,6 @@ export function TodoEditorView({
       ? "Capture a new task. Ctrl+S to save · Esc cancels."
       : "Update the title and optional markdown description.";
 
-  // Card width: wide enough to type comfortably, narrow enough to read as a
-  // focused dialog rather than another full panel.
   const cardWidth = Math.min(80, cols - 8);
 
   return (
@@ -109,9 +95,6 @@ export function TodoEditorView({
                 placeholder={mode === "add" ? "new todo title…" : undefined}
                 onChange={setTitle}
                 onSubmit={(value) => {
-                  // Enter on the title row advances focus to the description.
-                  // Save lives on Ctrl+S (handled at the editor level) so we
-                  // don't conflate "next field" and "submit".
                   setTitle(value);
                   focus(DESC_FIELD);
                 }}
@@ -162,8 +145,6 @@ interface FieldProps {
   children: (focused: boolean) => React.ReactNode;
 }
 
-// A single labeled input row inside the editor card. Owns its own focus claim
-// via useFocus so Ink's focus manager (Tab / Shift-Tab) can cycle through.
 function Field({ id, label, value, autoFocus, children }: FieldProps) {
   const { isFocused } = useFocus({ id, autoFocus });
   return (

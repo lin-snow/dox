@@ -7,16 +7,8 @@ export interface MultilineInputProps {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
-  // Mirrors @inkjs/ui TextInput's `isDisabled`. While disabled we early-return
-  // from useInput so the focus manager's other field owns key handling, and we
-  // render the value flat (no cursor, no placeholder).
   isDisabled?: boolean;
-  // Required so we know how wide each rendered line may be. Pass the parent's
-  // content column budget (panel width minus paddings) so wrap math matches
-  // the visual frame.
   width: number;
-  // Viewport cap: when the cursor lands past this many rows below the top we
-  // scroll so the cursor stays visible. Keeps the host card height stable.
   maxRows?: number;
 }
 
@@ -25,9 +17,6 @@ interface Cursor {
   col: number;
 }
 
-// Custom multi-line text-area for Ink TUIs. @inkjs/ui ships only single-line
-// inputs (TextInput/PasswordInput/EmailInput), so we roll our own when a field
-// needs newline insertion. See `purring-knitting-pelican.md` for the design.
 export function MultilineInput({
   value,
   onChange,
@@ -41,13 +30,8 @@ export function MultilineInput({
     row: Math.max(0, lines.length - 1),
     col: lines[lines.length - 1]?.length ?? 0,
   }));
-  // Remember the user's intended column so ↓ from a long line into a short one
-  // then onward into another long one restores horizontal position.
   const desiredCol = useRef<number>(cursor.col);
 
-  // Re-clamp when the value mutates from outside (parent reset, paste of a
-  // different shape). Keyed on lines.length + the active row's length so an
-  // edit that doesn't change those still skips the clamp.
   const activeLineLen = lines[cursor.row]?.length ?? 0;
   useEffect(() => {
     setCursor((prev) => clampCursor(prev, lines));
@@ -58,17 +42,12 @@ export function MultilineInput({
     (input, key) => {
       if (isDisabled) return;
 
-      // Plain Enter inserts a newline — this is a true multi-line field. Save
-      // is bound at the editor level (Ctrl+S) rather than here, because most
-      // terminals don't pass the Shift modifier on Enter so a "Shift+Enter for
-      // newline / Enter for save" split is unreliable.
       if (key.return) {
         const { next, cursor: nextCursor } = insertText(lines, cursor, "\n");
         commit(next, nextCursor);
         return;
       }
 
-      // Tab + Esc + Ctrl+S belong to the parent / focus manager / editor save.
       if (key.tab || key.escape) return;
       if (key.ctrl && input === "s") return;
 
@@ -93,8 +72,6 @@ export function MultilineInput({
         return;
       }
 
-      // Home/End — accept both terminal-native keys (when reported) and the
-      // portable Emacs-style Ctrl+A / Ctrl+E that every terminal can emit.
       if (key.home || (key.ctrl && input === "a")) {
         const next = { row: cursor.row, col: 0 };
         desiredCol.current = 0;
@@ -110,20 +87,13 @@ export function MultilineInput({
       }
 
       if (key.backspace || key.delete) {
-        // (0,0) on an empty buffer: nothing to delete — keep `onChange` quiet
-        // so React doesn't see a redundant state update.
         if (cursor.row === 0 && cursor.col === 0) return;
         const { next, cursor: nextCursor } = deleteBackward(lines, cursor);
         commit(next, nextCursor);
         return;
       }
 
-      // Printable input (covers single chars and pasted runs). Reject control
-      // chords and meta-prefixed inputs so e.g. Ctrl+A doesn't insert "a".
       if (!input || key.ctrl || key.meta) return;
-      // Pasted text may carry embedded newlines (and CRLF on Windows-ish
-      // sources). Normalise CRLF → LF, then let insertText split on LF so a
-      // multi-line paste lands as multiple lines rather than a single mash.
       const sanitized = input.replace(/\r/g, "");
       const { next, cursor: nextCursor } = insertText(lines, cursor, sanitized);
       commit(next, nextCursor);
@@ -137,9 +107,6 @@ export function MultilineInput({
     desiredCol.current = nextCursor.col;
   }
 
-  // Viewport: keep the cursor row visible within a window of `maxRows`. No
-  // separate scroll-offset state — start is derived each render so a paste or
-  // arrow keypress naturally drags the viewport.
   const safeWidth = Math.max(1, width);
   const start = clampStart(cursor.row, lines.length, maxRows);
   const visible = lines.slice(start, start + maxRows);
@@ -162,8 +129,6 @@ export function MultilineInput({
   return (
     <Box flexDirection="column" width={safeWidth}>
       {showPlaceholder ? (
-        // Render the cursor cell first so it visually sits at the start of the
-        // placeholder, not inside it.
         <Text>
           <Text inverse> </Text>
           <Text color={color.muted} dimColor>
@@ -206,8 +171,6 @@ function clampCursor(cursor: Cursor, lines: string[]): Cursor {
 
 function clampStart(row: number, total: number, maxRows: number): number {
   if (total <= maxRows) return 0;
-  // Pin the cursor inside the viewport: when cursor moves below the bottom,
-  // scroll so the cursor is on the last visible row.
   const maxStart = total - maxRows;
   return Math.max(0, Math.min(row - (maxRows - 1), maxStart));
 }
@@ -265,8 +228,6 @@ function insertText(
     };
   }
 
-  // Multi-segment paste: first segment merges with `before`, last with
-  // `after`, middle segments stand on their own.
   const first = before + segments[0];
   const last = segments[segments.length - 1] + after;
   const middle = segments.slice(1, -1);
@@ -294,8 +255,6 @@ function deleteBackward(lines: string[], cursor: Cursor): MutationResult {
     next[cursor.row] = nextLine;
     return { next, cursor: { row: cursor.row, col: cursor.col - 1 } };
   }
-  // col === 0 && row > 0 (caller guarantees we don't enter here at 0,0): merge
-  // the current line into the previous one.
   const prev = lines[cursor.row - 1] ?? "";
   const current = lines[cursor.row] ?? "";
   const merged = prev + current;

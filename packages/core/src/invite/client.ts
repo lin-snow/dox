@@ -9,9 +9,6 @@ export interface Invite {
   expiresAt: string;
 }
 
-// OutgoingInvite is what the server returns from /v1/invites/outgoing.
-// `code` is unrecoverable post-creation, so listings carry `codeHash` as the
-// revoke key instead.
 export interface OutgoingInvite {
   codeHash: string;
   projectId: string;
@@ -32,8 +29,6 @@ export class InviteClient {
     private readonly base: string,
   ) {}
 
-  // Creates either a server invite (projectId omitted, owner-only) or a project
-  // invite (projectId + role, project-owner-only).
   async create(args: {
     projectId?: string;
     role?: "editor" | "viewer";

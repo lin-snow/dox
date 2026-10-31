@@ -1,16 +1,10 @@
 import { readFile } from "node:fs/promises";
 
-// FormatCodeOnNewline formats a raw 8-char code as "ABCD-EFGH" matching the
-// server's auth.FormatCode rendering.
 export function FormatCodeOnNewline(code: string): string {
   if (code.length !== 8) return code;
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
-// readDescription resolves --description / --description-file into the body
-// string to send. `-` as the file path reads from stdin. Returns undefined
-// when neither flag is set, signalling "leave description unchanged" to the
-// server-side PATCH semantics. Throws when both flags are given.
 export async function readDescription(opts: {
   description?: string;
   descriptionFile?: string;

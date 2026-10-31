@@ -18,21 +18,6 @@ import { Panel } from "../../primitives/Panel";
 import { SectionHeader } from "../../primitives/SectionHeader";
 import { Stepper } from "../../primitives/Stepper";
 
-// Onboarding routes a brand-new client onto a dox server. The flow has
-// exactly three terminal intents:
-//
-//   - "first-user": server is empty; this caller will be the owner. The
-//     wizard collects username + password and offers an optional server
-//     identity step (server name, description).
-//   - "login":      server has users; caller already has an account here.
-//     Collect username + password, POST /v1/auth/login.
-//   - "register":   server has users; caller is brand new to it. Collect
-//     invite code (if registration is closed), username, password.
-//
-// The branch ("login" vs "register") is picked by the user, not inferred
-// from server state — previously the UI auto-routed to register when
-// registration_open=true, silently creating duplicate accounts for any
-// returning owner who reinstalled.
 type Stage =
   | "server"
   | "probing"
@@ -47,10 +32,6 @@ type Stage =
 
 type Intent = "first-user" | "login" | "register";
 
-// "fresh" = no config on disk; "reauth" = config existed but its token was
-// rejected by the server (expired, secret rotated, user deleted, etc.).
-// Surfaced as a different welcome line so the user knows why they're seeing
-// this screen.
 export type OnboardingReason = "fresh" | "reauth";
 
 const DEFAULT_SERVER = "http://localhost:6278";
@@ -74,7 +55,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
   const [intent, setIntent] = useState<Intent>("login");
   const [error, setError] = useState<string | null>(null);
 
-  // Probe the server when transitioning into "probing".
   useEffect(() => {
     if (stage !== "probing") return;
     let cancelled = false;
@@ -84,13 +64,9 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         if (cancelled) return;
         setInfo(result);
         if (!result.hasUsers) {
-          // Empty server: this caller will be the owner. No branch choice —
-          // there's nothing to log in to.
           setIntent("first-user");
           setStage("enter-username");
         } else {
-          // Has users: always ask. Whether registration is open only changes
-          // whether the register path needs an invite code.
           setStage("choose-branch");
         }
       } catch (err) {
@@ -104,7 +80,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     };
   }, [stage, server]);
 
-  // Final submit: register / login when transitioning into "submitting".
   useEffect(() => {
     if (stage !== "submitting") return;
     let cancelled = false;
@@ -136,7 +111,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
       } catch (err) {
         if (cancelled) return;
         setError((err as Error).message);
-        // Drop back to whatever input stage makes sense for the intent.
         setStage(intent === "login" ? "enter-password" : "confirm-password");
       }
     })();
@@ -155,7 +129,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
     onDone,
   ]);
 
-  // Branch picker — numeric keys, native useInput is simpler than a Select.
   useInput(
     (input) => {
       setError(null);
@@ -197,8 +170,6 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
 
   const submitPassword = (raw: string) => {
     if (intent === "login") {
-      // Login: no length check (legacy users may have short passwords); the
-      // server will reject if wrong.
       if (!raw) return;
       setError(null);
       setPassword(raw);
@@ -449,8 +420,6 @@ function panelTitle(stage: Stage, intent: Intent): string {
 }
 
 function stepIndexFor(stage: Stage): number {
-  // 4-dot stepper: Server → Method → Account → Password. The first-user path
-  // skips Method (auto-selected), so its stages collapse onto the same dots.
   switch (stage) {
     case "server":
     case "probing":

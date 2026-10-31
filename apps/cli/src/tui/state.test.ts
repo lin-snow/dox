@@ -4,12 +4,6 @@ import type { Todo } from "@dox/core";
 
 import { initialState, reducer, visibleTodos, type State } from "./state";
 
-// Pure reducer tests — no Ink, no async, no polling. Most of the behavior the
-// TUI surfaces (cursor movement, filter cycling, mode transitions, list
-// recomputation on toggle/delete) is encoded here and runs in microseconds.
-// The companion App.test.tsx keeps only a handful of smokes that verify the
-// keymap + Ink + async-API wiring actually reaches these actions.
-
 let idCounter = 0;
 function todo(overrides: Partial<Todo> = {}): Todo {
   idCounter += 1;
@@ -24,8 +18,6 @@ function todo(overrides: Partial<Todo> = {}): Todo {
   };
 }
 
-// Compose dispatches without rewriting the boilerplate `s = reducer(s, …)` on
-// every line. Mirrors how a component would step through actions over time.
 function applyAll(
   state: State,
   actions: Parameters<typeof reducer>[1][],
@@ -54,14 +46,9 @@ describe("reducer / loading", () => {
   });
 
   test("TODOS_LOADED preserves a hydrated description the list payload omits", () => {
-    // Regression: ListTodos drops the description body, so a background poll
-    // would overwrite the row with description=undefined and the open detail
-    // view's body would vanish ~30s after opening. The reducer must keep the
-    // GetTodo-hydrated body when the refreshed row arrives without one.
     const t = todo({ title: "x", description: "hydrated body" });
     const polled = applyAll(initialState, [
       { type: "TODOS_LOADED", todos: [t] },
-      // The poll re-lists with the same row, sans description (list payload).
       { type: "TODOS_LOADED", todos: [{ ...t, description: undefined }] },
     ]);
     expect(polled.todos[0]?.description).toBe("hydrated body");

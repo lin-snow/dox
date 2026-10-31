@@ -3,13 +3,6 @@ import type { Project } from "@dox/core";
 
 import { color, icon } from "../../theme";
 
-// "inbox" = private todos with no project (project_id IS NULL on the server).
-// Surfaced to users as "Private" — see App.tsx tabs. Key stays "inbox" for
-// persistence stability.
-//
-// "done" is the cross-project archive of completed todos. It's *not* part of
-// the working flow — open todos drop out of every other tab once completed —
-// so it sits at the end of the cycle as a review-only surface.
 export type Filter = "inbox" | "done" | { type: "project"; id: string };
 
 export function filterKey(f: Filter): string {
@@ -60,8 +53,6 @@ export function Sidebar({
     }
   }
 
-  // Build the row-index → focus mapping skipping dividers, so the cursor index
-  // (which counts only selectable filters) maps back to a render row.
   const selectableIndexes: number[] = [];
   rows.forEach((r, i) => {
     if (!r.divider) selectableIndexes.push(i);
@@ -99,8 +90,6 @@ function SidebarRow({
   selected: boolean;
   cursored: boolean;
 }) {
-  // Cursor draws the bar; the selected (committed) filter is bolded. When both
-  // overlap the row uses accent for the bar so focus is obvious.
   const bar = cursored ? icon.selectBar : selected ? icon.selectBar : " ";
   const barColor = cursored
     ? color.accent
@@ -130,8 +119,6 @@ function SidebarRow({
   );
 }
 
-// Project colors come from the server as free-form strings. Map a few known
-// names; fall back to muted so unknown values render harmlessly.
 function swatchColor(raw: string): string {
   const known: Record<string, string> = {
     red: "red",

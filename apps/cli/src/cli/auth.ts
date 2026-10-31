@@ -68,8 +68,6 @@ async function promptPassword(message: string): Promise<string> {
   return v;
 }
 
-// loginCmd authenticates an existing user with username + password and
-// stores the returned JWT.
 export async function loginCmd(opts: LoginOptions): Promise<void> {
   const url = validUrlOrDie(opts.server);
   p.intro(`Log in to ${url.origin}`);
@@ -92,8 +90,6 @@ export async function loginCmd(opts: LoginOptions): Promise<void> {
   p.outro(`Logged in as ${result.userName} (${result.role}). Config saved.`);
 }
 
-// registerCmd creates a new user. First-ever caller becomes the server owner.
-// Subsequent callers need either an invite or the server set to open registration.
 export async function registerCmd(opts: RegisterOptions): Promise<void> {
   const url = validUrlOrDie(opts.server);
   p.intro(`Register with ${url.origin}`);
@@ -133,8 +129,6 @@ export async function registerCmd(opts: RegisterOptions): Promise<void> {
   p.outro(`Registered as ${result.userName} (${result.role}). Config saved.`);
 }
 
-// acceptInviteCmd redeems an invite code. If already logged in, just joins
-// the project. Otherwise prompts for registration and uses the code there.
 export async function acceptInviteCmd(
   codeArg: string,
   opts: AcceptOptions,
@@ -152,11 +146,8 @@ export async function acceptInviteCmd(
     }
     return;
   }
-  // No existing config — fall through to registration with the invite.
   const server =
     opts.server ?? (await promptText("Server URL:", "http://localhost:6278"));
-  // Pre-probe so we can warn if registration is closed AND no invite was
-  // given — but we DO have an invite here, so just go.
   try {
     await fetchServerInfo(server);
   } catch (err) {
@@ -166,8 +157,6 @@ export async function acceptInviteCmd(
   await registerCmd({ server, invite: codeArg });
 }
 
-// logoutCmd wipes the local config. Server-side state is unaffected (JWT
-// continues to be valid until its natural expiry).
 export async function logoutCmd(): Promise<void> {
   const removed = await clearConfig();
   if (removed) {
@@ -177,7 +166,6 @@ export async function logoutCmd(): Promise<void> {
   }
 }
 
-// passwdCmd changes the current user's password.
 export async function passwdCmd(opts: PasswdOptions): Promise<void> {
   const cfg = await loadConfig();
   if (!cfg) {

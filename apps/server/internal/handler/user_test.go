@@ -62,7 +62,6 @@ func TestRegister_FirstUserBecomesOwner(t *testing.T) {
 	if resp.Token == "" || resp.UserId == "" {
 		t.Errorf("incomplete response: %+v", resp)
 	}
-	// Issued token must verify under the same secret.
 	v := authn.NewJWTVerifier(testSecret)
 	c, ok := v.Verify(resp.Token)
 	if !ok {
@@ -71,7 +70,6 @@ func TestRegister_FirstUserBecomesOwner(t *testing.T) {
 	if c.UserID != resp.UserId || c.UserName != "alice" || c.Role != caller.RoleOwner {
 		t.Errorf("claims mismatch: %+v", c)
 	}
-	// Owner anchor written to settings.
 	got, _ := q.GetSetting(context.Background(), "server_owner_id")
 	if got != resp.UserId {
 		t.Errorf("server_owner_id not set: got %q want %q", got, resp.UserId)
@@ -204,13 +202,11 @@ func TestChangePassword_HappyPath(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("ChangePassword: %v", err)
 	}
-	// Old password no longer works.
 	if _, err := s.Login(context.Background(), &doxv1.LoginRequest{
 		UserName: "alice", Password: goodPassword,
 	}); status.Code(err) != codes.Unauthenticated {
 		t.Errorf("old password should be rejected, got %v", err)
 	}
-	// New password works.
 	if _, err := s.Login(context.Background(), &doxv1.LoginRequest{
 		UserName: "alice", Password: "new-strong-pw",
 	}); err != nil {
@@ -238,7 +234,6 @@ func TestResetUserPassword_OwnerOnly(t *testing.T) {
 	owner, _ := s.Register(context.Background(), &doxv1.RegisterRequest{
 		UserName: "alice", Password: goodPassword,
 	})
-	// Open registration so bob can sign up without an invite.
 	if err := q.UpsertSetting(context.Background(), queries.UpsertSettingParams{
 		Key: "registration_open", Value: "true",
 	}); err != nil {
@@ -248,13 +243,11 @@ func TestResetUserPassword_OwnerOnly(t *testing.T) {
 		UserName: "bob", Password: goodPassword,
 	})
 
-	// Non-owner cannot reset.
 	bobCtx := callerCtxFor(t, bob.Token)
 	if _, err := s.ResetUserPassword(bobCtx, &doxv1.ResetUserPasswordRequest{UserId: owner.UserId}); status.Code(err) != codes.PermissionDenied {
 		t.Errorf("want PermissionDenied for non-owner reset, got %v", err)
 	}
 
-	// Owner can reset; returned temp password works for Login.
 	ownerCtx := callerCtxFor(t, owner.Token)
 	resp, err := s.ResetUserPassword(ownerCtx, &doxv1.ResetUserPasswordRequest{UserId: bob.UserId})
 	if err != nil {

@@ -7,11 +7,9 @@ import (
 )
 
 type Config struct {
-	DBPath     string
-	ListenAddr string
-	LogLevel   slog.Level
-	// EventRetention controls how long rows in the events table are kept.
-	// A background sweeper deletes anything older. Set to 0 to disable.
+	DBPath         string
+	ListenAddr     string
+	LogLevel       slog.Level
 	EventRetention time.Duration
 }
 
@@ -29,8 +27,6 @@ func Load() (*Config, error) {
 		ListenAddr:     getenv("DOX_LISTEN_ADDR", ":6278"),
 		EventRetention: defaultEventRetention,
 	}
-	// DOX_EVENT_RETENTION accepts a Go duration string (e.g. "360h", "168h").
-	// "0" disables the sweeper.
 	if raw := os.Getenv("DOX_EVENT_RETENTION"); raw != "" {
 		d, err := time.ParseDuration(raw)
 		if err != nil {

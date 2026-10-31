@@ -11,7 +11,6 @@ export interface SettingsFormField {
   key: string;
   label: string;
   placeholder?: string;
-  // Pre-fill, e.g. existing server_name value being edited.
   initial?: string;
 }
 
@@ -26,15 +25,6 @@ interface SettingsFormModalProps {
   onCancel: () => void;
 }
 
-// Linear form modal. Mirrors the Onboarding pattern: TextInput is fully
-// uncontrolled (no onChange), values are captured on each field's Enter via
-// onSubmit, and Enter advances focus — last field's Enter calls parent
-// onSubmit with the accumulated values.
-//
-// Why this shape: @inkjs/ui v2.0.0's TextInput has a useEffect with onChange
-// in its deps. Passing a non-stable onChange there causes a "Maximum update
-// depth exceeded" loop as soon as the user types a character. Dropping
-// onChange entirely sidesteps it.
 export function SettingsFormModal({
   title,
   fields,
@@ -50,8 +40,6 @@ export function SettingsFormModal({
   const rows = Math.max(15, windowRows);
   const cardWidth = Math.min(72, cols - 8);
 
-  // Accumulator for each field's submitted value. Lives in a ref because we
-  // don't need to re-render between fields — only the focused index changes.
   const valuesRef = useRef<Record<string, string>>(
     (() => {
       const init: Record<string, string> = {};
@@ -61,8 +49,6 @@ export function SettingsFormModal({
   );
   const [field, setField] = useState(0);
 
-  // Per-field Enter handler. Saves the typed value, advances to the next
-  // field, or — if this was the last field — fires the parent's onSubmit.
   const handleFieldSubmit = (idx: number, value: string) => {
     if (busy) return;
     const f = fields[idx];

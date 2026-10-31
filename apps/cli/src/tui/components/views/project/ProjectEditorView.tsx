@@ -19,9 +19,6 @@ interface ProjectEditorViewProps {
   onCancel: () => void;
 }
 
-// Curated palette. Hex values keep the wire format explicit (the server stores
-// the string verbatim); `tint` is what we render the swatch in so the picker
-// actually looks like its choice.
 const PALETTE: ReadonlyArray<{ name: string; value: string; tint: string }> = [
   { name: "none", value: "", tint: "gray" },
   { name: "magenta", value: "#ec4899", tint: "magentaBright" },
@@ -35,9 +32,6 @@ const PALETTE: ReadonlyArray<{ name: string; value: string; tint: string }> = [
 
 type FieldIndex = 0 | 1 | 2;
 
-// Full-screen centered editor for creating a project. Modeled on
-// TodoEditorView but multi-field: name + description (text), color (picker).
-// Tab cycles fields, Enter submits from any field, Esc cancels.
 export function ProjectEditorView({
   onSubmit,
   onCancel,
@@ -55,7 +49,6 @@ export function ProjectEditorView({
   const submit = () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      // Re-route focus to the name field so the user sees what's missing.
       setField(0);
       return;
     }
@@ -77,8 +70,6 @@ export function ProjectEditorView({
       setField(((((field + delta) % 3) + 3) % 3) as FieldIndex);
       return;
     }
-    // Color picker navigation + submit only fire when the picker holds focus,
-    // since on text fields the @inkjs/ui TextInput consumes arrows / Enter.
     if (field === 2) {
       if (key.leftArrow) {
         setPaletteIdx((i) => (i - 1 + PALETTE.length) % PALETTE.length);

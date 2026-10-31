@@ -23,8 +23,6 @@ const (
 	maxDescriptionLen = 64 * 1024
 	ulidLen           = 26
 
-	// projectInbox is the magic value clients send in ListTodosRequest.project_id
-	// to filter to the caller's Inbox (project_id IS NULL in the DB).
 	projectInbox = "inbox"
 )
 
@@ -92,8 +90,6 @@ func (s *Todo) ListTodos(ctx context.Context, req *doxv1.ListTodosRequest) (*dox
 	}
 	todos := make([]*doxv1.Todo, 0, len(rows))
 	for _, r := range rows {
-		// List payloads omit description — clients fetch the full body via
-		// GetTodo when they actually need it.
 		todos = append(todos, r.toProto(false))
 	}
 	return &doxv1.ListTodosResponse{Todos: todos}, nil
@@ -156,9 +152,6 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 		if err != nil {
 			return err
 		}
-		// Publish for both private (projectID invalid → personal-scope event,
-		// visible only to actor) and project-scope todos. Private events keep
-		// the activity feed populated for solo users with no collaborators.
 		return s.bus.Publish(ctx, q, bus.TodoCreated{
 			ActorID:   c.UserID,
 			TodoID:    id,
@@ -212,10 +205,6 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 	}
 
 	now := s.now()
-	// Emit a todo_completed event only on the false→true transition.
-	// Re-marking an already-done todo or toggling back to open is silent.
-	// Both private and project-scoped todos emit — the project_id on the
-	// underlying todo is passed through and decides the visibility scope.
 	emitCompleted := !existing.Done && done
 
 	var row queries.UpdateTodoRow

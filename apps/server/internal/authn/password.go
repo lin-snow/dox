@@ -18,7 +18,7 @@ const MinPasswordLen = 8
 // Argon2 parameters. Tuned for 2026 OWASP defaults; ~30ms on commodity x86.
 const (
 	argonTime    = 3
-	argonMemory  = 64 * 1024 // KiB → 64 MiB
+	argonMemory  = 64 * 1024
 	argonThreads = 4
 	argonKeyLen  = 32
 	argonSaltLen = 16

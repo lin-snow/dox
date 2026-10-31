@@ -58,7 +58,6 @@ DELETE FROM users
 WHERE id = ? AND role != 'owner'
 `
 
-// Owner protection at SQL level (defense-in-depth); service layer should also enforce.
 func (q *Queries) DeleteUserByID(ctx context.Context, id string) (int64, error) {
 	result, err := q.db.ExecContext(ctx, deleteUserByID, id)
 	if err != nil {

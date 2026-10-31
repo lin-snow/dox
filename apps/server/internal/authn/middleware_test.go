@@ -66,7 +66,6 @@ func TestMiddleware(t *testing.T) {
 		})
 	}
 
-	// One last protected request to verify the caller-context is propagated.
 	req := httptest.NewRequest("GET", "/v1/todos", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
@@ -91,7 +90,6 @@ func TestJWTRoundTrip(t *testing.T) {
 		t.Errorf("caller mismatch: %+v", c)
 	}
 
-	// Wrong secret rejects.
 	bad := authn.NewJWTVerifier([]byte("other-secret-at-least-16-bytes!!"))
 	if _, ok := bad.Verify(token); ok {
 		t.Error("token verified under wrong secret")

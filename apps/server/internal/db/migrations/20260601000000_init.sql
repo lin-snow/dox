@@ -1,8 +1,4 @@
 -- +goose Up
--- Consolidated baseline schema. Pre-release: previous migrations were
--- collapsed into this single init when the auth model switched from
--- device-tokens + pairing-codes to username/password + JWT. There are no
--- production deployments to migrate from.
 
 CREATE TABLE users (
     id            TEXT    PRIMARY KEY,
@@ -12,14 +8,6 @@ CREATE TABLE users (
     created_at    INTEGER NOT NULL
 );
 
--- Generic KV for server-level config. Reserved keys:
---   registration_open   — "true" / "false"
---   server_name         — display name shown on Onboarding
---   server_description  — optional one-liner
---   server_owner_id     — stable pointer to the owner user; written atomically
---                         with the first Register
---   jwt_secret          — 32-byte base64; auto-seeded on first boot if absent.
---                         Env DOX_JWT_SECRET overrides at runtime.
 CREATE TABLE settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

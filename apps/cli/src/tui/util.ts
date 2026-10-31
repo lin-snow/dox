@@ -1,5 +1,3 @@
-// Compact relative-time string (`2m`, `1h`, `3d`, `2w`). Tolerates the
-// grpc-gateway string-encoded int64s by accepting `unknown`.
 export function relativeTime(now: number, raw: unknown): string {
   const ms =
     typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;
@@ -17,8 +15,6 @@ export function relativeTime(now: number, raw: unknown): string {
   return `${w}w`;
 }
 
-// Map project color names → ink color names. Free-form project.color from the
-// server falls back to muted so unknown values render harmlessly.
 export function swatchColor(raw: string | undefined): string {
   if (!raw) return "gray";
   const known: Record<string, string> = {

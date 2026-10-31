@@ -47,9 +47,6 @@ export class TodoClient implements TodoApi {
   }
 
   async updateTodo(id: string, patch: TodoPatch): Promise<Todo> {
-    // grpc-gateway maps proto field names to snake_case JSON. Forward the
-    // patch as-is for title/done, and translate description so an explicit
-    // empty string round-trips as "clear this field".
     const body: Record<string, unknown> = {};
     if (patch.title !== undefined) body.title = patch.title;
     if (patch.done !== undefined) body.done = patch.done;

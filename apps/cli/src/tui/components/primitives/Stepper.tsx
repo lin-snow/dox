@@ -7,10 +7,7 @@ interface StepperProps {
   activeIndex: number;
 }
 
-// Horizontal "● ─── ◉ ─── ○" progress row with right-padded labels under each
-// dot. Each cell is fixed-width so dots and labels line up regardless of label
-// length.
-const CELL_WIDTH = 11; // 1 dot + 4 link + 6 label + padding
+const CELL_WIDTH = 11;
 
 export function Stepper({ steps, activeIndex }: StepperProps) {
   return (

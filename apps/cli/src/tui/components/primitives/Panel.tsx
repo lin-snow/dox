@@ -10,15 +10,10 @@ interface PanelProps {
   minHeight?: number;
   paddingX?: number;
   paddingY?: number;
-  // Override the resting border color (when not focused). Useful for stats /
-  // help panels that should pop even without focus.
   borderTint?: string;
   children: ReactNode;
 }
 
-// Rounded bordered container. The container only owns the chrome — section
-// titles live OUTSIDE in <SectionHeader />, matching the SurgeDM pattern where
-// every panel is labeled by an inline-dash header above it.
 export function Panel({
   focused = false,
   flexGrow,

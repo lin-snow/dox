@@ -54,12 +54,10 @@ func (s *Invite) CreateInvite(ctx context.Context, req *doxv1.CreateInviteReques
 	)
 	switch {
 	case req.ProjectId == nil || *req.ProjectId == "":
-		// Server invite — owner only.
 		if c.Role != caller.RoleOwner {
 			return nil, status.Error(codes.PermissionDenied, "only the server owner may issue server invites")
 		}
 	default:
-		// Project invite — project owner only, role required.
 		if req.Role == nil || (*req.Role != authz.RoleEditor && *req.Role != authz.RoleViewer) {
 			return nil, status.Error(codes.InvalidArgument, "role must be 'editor' or 'viewer' for project invites")
 		}
@@ -102,10 +100,6 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		return nil, status.Error(codes.InvalidArgument, "code is required")
 	}
 	now := s.now()
-	// ConsumeInvite happens outside the tx so its sql.ErrNoRows surface stays a
-	// clean NotFound for the client. Once we know the row is real, the member
-	// insert + the member_joined event share a tx so the feed can't diverge
-	// from membership.
 	row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
 		Now:      now,
 		UsedAt:   sql.NullInt64{Int64: now, Valid: true},
@@ -119,7 +113,6 @@ func (s *Invite) AcceptInvite(ctx context.Context, req *doxv1.AcceptInviteReques
 		return nil, status.Errorf(codes.Internal, "consume invite: %v", err)
 	}
 	if !row.ProjectID.Valid {
-		// Server invites have no project — they only make sense via Register.
 		return nil, status.Error(codes.FailedPrecondition, "server invites must be redeemed via Register on a fresh client")
 	}
 	projectID := row.ProjectID.String
@@ -187,8 +180,6 @@ func (s *Invite) RevokeInvite(ctx context.Context, req *doxv1.RevokeInviteReques
 		return nil, status.Errorf(codes.Internal, "revoke invite: %v", err)
 	}
 	if n == 0 {
-		// Either the row doesn't exist or it isn't ours. Don't distinguish, to
-		// avoid leaking the existence of other users' invites.
 		return nil, status.Error(codes.NotFound, "invite not found")
 	}
 	return &doxv1.RevokeInviteResponse{}, nil

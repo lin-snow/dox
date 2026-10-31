@@ -45,15 +45,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	user := handler.NewUser(q, secret)
 	proj := handler.NewProject(q)
-	// Bus owns mutation→side-effect fanout. ActivityRecorder is the only
-	// subscriber today; webhooks/audit/notifications plug in here later.
 	b := bus.New(bus.NewActivityRecorder())
 	inv := handler.NewInvite(dbConn, q, b)
 	td := handler.NewTodo(dbConn, q, b)
 	ev := handler.NewEvent(q)
 
 	mux := runtime.NewServeMux()
-	// user.User implements both AuthService (public) and UserService (auth).
 	if err := doxv1.RegisterAuthServiceHandlerServer(ctx, mux, user); err != nil {
 		return fmt.Errorf("register auth: %w", err)
 	}
@@ -79,8 +76,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	// Bound the retention sweeper's lifetime to Run so Shutdown can wait for it
-	// to return before closing the DB.
 	sweepCtx, stopSweep := context.WithCancel(ctx)
 	defer stopSweep()
 	sweepDone := make(chan struct{})
@@ -114,8 +109,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	err = srv.Shutdown(shutdownCtx)
-	// Stop the sweeper and wait for it before returning, so the DB isn't
-	// closed out from under an in-flight DELETE.
 	stopSweep()
 	<-sweepDone
 	return err

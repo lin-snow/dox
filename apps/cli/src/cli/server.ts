@@ -51,9 +51,6 @@ export const setServerDescription = (desc: string, opts: GlobalOpts) =>
     });
   });
 
-// resetUserPassword resolves a username to its user_id then resets the
-// password server-side. Owner-only. Returns a one-time temp password the
-// owner must relay out-of-band; the user should ChangePassword on first login.
 export const resetUserPassword = (userName: string, opts: GlobalOpts) =>
   withContext(opts, async ({ users, output }) => {
     const all = await users.list();

@@ -20,8 +20,6 @@ export function AboutView({ version, onClose }: AboutViewProps) {
     if (key.escape || key.return) onClose();
   });
 
-  // Push the centered card vertically toward the middle. Subtract the footer
-  // (~2 rows) and the card's own height so the visual center lands on the card.
   const cardRows = 12;
   const topPad = Math.max(1, Math.floor((totalRows - cardRows - 2) / 2));
 

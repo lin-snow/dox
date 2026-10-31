@@ -23,8 +23,6 @@ func runEventRetention(ctx context.Context, q *queries.Queries, retention time.D
 		slog.Info("event retention sweep disabled")
 		return
 	}
-	// Sweep once on startup so a long-stopped server doesn't keep stale rows
-	// around waiting for the first tick.
 	sweepEvents(ctx, q, retention, nowFn)
 
 	t := time.NewTicker(eventSweepInterval)
@@ -43,7 +41,6 @@ func sweepEvents(ctx context.Context, q *queries.Queries, retention time.Duratio
 	cutoff := nowFn().Add(-retention).UnixMilli()
 	n, err := q.DeleteEventsOlderThan(ctx, cutoff)
 	if err != nil {
-		// ctx cancellation during shutdown is expected, not worth logging at error.
 		if ctx.Err() != nil {
 			return
 		}

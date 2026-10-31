@@ -1,17 +1,4 @@
 #!/usr/bin/env bun
-//
-// scripts/build-cli.ts — Produce a publish-ready CLI bundle at apps/cli/dist/.
-//
-// Output layout (everything `npm publish` needs and nothing it doesn't):
-//   apps/cli/dist/dox.js          single-file bundle, all deps inlined
-//   apps/cli/dist/package.json    minimal manifest, no workspace:* leaks
-//   apps/cli/dist/README.md       npm page copy of the repo README
-//
-// Local sanity check:
-//   DOX_CLI_VERSION=v0.1.0 bun run scripts/build-cli.ts
-//   node apps/cli/dist/dox.js --version
-//
-// CI runs this with DOX_CLI_VERSION = github.ref_name (the pushed tag).
 
 import {
   chmodSync,
@@ -27,17 +14,12 @@ const VERSION = process.env.DOX_CLI_VERSION ?? "dev";
 
 function detectCommit(): string {
   if (process.env.DOX_CLI_COMMIT) return process.env.DOX_CLI_COMMIT;
-  // Bun.spawnSync runs git directly (no shell), so the constant argv is
-  // injection-safe by construction.
   const proc = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]);
   if (proc.exitCode !== 0) return "unknown";
   return proc.stdout.toString().trim() || "unknown";
 }
 const COMMIT = detectCommit();
 
-// npm versions must be plain semver — strip the leading "v". For non-release
-// builds ("dev", branch names, …) fall back to 0.0.0-<sanitized> so the
-// manifest is still valid even when run locally.
 const NPM_VERSION = /^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(VERSION)
   ? VERSION.replace(/^v/, "")
   : `0.0.0-${VERSION.replace(/[^0-9A-Za-z.-]/g, "-")}`;
@@ -46,11 +28,6 @@ const DIST = "apps/cli/dist";
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
-// Bun pulls ink's `await import('./devtools.js')` into the static graph even
-// though it's gated on `process.env['DEV'] === 'true'` at runtime, which then
-// drags in react-devtools-core (an optional peer dep we never install). A
-// resolver plugin swaps that import for an empty default export so the
-// devtools subgraph never enters the bundle.
 const stubReactDevtoolsCore = {
   name: "stub-react-devtools-core",
   setup(builder: {
@@ -91,9 +68,6 @@ if (!result.success) {
   process.exit(1);
 }
 
-// Force the published shebang to Node regardless of what bun emitted from the
-// source's `#!/usr/bin/env bun` — the bundle ships to npm where node executes
-// it.
 const bundlePath = `${DIST}/dox.js`;
 const body = readFileSync(bundlePath, "utf8").replace(
   /^#!.*\n/,
@@ -103,9 +77,6 @@ const final = body.startsWith("#!") ? body : `#!/usr/bin/env node\n${body}`;
 writeFileSync(bundlePath, final);
 chmodSync(bundlePath, 0o755);
 
-// Hand-roll the publish manifest so workspace:* deps from apps/cli/package.json
-// never reach the registry. Everything the CLI needs at runtime is already
-// bundled into dox.js, so this manifest deliberately has no `dependencies`.
 const manifest = {
   name: "@l1nsn0w/dox",
   version: NPM_VERSION,
@@ -120,11 +91,8 @@ const manifest = {
   },
   bugs: { url: "https://github.com/lin-snow/dox/issues" },
   keywords: ["todo", "self-hosted", "cli", "tui", "dox"],
-  // npm strips `./`-prefixed bin values as "invalid script name"; use the
-  // plain filename instead. (Verified against npm bundled with Node 25.)
   bin: { dox: "dox.js" },
   files: ["dox.js", "README.md"],
-  // Node 26 is Active LTS; CI builds/publishes on the same major.
   engines: { node: ">=26" },
   publishConfig: { access: "public" },
 };

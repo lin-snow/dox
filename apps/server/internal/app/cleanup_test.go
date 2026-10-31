@@ -30,8 +30,6 @@ func TestSweepEvents_deletesOlderThanRetention(t *testing.T) {
 	retention := 15 * 24 * time.Hour
 	cutoff := now.Add(-retention).UnixMilli()
 
-	// Three events: one well before cutoff (delete), one just at cutoff
-	// (boundary keep — DELETE is strict <), one fresh (keep).
 	seedEvent(t, q, "old", userID, cutoff-1)
 	seedEvent(t, q, "edge", userID, cutoff)
 	seedEvent(t, q, "fresh", userID, now.UnixMilli())
@@ -59,8 +57,6 @@ func TestRunEventRetention_disabledWhenRetentionNonPositive(t *testing.T) {
 	}
 	seedEvent(t, q, "ancient", userID, 0)
 
-	// Retention=0 means no sweeping. The function should return immediately
-	// without ever calling DELETE.
 	runEventRetention(context.Background(), q, 0, time.Now)
 
 	if got := listEventIDs(t, q); len(got) != 1 {
@@ -95,8 +91,6 @@ func seedEvent(t *testing.T, q *queries.Queries, id, actorID string, createdAt i
 
 func listEventIDs(t *testing.T, q *queries.Queries) []string {
 	t.Helper()
-	// Use the personal-scope reader; with no project_id all seeded rows show up
-	// for the actor.
 	rows, err := q.ListPersonalEventsForUser(context.Background(), queries.ListPersonalEventsForUserParams{
 		UserID: "u1",
 		LimitN: 100,

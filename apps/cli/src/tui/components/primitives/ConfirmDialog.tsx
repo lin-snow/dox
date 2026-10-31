@@ -8,23 +8,15 @@ import { TitledPanel } from "./TitledPanel";
 
 interface ConfirmDialogProps {
   title: string;
-  // Body content. Plain string renders as one paragraph; pass a node for
-  // richer layouts (multiline, mixed colors).
   message: ReactNode;
-  // Tint of the title border and the destructive-action hint. Defaults to red
-  // for delete-style flows; pass a softer color for benign confirmations.
   tone?: string;
   confirmKey?: string;
   cancelKey?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  // Footer label shown in the mode pill. Defaults to "confirm".
   footerMode?: string;
 }
 
-// Full-screen centered confirmation dialog. Mirrors TodoEditorView /
-// ProjectEditorView so the modal swap feels native. Parent owns the key
-// handling — this component is presentational only.
 export function ConfirmDialog({
   title,
   message,

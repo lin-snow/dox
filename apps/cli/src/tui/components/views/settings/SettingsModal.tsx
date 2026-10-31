@@ -14,20 +14,11 @@ interface SettingsModalProps {
   dispatch: (a: Action) => void;
   users?: UserClient;
   invites?: InviteClient;
-  // Slimmed-down shape to stay assignment-compatible with the structural
-  // ProjectsApi App.tsx passes (the test harness uses a fake). We only need
-  // list() — for resolving the joined project's name in the redeem toast.
   projects?: { list(): Promise<Project[]> };
-  // Triggers the main todos+projects refresh in App.tsx. Used after actions
-  // that change the caller's visible project set (e.g. redeeming an invite)
-  // so the sidebar updates immediately instead of waiting for the 30s poll.
   onRefresh?: () => Promise<void> | void;
   onSignedOut?: () => void;
 }
 
-// Picks the correct modal kind for `editing` and wires it to the right async
-// action on the user/invite clients. Lives in its own component so App.tsx
-// doesn't grow another seven-branch ladder.
 export function SettingsModal({
   editing,
   state,
@@ -40,7 +31,6 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const cancel = () => dispatch({ type: "SETTINGS_EDIT", editing: null });
 
-  // ── form modals ────────────────────────────────────────────────────────
   if (editing.kind === "serverName") {
     return (
       <SettingsFormModal
@@ -157,19 +147,12 @@ export function SettingsModal({
           dispatch({ type: "SETTINGS_BUSY", busy: true });
           try {
             const res = await invites.accept(vals.code ?? "");
-            // Pull the fresh project list ourselves so we can resolve the
-            // joined project's name for the toast. Also drives the main
-            // App refresh so the sidebar updates without waiting for the
-            // 30s poll. (Server invites have an empty projectId — fall
-            // back to a generic message in that case.)
             let name = "";
             if (res.projectId && projects) {
               try {
                 const list = await projects.list();
                 name = list.find((p) => p.id === res.projectId)?.name ?? "";
-              } catch {
-                // Listing is best-effort; we still dispatch a useful notice.
-              }
+              } catch {}
             }
             await onRefresh?.();
             dispatch({ type: "SETTINGS_BUSY", busy: false });
@@ -190,7 +173,6 @@ export function SettingsModal({
     );
   }
 
-  // ── confirm dialogs ────────────────────────────────────────────────────
   if (editing.kind === "registrationToggle") {
     const next = editing.next;
     return (
@@ -292,8 +274,6 @@ export function SettingsModal({
   return null;
 }
 
-// ConfirmDialog is presentational only — this wrapper owns the keys (y/n/esc)
-// + threads error/busy through ConfirmDialog's message slot.
 function ConfirmAction({
   title,
   message,

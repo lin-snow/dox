@@ -33,10 +33,6 @@ type ConsumeInviteRow struct {
 	IssuedBy  string
 }
 
-// Atomically marks the invite used and returns its (project_id, role, issued_by).
-// Returns no row if missing/expired/already-used. The caller passes the same
-// timestamp for both `now` and `used_at`; we split them so sqlc infers distinct
-// types (int64 for the expires_at comparison, NullInt64 for the SET).
 func (q *Queries) ConsumeInvite(ctx context.Context, arg ConsumeInviteParams) (ConsumeInviteRow, error) {
 	row := q.db.QueryRowContext(ctx, consumeInvite,
 		arg.UsedAt,
@@ -117,9 +113,6 @@ type ListOutgoingInvitesByUserRow struct {
 	ProjectName sql.NullString
 }
 
-// Caller's still-redeemable invites. project_name is resolved via LEFT JOIN so
-// server-level invites (project_id NULL) and stranded invites (project deleted)
-// come back with NULL/empty project_name.
 func (q *Queries) ListOutgoingInvitesByUser(ctx context.Context, arg ListOutgoingInvitesByUserParams) ([]ListOutgoingInvitesByUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, listOutgoingInvitesByUser, arg.IssuedBy, arg.Now)
 	if err != nil {
@@ -161,9 +154,6 @@ type RevokeInviteByIssuerParams struct {
 	IssuedBy string
 }
 
-// Hard-deletes one invite scoped to the issuer so a non-owner can only revoke
-// invites they personally issued. Returns rows affected so the handler can
-// distinguish "not found / not yours" from "deleted".
 func (q *Queries) RevokeInviteByIssuer(ctx context.Context, arg RevokeInviteByIssuerParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, revokeInviteByIssuer, arg.CodeHash, arg.IssuedBy)
 	if err != nil {

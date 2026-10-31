@@ -118,14 +118,13 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 	)
 	switch {
 	case isFirstUser:
-		// First user always wins, regardless of invite/registration policy.
 		role = caller.RoleOwner
 	case req.InviteCode != nil && *req.InviteCode != "":
 		now := s.now()
 		row, err := s.q.ConsumeInvite(ctx, queries.ConsumeInviteParams{
 			Now:      now,
 			UsedAt:   sql.NullInt64{Int64: now, Valid: true},
-			UsedBy:   sql.NullString{}, // user_id not yet known
+			UsedBy:   sql.NullString{},
 			CodeHash: authn.HashInviteCode(*req.InviteCode),
 		})
 		if err != nil {
@@ -158,7 +157,6 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 		Role:         role,
 		CreatedAt:    s.now(),
 	}); err != nil {
-		// UNIQUE constraint on users.name surfaces here.
 		return nil, status.Errorf(codes.AlreadyExists, "user_name is taken or db error: %v", err)
 	}
 
@@ -173,9 +171,6 @@ func (s *User) Register(ctx context.Context, req *doxv1.RegisterRequest) (*doxv1
 		}
 	}
 
-	// First-time deployment: anchor server identity to this user, optionally
-	// seed display name/description from the same Register call, and seed the
-	// owner's Inbox with onboarding examples.
 	if isFirstUser {
 		_ = s.q.UpsertSetting(ctx, queries.UpsertSettingParams{
 			Key: settingServerOwnerID, Value: userID,

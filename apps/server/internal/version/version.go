@@ -32,13 +32,13 @@ var (
 // Info is a snapshot of build identity. Safe to copy; fields are immutable
 // after Get() returns.
 type Info struct {
-	Version   string // semver-ish, e.g. "v0.3.1" or "dev"
-	Commit    string // short git sha, possibly with "-dirty" suffix
-	Date      string // RFC3339 build timestamp, or "" if unknown
-	BuiltBy   string // "ldflags", "go-build", or a CI tag like "goreleaser"
-	GoVersion string // runtime.Version()
-	OS        string // runtime.GOOS
-	Arch      string // runtime.GOARCH
+	Version   string
+	Commit    string
+	Date      string
+	BuiltBy   string
+	GoVersion string
+	OS        string
+	Arch      string
 }
 
 var (
@@ -65,14 +65,11 @@ func resolve() Info {
 
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
-		// `go test` without module info, or a stripped binary. Fill blanks.
 		fillDefaults(&info)
 		return info
 	}
 
 	if info.Version == "" {
-		// bi.Main.Version is "(devel)" for local builds; keep it as a signal
-		// rather than overwriting with "dev" so users can tell the two apart.
 		info.Version = bi.Main.Version
 	}
 

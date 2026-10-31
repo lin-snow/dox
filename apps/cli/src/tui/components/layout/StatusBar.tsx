@@ -9,8 +9,6 @@ interface StatusBarProps {
   hints: ReadonlyArray<readonly [string, string]>;
 }
 
-// Bottom-of-screen mode + key hint strip. The mode pill is reverse-video so the
-// active context is unmistakable at a glance.
 export function StatusBar({
   mode,
   modeColor = color.accent,

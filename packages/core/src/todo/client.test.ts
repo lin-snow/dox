@@ -3,10 +3,6 @@ import { describe, expect, test } from "bun:test";
 import type { Fetcher } from "../http";
 import { TodoClient } from "./client";
 
-// Records every outgoing Request and replies with a canned JSON body so we can
-// assert on the wire shape the client produces (URL, method, snake_case body)
-// without a live server. `reply` defaults to an empty object — enough for the
-// methods that only care about the request side.
 function stub(reply: unknown = {}) {
   const seen: Request[] = [];
   const fetcher: Fetcher = (req) => {

@@ -20,9 +20,7 @@ export interface ProjectPatch {
 
 export interface ProjectMember {
   userId: string;
-  // Resolved by the server. Empty only in legacy responses or if the user row
-  // was somehow deleted out from under the membership.
   userName: string;
-  role: string; // "editor" | "viewer"
+  role: string;
   addedAt: string;
 }

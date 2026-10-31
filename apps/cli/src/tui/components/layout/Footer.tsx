@@ -6,39 +6,22 @@ interface FooterProps {
   mode: string;
   version?: string;
   hints: ReadonlyArray<readonly [string, string]>;
-  // Extra outer padding the parent already applied; we subtract it from the
-  // available width so the right-side content never overflows onto a 2nd row.
   outerPadX?: number;
 }
 
 const POWERED_BY = "powered by dox";
 
-// Bottom-of-screen status strip. Visual hierarchy:
-//   powered by dox  ─── filler ───  ⏎ open · ␣ toggle · …    ┃ NORMAL ┃   ◆ dox v0.0.0
-//   ↑ attribution                    ↑ keys in accent          ↑ inverse   ↑ brand glyph
-//                                      labels in muted           mode       in 2-tone
-//                                      `·` separators
 export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
   const { columns: cols } = useWindowSize();
 
-  // Plain-text length used to size the dash run. Mirror the visible cells of
-  // the right-side cluster precisely; the renderer below uses the same content.
-  // Per-hint cells: `<key> <label>` + a 4-cell separator (`  · `) between
-  // chips. Must match the actual rendered output below; off-by-one here wraps
-  // the last token (`dox v0.0.0`) onto a second row.
   const hintLen = hints.reduce(
     (acc, [k, l], idx) => acc + (idx > 0 ? 4 : 0) + k.length + 1 + l.length,
     0,
   );
   const modeCell = ` ${mode.toUpperCase()} `;
-  // Version shown only when the terminal is wide enough; on narrow widths the
-  // hint chips + mode pill take priority over decorative branding. The user
-  // can always check version in the Status panel.
   const brandCell = version ? `  ${icon.brand} dox` : "";
   const leftLen = POWERED_BY.length + 2;
   const visibleRightLen = 2 + hintLen + 4 + modeCell.length + brandCell.length;
-  // Safety margin: some unicode glyphs (e.g. ◆, ␣) measure as 2 cells in
-  // BiDi-aware terminals, so .length undercounts the rendered width.
   const SAFETY = 2;
   const dashes = Math.max(
     3,

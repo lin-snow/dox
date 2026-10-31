@@ -133,7 +133,6 @@ func TestGetTodo(t *testing.T) {
 		}
 	})
 
-	// silence unused-import warning if helper isn't used later
 	_ = sql.NullString{}
 }
 

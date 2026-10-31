@@ -8,14 +8,9 @@ import * as toml from "@iarna/toml";
 export interface Config {
   server: string;
   token: string;
-  // The user identity bound to the token. Populated by `dox register` and
-  // `dox login`. Cached locally so the TUI can gate owner-only UI without an
-  // extra round-trip; the server stays authoritative.
   userId: string;
   userName: string;
-  role: string; // "owner" | "member"
-  // Default project filter for TUI / CLI. "inbox" filters to Inbox; a project
-  // id filters to that project; absent / "" means "all visible".
+  role: string;
   defaultProject?: string;
 }
 
@@ -68,8 +63,6 @@ export async function saveConfig(cfg: Config): Promise<void> {
   await chmod(path, 0o600);
 }
 
-// clearConfig removes the on-disk config. Used by `dox logout`. Returns true
-// if a file was removed, false if nothing was there.
 export async function clearConfig(): Promise<boolean> {
   const path = configPath();
   if (!existsSync(path)) return false;

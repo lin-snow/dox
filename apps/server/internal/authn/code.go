@@ -22,7 +22,6 @@ func GenerateCode() (string, error) {
 	}
 	out := make([]byte, codeLen)
 	for i, b := range buf {
-		// 256 % 32 == 0 so modulo is unbiased.
 		out[i] = codeAlphabet[int(b)%32]
 	}
 	return string(out), nil

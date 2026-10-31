@@ -76,8 +76,6 @@ export class UserClient {
     );
   }
 
-  // Owner-only. Returns a plaintext one-time temp password; relay out-of-band
-  // and have the user ChangePassword on first login.
   async resetUserPassword(userId: string): Promise<{ tempPassword: string }> {
     const res = await this.fetcher(
       new Request(

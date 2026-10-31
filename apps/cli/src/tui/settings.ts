@@ -4,36 +4,22 @@ import type { OutgoingInvite, ServerSettings } from "@dox/core";
 
 import type { SettingsTabKey } from "./state";
 
-// One row in a settings tab. `value` is the short right-aligned summary shown
-// next to the label in the list. `detail` is the longer right-panel content
-// when this row is the active one. `enterAction` / `secondaryAction` plug in
-// what ↵ and `r` do on the row.
 export interface SettingsRow {
   key: string;
   label: string;
-  // Short, single-line summary rendered inline (right-aligned). Optional.
   value?: string;
-  // Right pane content when this row is selected. Defaults to a short blurb if
-  // omitted.
   detail?: ReactNode;
-  // Triggered by ⏎. Null/undefined = read-only row.
   onEnter?: () => void;
-  // Short verb shown in the tip strip after `⏎`, e.g. "edit" / "toggle" /
-  // "sign out". Defaults to "open" when onEnter is set but this is empty.
   enterLabel?: string;
-  // Optional non-Enter binding, e.g. `r` to revoke an invite.
   secondary?: { key: string; label: string; action: () => void };
-  // Render the value muted/dim — used for "(coming soon)" or "—".
   muted?: boolean;
 }
 
 export interface SettingsTabSpec {
   key: SettingsTabKey;
   label: string;
-  // Short blurb above the list. Optional.
   hint?: string;
   rows: SettingsRow[];
-  // Footer hint chips for this tab.
   hints?: ReadonlyArray<readonly [string, string]>;
 }
 
@@ -43,8 +29,6 @@ export interface BuildSettingsArgs {
   serverLoaded: boolean;
   outgoing: OutgoingInvite[];
   outgoingLoaded: boolean;
-  // Dispatchers — wired up in App.tsx. Each opens a modal or kicks off an
-  // async action.
   on: {
     editServerName: () => void;
     editServerDescription: () => void;

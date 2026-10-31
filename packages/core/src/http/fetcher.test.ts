@@ -2,10 +2,6 @@ import { describe, expect, test } from "bun:test";
 
 import { ApiError, compose, type Fetcher, type Middleware } from "./fetcher";
 
-// ApiError turns a server error envelope into a single human-readable line.
-// The grpc `code` takes precedence over the HTTP status, and a present
-// `message` is appended as ": <detail>". These assertions pin the exact copy
-// the CLI/TUI surface to users.
 describe("ApiError message mapping", () => {
   const msg = (status: number, body: object) =>
     new ApiError(status, JSON.stringify(body)).message;

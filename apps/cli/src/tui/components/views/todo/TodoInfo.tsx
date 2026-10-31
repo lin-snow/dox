@@ -8,25 +8,16 @@ import { relativeTime, swatchColor } from "../../../util";
 interface TodoInfoProps {
   todo: Todo | null;
   project: Project | null;
-  // Owner display name. ULID fallback is fine when no lookup is wired yet.
   ownerName?: string;
   nowMs: number;
-  // Outer panel dimensions, used to compute how many description rows fit.
   panelWidth: number;
   panelHeight: number;
 }
 
-// Rows the non-description content always claims:
-// status(1) + mtTitle(1) + title(1) + mtMeta(1) + meta(4) + mtFooter(1) + footer(1).
 const FIXED_ROWS = 10;
-// marginTop(1) + divider line(1) above the description text.
 const DESC_HEADER = 2;
-// TitledPanel chrome inside the content area: border(2) + paddingY(2).
 const PANEL_CHROME = 4;
 
-// Compact at-a-glance card for the cursored todo. Lives in the right-bottom
-// panel; full Todo Detail page (Enter) carries the long-form view including
-// any description that didn't fit in the preview below.
 export function TodoInfo({
   todo,
   project,
@@ -61,7 +52,7 @@ export function TodoInfo({
 
   return (
     <Box flexDirection="column">
-      {/* Status + short ID on one line — frees vertical space for body. */}
+      {}
       <Box>
         <Text color={statusColor} bold>
           {statusIcon} {statusLabel}
@@ -72,14 +63,14 @@ export function TodoInfo({
         </Text>
       </Box>
 
-      {/* Title: bold accent, single line with truncation. */}
+      {}
       <Box marginTop={1}>
         <Text color={color.accent} bold wrap="truncate">
           {todo.title}
         </Text>
       </Box>
 
-      {/* Metadata block: label column 9 cells, value truncates. */}
+      {}
       <Box flexDirection="column" marginTop={1}>
         <InfoRow label="Project">
           {project ? (
@@ -106,11 +97,7 @@ export function TodoInfo({
         </InfoRow>
       </Box>
 
-      {/* Description preview — fills whatever rows remain after the fixed
-          sections. A "─ Description ─" divider mirrors the Recent strip in
-          the Activity panel above so the right column reads as a coherent
-          stack. Trailing "…" + footer hint cue the user to press Enter when
-          the body overflows the budget. */}
+      {}
       {preview && (
         <Box flexDirection="column" marginTop={1}>
           <Text color={color.muted} dimColor>
@@ -124,9 +111,7 @@ export function TodoInfo({
         </Box>
       )}
 
-      {/* Footer hint — kept inside the panel so users discover the detail
-          page without reading the global footer. Wording shifts when the
-          description was truncated above. */}
+      {}
       <Box marginTop={1}>
         <Text color={color.muted} dimColor>
           press{" "}
@@ -157,11 +142,6 @@ function InfoRow({
   );
 }
 
-// Greedy word-wrap that honors user newlines and caps the output at `maxLines`.
-// When the text doesn't fit, the last visible line gets a trailing ellipsis so
-// the user has a visual cue that more content lives in the detail page. We
-// re-implement wrapping (instead of relying on Ink's `wrap="wrap"`) because we
-// need to know up-front whether truncation happened to switch the footer hint.
 interface WrappedPreview {
   lines: string[];
   truncated: boolean;
@@ -194,7 +174,6 @@ function previewDescription(
           break outer;
         }
       }
-      // Hard-break words longer than the available width.
       let rest = word;
       while (rest.length > width) {
         lines.push(rest.slice(0, width));
@@ -212,7 +191,6 @@ function previewDescription(
     }
   }
 
-  // Anything we couldn't reach also counts as overflow.
   const consumedChars = lines.reduce((n, l) => n + l.length, 0);
   if (consumedChars < text.replace(/\s+/g, "").length) overflowed = true;
 

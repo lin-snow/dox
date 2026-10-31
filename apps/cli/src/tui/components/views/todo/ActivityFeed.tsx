@@ -10,9 +10,6 @@ interface ActivityFeedProps {
   nowMs: number;
 }
 
-// Right-bottom collaboration feed. v1 verbs are all project-scoped and
-// non-actionable, so the layout is a straight reverse-chronological list with
-// no pinning or call-to-action affordances.
 export function ActivityFeed({ events, nowMs }: ActivityFeedProps) {
   if (events.length === 0) {
     return (
@@ -43,9 +40,6 @@ export function ActivityFeed({ events, nowMs }: ActivityFeedProps) {
   );
 }
 
-// Per-event row layout: fixed actor + verb columns on the left, flex target in
-// the middle, fixed relative-time on the right. Mirrors TodoRow so the two
-// right-column panels read as a coherent stack.
 const ACTOR_W = 8;
 const TIME_W = 4;
 

@@ -45,7 +45,6 @@ func LoadOrCreateJWTSecret(ctx context.Context, q *queries.Queries) ([]byte, err
 		if decErr == nil && len(raw) >= 16 {
 			return raw, nil
 		}
-		// Stored value is corrupt — fall through and regenerate.
 	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("authn: read jwt secret: %w", err)
 	}

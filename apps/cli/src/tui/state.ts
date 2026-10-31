@@ -23,18 +23,11 @@ export type Mode =
   | "searchDetail"
   | "about";
 
-// Sub-state for the project manage screen. Mutually exclusive with the main
-// member-list view of that screen — exactly one is up at a time.
 export type ManageEditing =
   | { kind: "invitePicker" }
   | { kind: "codeReveal"; code: string; expiresAt: string; role: string };
 export type Focus = "list" | "sidebar";
 
-// Transient banner shown above the todos list after the user completes a
-// todo. The row vanishes from the working list immediately; the toast carries
-// the affordance to undo within a 5s window. `prevDone` is the value before
-// the toggle so the undo restores the right state instead of unconditionally
-// reopening.
 export type Toast = {
   kind: "doneToggled";
   todoId: string;
@@ -45,8 +38,6 @@ export type Toast = {
 
 export type SettingsTabKey = "server" | "account" | "invites";
 
-// Exactly one modal is up at a time on the settings screen. The discriminator
-// drives which modal renders + which keys are handled.
 export type SettingsEditing =
   | { kind: "changePassword" }
   | { kind: "serverName" }
@@ -65,8 +56,6 @@ export interface State {
   filter: Filter;
   cursor: number;
   sidebarCursor: number;
-  // Seed values for the TodoEditorView form. The editor owns its own working
-  // state once mounted; these only matter for the initial render.
   editingTitle: string;
   editingDescription: string;
   editingId: string | null;
@@ -74,47 +63,26 @@ export interface State {
   error: string | null;
   helpOpen: boolean;
   syncing: boolean;
-  // Settings view sub-state. Persists across open/close so the user lands back
-  // on the same tab + row when they reopen the screen mid-session.
   settingsTab: SettingsTabKey;
   settingsCursor: number;
-  // Settings data caches. null/empty = not yet fetched OR not visible to this
-  // user (e.g., a non-owner won't have settingsServer). The *Loaded flags
-  // distinguish "still loading" from "intentionally empty."
   settingsServer: ServerSettings | null;
   settingsServerLoaded: boolean;
   settingsOutgoing: OutgoingInvite[];
   settingsOutgoingLoaded: boolean;
-  // Active modal on the settings screen, or null. Mutually exclusive — only
-  // one can be open at a time.
   settingsEditing: SettingsEditing | null;
-  // True while an async settings action (save / revoke / sign-out) is in
-  // flight. Modals read this to disable submit while waiting.
   settingsBusy: boolean;
-  // Last error message produced by a settings action. Rendered inline in the
-  // active modal. Cleared on dispatch of SETTINGS_EDIT.
   settingsError: string | null;
-  // Transient success message shown in the settings shell (above the tabs).
-  // Set after a successful action that closed its modal; auto-cleared on tab
-  // change, close, or after a short timer in App.tsx.
   settingsNotice: string | null;
-  // Project manage view sub-state. Active only when mode === "projectManage".
   manageProjectId: string | null;
   manageMembers: ProjectMember[];
   manageMembersLoaded: boolean;
   manageEditing: ManageEditing | null;
   manageBusy: boolean;
   manageError: string | null;
-  // Project pending y/n confirmation. Cleared whenever the prompt is dismissed.
   deletingProjectId: string | null;
-  // Search view sub-state. Persists across enter→detail→back so the user lands
-  // back on the same query + cursor row when they bounce out of a result.
   searchQuery: string;
   searchCursor: number;
-  // Todo opened via the search result list. Lets `todoDetail`/`searchDetail`
-  // look up the row by id rather than relying on the list-page cursor.
   searchDetailTodoId: string | null;
-  // Transient banner above the list; see `Toast`. Null when nothing recent.
   toast: Toast | null;
 }
 
@@ -221,16 +189,6 @@ export const initialState: State = {
   toast: null,
 };
 
-// Private (filter key "inbox") = open todos with no project; project filter =
-// open todos matching projectId. Done todos drop out of those working lists
-// immediately on completion — see the toast undo path in App.tsx for the
-// 5-second recovery window.
-//
-// The "done" filter is the review surface: it lists every completed todo
-// across all projects, sorted most-recently-completed first (proxied by
-// updatedAt, since the server doesn't store completed-at separately). It's
-// sorted here rather than at render time so the windowing slice + cursor
-// agree with what the user sees.
 export function visibleTodos(state: State): Todo[] {
   const f = state.filter;
   if (f === "done") {
@@ -245,10 +203,6 @@ export function visibleTodos(state: State): Todo[] {
 }
 
 export function filterList(projects: Project[]): Filter[] {
-  // Done sits next to Private (both "system" surfaces) so users who don't use
-  // projects still have one-hop access to their archive. Projects follow,
-  // separated visually by the `│` divider Tabs.tsx auto-inserts before the
-  // first `kind: "project"` chip.
   return [
     "inbox",
     "done",
@@ -264,13 +218,6 @@ function clampCursor(cursor: number, length: number): number {
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "TODOS_LOADED": {
-      // ListTodos omits the description body, so the incoming rows carry
-      // `description === undefined`. Preserve any description we've already
-      // hydrated via GetTodo instead of clobbering it — otherwise the 30s
-      // background poll wipes the body out from under an open detail view
-      // (which, unlike the list, has no cursor-hydration effect to refetch
-      // it). Mirrors the merge in TODO_UPDATED; a row whose body genuinely
-      // changed is refreshed on the next GetTodo (detail open / cursor move).
       const prevById = new Map(state.todos.map((t) => [t.id, t]));
       const todos = action.todos.map((t) => {
         if (t.description !== undefined) return t;
@@ -331,8 +278,6 @@ export function reducer(state: State, action: Action): State {
     case "FOCUS_TOGGLE": {
       const nextFocus: Focus = state.focus === "list" ? "sidebar" : "list";
       if (nextFocus !== "sidebar") return { ...state, focus: nextFocus };
-      // Snap sidebar cursor to the currently selected filter so j/k moves
-      // relative to "where I am" rather than back to the top.
       const list = filterList(state.projects);
       const currentKey = filterKey(state.filter);
       const idx = list.findIndex((f) => filterKey(f) === currentKey);
@@ -373,8 +318,6 @@ export function reducer(state: State, action: Action): State {
     case "ENTER_PROJECT_ADD":
       return { ...state, mode: "projectAdd", error: null, helpOpen: false };
     case "PROJECT_ADDED": {
-      // Land on the new project so the user sees it immediately. Tabs auto-sync
-      // because they read from state.projects + state.filter.
       const projects = [...state.projects, action.project];
       const filter: Filter = { type: "project", id: action.project.id };
       const next = { ...state, projects, filter, mode: "list" as Mode };
@@ -390,8 +333,6 @@ export function reducer(state: State, action: Action): State {
       };
     case "PROJECT_DELETED": {
       const projects = state.projects.filter((p) => p.id !== action.id);
-      // Server cascades todos.project_id → drop them locally too so we don't
-      // flash dangling rows before the next poll catches up.
       const todos = state.todos.filter((t) => t.projectId !== action.id);
       const wasActiveFilter =
         typeof state.filter !== "string" &&
@@ -426,9 +367,6 @@ export function reducer(state: State, action: Action): State {
         ...state,
         mode: "settings",
         helpOpen: false,
-        // Force a fresh fetch on every open so edits made elsewhere (a second
-        // client, an API call) are reflected. App.tsx kicks the fetch off when
-        // it sees these flags flip back to false.
         settingsServerLoaded: false,
         settingsOutgoingLoaded: false,
         settingsEditing: null,
@@ -445,8 +383,6 @@ export function reducer(state: State, action: Action): State {
         settingsNotice: null,
       };
     case "SETTINGS_TAB":
-      // Resetting the cursor on tab change matches the image: the new tab's
-      // first item is always pre-selected.
       return {
         ...state,
         settingsTab: action.tab,
@@ -524,20 +460,14 @@ export function reducer(state: State, action: Action): State {
     case "CLOSE_SEARCH":
       return { ...state, mode: "list", searchDetailTodoId: null };
     case "SEARCH_SET_QUERY":
-      // Reset cursor whenever the query changes: the result list re-derives, so
-      // any prior index is meaningless.
       return { ...state, searchQuery: action.query, searchCursor: 0 };
     case "SEARCH_CURSOR_UP":
       return { ...state, searchCursor: Math.max(0, state.searchCursor - 1) };
     case "SEARCH_CURSOR_DOWN":
-      // Cap is enforced by the view: it dispatches SEARCH_CURSOR_SET when the
-      // result list shrinks under the cursor. Here we just bump by one.
       return { ...state, searchCursor: state.searchCursor + 1 };
     case "SEARCH_CURSOR_SET":
       return { ...state, searchCursor: Math.max(0, action.index) };
     case "SEARCH_RESULT_COUNT": {
-      // Clamp the cursor any time the visible result count changes (typing
-      // narrows the list). Keeps the highlight on a real row.
       const max = Math.max(0, action.count - 1);
       if (state.searchCursor <= max) return state;
       return { ...state, searchCursor: max };
@@ -550,7 +480,6 @@ export function reducer(state: State, action: Action): State {
         helpOpen: false,
       };
     case "SEARCH_CLOSE_DETAIL":
-      // Returns to the search page with prior query + cursor intact.
       return { ...state, mode: "search", searchDetailTodoId: null };
     case "TODO_ADDED": {
       const next = {
@@ -563,19 +492,8 @@ export function reducer(state: State, action: Action): State {
       return { ...next, cursor: 0 };
     }
     case "TODO_UPDATED": {
-      // Data merge — callers control mode transitions. Previously this forced
-      // mode back to "list", which fought with async hydration: pressing
-      // Enter opened the detail view, then the GetTodo response landed and
-      // kicked the user back to the list (visible as a flash).
-      //
-      // Cursor re-clamp is needed because flipping done now removes the row
-      // from visibleTodos; without re-clamping the cursor lands past the end.
       const next = {
         ...state,
-        // Merge rather than replace: the next ListTodos refresh strips
-        // description, but we still want the just-edited row to keep its
-        // updated fields in cache without clobbering a description fetched
-        // by an in-progress GetTodo.
         todos: state.todos.map((t) =>
           t.id === action.todo.id ? { ...t, ...action.todo } : t,
         ),

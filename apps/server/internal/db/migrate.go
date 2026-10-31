@@ -53,9 +53,6 @@ func Open(path string) (*sql.DB, error) {
 
 func migrate(db *sql.DB) error {
 	goose.SetBaseFS(migrationFS)
-	// Route goose's stdlib-log chatter ("OK 0001.sql", "no migrations to run", ...)
-	// into slog at debug level so it stays out of normal startup output but is
-	// still available with DOX_LOG_LEVEL=debug. Real errors propagate via goose.Up.
 	goose.SetLogger(slogGooseLogger{})
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("goose set dialect: %w", err)

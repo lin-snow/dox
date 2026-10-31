@@ -40,10 +40,6 @@ func (s *Event) ListEvents(ctx context.Context, req *doxv1.ListEventsRequest) (*
 		limit = maxEventsLimit
 	}
 
-	// Two scopes, two queries — split because sqlc's SQLite parser can't
-	// express both in one statement. We over-fetch each side at the full
-	// limit so the merge can pick the freshest `limit` items overall (worst
-	// case: the user's recent activity is all from one scope).
 	projectRows, err := s.q.ListProjectEventsForUser(ctx, queries.ListProjectEventsForUserParams{
 		UserID: c.UserID,
 		LimitN: limit,
@@ -85,13 +81,9 @@ func (s *Event) ListEvents(ctx context.Context, req *doxv1.ListEventsRequest) (*
 			TargetId:    r.TargetID,
 			TargetLabel: r.TargetLabel,
 			CreatedAt:   r.CreatedAt,
-			// project_id/name/color intentionally left empty — TUI uses
-			// empty projectColor as the signal to suppress the swatch.
 		})
 	}
 
-	// Merge sort: newest first, ULID as ms-collision tiebreaker (matches the
-	// ORDER BY inside each query so the merged feed reads consistently).
 	sort.SliceStable(merged, func(i, j int) bool {
 		if merged[i].CreatedAt != merged[j].CreatedAt {
 			return merged[i].CreatedAt > merged[j].CreatedAt
