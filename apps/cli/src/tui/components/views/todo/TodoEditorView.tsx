@@ -24,6 +24,10 @@ export interface TodoEditorPayload {
   due: string;
   /** Raw reminder text; empty clears. */
   remind: string;
+  /** Raw meeting start text; empty means no meeting. */
+  meetStart: string;
+  /** Raw meeting end text; empty means no meeting. */
+  meetEnd: string;
 }
 
 interface TodoEditorViewProps {
@@ -32,6 +36,8 @@ interface TodoEditorViewProps {
   defaultDescription?: string;
   defaultDue?: string;
   defaultRemind?: string;
+  defaultMeetStart?: string;
+  defaultMeetEnd?: string;
   onSubmit: (payload: TodoEditorPayload) => void;
   onCancel: () => void;
 }
@@ -39,6 +45,8 @@ interface TodoEditorViewProps {
 const TITLE_FIELD = "todo-editor:title";
 const DUE_FIELD = "todo-editor:due";
 const REMIND_FIELD = "todo-editor:remind";
+const MEET_START_FIELD = "todo-editor:meet-start";
+const MEET_END_FIELD = "todo-editor:meet-end";
 const DESC_FIELD = "todo-editor:description";
 
 const WHEN_HINT = '2026-11-05 · "2026-11-05 09:30" · 09:30 · +2h';
@@ -49,6 +57,8 @@ export function TodoEditorView({
   defaultDescription,
   defaultDue,
   defaultRemind,
+  defaultMeetStart,
+  defaultMeetEnd,
   onSubmit,
   onCancel,
 }: TodoEditorViewProps) {
@@ -60,11 +70,14 @@ export function TodoEditorView({
   const [description, setDescription] = useState(defaultDescription ?? "");
   const [due, setDue] = useState(defaultDue ?? "");
   const [remind, setRemind] = useState(defaultRemind ?? "");
+  const [meetStart, setMeetStart] = useState(defaultMeetStart ?? "");
+  const [meetEnd, setMeetEnd] = useState(defaultMeetEnd ?? "");
 
   const { focus } = useFocusManager();
 
   const dueInvalid = due.trim().length > 0 && !parseWhen(due);
   const remindInvalid = remind.trim().length > 0 && !parseWhen(remind);
+  const meetError = meetingError(meetStart, meetEnd);
 
   useInput((input, key) => {
     if (key.escape) {
@@ -78,8 +91,15 @@ export function TodoEditorView({
         return;
       }
       // Keep the sheet open on bad input so the user's typing survives.
-      if (dueInvalid || remindInvalid) return;
-      onSubmit({ title: trimmed, description, due, remind });
+      if (dueInvalid || remindInvalid || meetError) return;
+      onSubmit({
+        title: trimmed,
+        description,
+        due,
+        remind,
+        meetStart,
+        meetEnd,
+      });
     }
   });
 
@@ -87,7 +107,7 @@ export function TodoEditorView({
   const subtitle =
     mode === "add"
       ? "Capture a new task. Ctrl+S to save · Esc cancels."
-      : "Update the title, deadline, reminder, and markdown description.";
+      : "Update the title, deadlines, meeting window, and markdown description.";
 
   const cardWidth = Math.min(80, cols - 8);
 
@@ -170,6 +190,41 @@ export function TodoEditorView({
             </Box>
           )}
 
+          <Field id={MEET_START_FIELD} label="starts" value={meetStart}>
+            {(focused) => (
+              <TextInput
+                isDisabled={!focused}
+                defaultValue={defaultMeetStart}
+                placeholder={`optional · meeting start · ${WHEN_HINT}`}
+                onChange={setMeetStart}
+                onSubmit={(value) => {
+                  setMeetStart(value);
+                  focus(MEET_END_FIELD);
+                }}
+              />
+            )}
+          </Field>
+
+          <Field id={MEET_END_FIELD} label="ends" value={meetEnd}>
+            {(focused) => (
+              <TextInput
+                isDisabled={!focused}
+                defaultValue={defaultMeetEnd}
+                placeholder={`optional · meeting end · ${WHEN_HINT}`}
+                onChange={setMeetEnd}
+                onSubmit={(value) => {
+                  setMeetEnd(value);
+                  focus(DESC_FIELD);
+                }}
+              />
+            )}
+          </Field>
+          {meetError && (
+            <Box marginLeft={4}>
+              <Text color={color.danger}>{meetError}</Text>
+            </Box>
+          )}
+
           <Field id={DESC_FIELD} label="description" value={description}>
             {(focused) => (
               <MultilineInput
@@ -202,6 +257,27 @@ export function TodoEditorView({
       />
     </Box>
   );
+}
+
+/**
+ * A meeting is one window, so half of it is never a valid edit — and an end
+ * before its start is a typo, not intent. Both are caught here so the sheet
+ * can point at the fields instead of closing and letting the server reject a
+ * patch the user has to retype from scratch.
+ */
+function meetingError(startRaw: string, endRaw: string): string | null {
+  const start = startRaw.trim();
+  const end = endRaw.trim();
+  if (start === "" && end === "") return null;
+  if (start === "" || end === "") {
+    return "a meeting needs both a start and an end";
+  }
+  const from = parseWhen(start);
+  if (!from) return `unrecognised meeting start · ${WHEN_HINT}`;
+  const to = parseWhen(end);
+  if (!to) return `unrecognised meeting end · ${WHEN_HINT}`;
+  if (to.at <= from.at) return "the meeting must end after it starts";
+  return null;
 }
 
 interface FieldProps {

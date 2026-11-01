@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/todo.proto.
  */
 export const file_dox_v1_todo: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxItECCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJEhgKC2Rlc2NyaXB0aW9uGAggASgJSAGIAQESEwoGZHVlX2F0GAkgASgDSAKIAQESGAoLZHVlX2FsbF9kYXkYCiABKAhIA4gBARIVCghkdWVfem9uZRgLIAEoCUgEiAEBEhYKCXJlbWluZF9hdBgMIAEoA0gFiAEBQg0KC19wcm9qZWN0X2lkQg4KDF9kZXNjcmlwdGlvbkIJCgdfZHVlX2F0Qg4KDF9kdWVfYWxsX2RheUILCglfZHVlX3pvbmVCDAoKX3JlbWluZF9hdCJXChBMaXN0VG9kb3NSZXF1ZXN0EhcKCnByb2plY3RfaWQYASABKAlIAIgBARIbChNpbmNsdWRlX2Rlc2NyaXB0aW9uGAIgASgIQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAkiiAIKEUNyZWF0ZVRvZG9SZXF1ZXN0Eg0KBXRpdGxlGAEgASgJEhcKCnByb2plY3RfaWQYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhMKBmR1ZV9hdBgEIAEoA0gCiAEBEhYKCXJlbWluZF9hdBgFIAEoA0gDiAEBEhgKC2R1ZV9hbGxfZGF5GAYgASgISASIAQESFQoIZHVlX3pvbmUYByABKAlIBYgBAUINCgtfcHJvamVjdF9pZEIOCgxfZGVzY3JpcHRpb25CCQoHX2R1ZV9hdEIMCgpfcmVtaW5kX2F0Qg4KDF9kdWVfYWxsX2RheUILCglfZHVlX3pvbmUilwIKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAKIAQESEwoGZHVlX2F0GAUgASgDSAOIAQESFgoJcmVtaW5kX2F0GAYgASgDSASIAQESGAoLZHVlX2FsbF9kYXkYByABKAhIBYgBARIVCghkdWVfem9uZRgIIAEoCUgGiAEBQggKBl90aXRsZUIHCgVfZG9uZUIOCgxfZGVzY3JpcHRpb25CCQoHX2R1ZV9hdEIMCgpfcmVtaW5kX2F0Qg4KDF9kdWVfYWxsX2RheUILCglfZHVlX3pvbmUiHwoRRGVsZXRlVG9kb1JlcXVlc3QSCgoCaWQYASABKAkiFAoSRGVsZXRlVG9kb1Jlc3BvbnNlMqcDCgtUb2RvU2VydmljZRJTCglMaXN0VG9kb3MSGC5kb3gudjEuTGlzdFRvZG9zUmVxdWVzdBoZLmRveC52MS5MaXN0VG9kb3NSZXNwb25zZSIRgtPkkwILEgkvdjEvdG9kb3MSRwoHR2V0VG9kbxIWLmRveC52MS5HZXRUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhaC0+STAhASDi92MS90b2Rvcy97aWR9EksKCkNyZWF0ZVRvZG8SGS5kb3gudjEuQ3JlYXRlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIUgtPkkwIOOgEqIgkvdjEvdG9kb3MSUAoKVXBkYXRlVG9kbxIZLmRveC52MS5VcGRhdGVUb2RvUmVxdWVzdBoMLmRveC52MS5Ub2RvIhmC0+STAhM6ASoyDi92MS90b2Rvcy97aWR9ElsKCkRlbGV0ZVRvZG8SGS5kb3gudjEuRGVsZXRlVG9kb1JlcXVlc3QaGi5kb3gudjEuRGVsZXRlVG9kb1Jlc3BvbnNlIhaC0+STAhAqDi92MS90b2Rvcy97aWR9QjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
+  fileDesc("ChFkb3gvdjEvdG9kby5wcm90bxIGZG94LnYxIqsDCgRUb2RvEgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEgwKBGRvbmUYAyABKAgSEgoKY3JlYXRlZF9hdBgEIAEoAxISCgp1cGRhdGVkX2F0GAUgASgDEhcKCnByb2plY3RfaWQYBiABKAlIAIgBARISCgpjcmVhdGVkX2J5GAcgASgJEhgKC2Rlc2NyaXB0aW9uGAggASgJSAGIAQESEwoGZHVlX2F0GAkgASgDSAKIAQESGAoLZHVlX2FsbF9kYXkYCiABKAhIA4gBARIVCghkdWVfem9uZRgLIAEoCUgEiAEBEhYKCXJlbWluZF9hdBgMIAEoA0gFiAEBEhAKCHBvc2l0aW9uGA0gASgDEhYKCXN0YXJ0c19hdBgOIAEoA0gGiAEBEhQKB2VuZHNfYXQYDyABKANIB4gBAUINCgtfcHJvamVjdF9pZEIOCgxfZGVzY3JpcHRpb25CCQoHX2R1ZV9hdEIOCgxfZHVlX2FsbF9kYXlCCwoJX2R1ZV96b25lQgwKCl9yZW1pbmRfYXRCDAoKX3N0YXJ0c19hdEIKCghfZW5kc19hdCJXChBMaXN0VG9kb3NSZXF1ZXN0EhcKCnByb2plY3RfaWQYASABKAlIAIgBARIbChNpbmNsdWRlX2Rlc2NyaXB0aW9uGAIgASgIQg0KC19wcm9qZWN0X2lkIjAKEUxpc3RUb2Rvc1Jlc3BvbnNlEhsKBXRvZG9zGAEgAygLMgwuZG94LnYxLlRvZG8iHAoOR2V0VG9kb1JlcXVlc3QSCgoCaWQYASABKAki0AIKEUNyZWF0ZVRvZG9SZXF1ZXN0Eg0KBXRpdGxlGAEgASgJEhcKCnByb2plY3RfaWQYAiABKAlIAIgBARIYCgtkZXNjcmlwdGlvbhgDIAEoCUgBiAEBEhMKBmR1ZV9hdBgEIAEoA0gCiAEBEhYKCXJlbWluZF9hdBgFIAEoA0gDiAEBEhgKC2R1ZV9hbGxfZGF5GAYgASgISASIAQESFQoIZHVlX3pvbmUYByABKAlIBYgBARIWCglzdGFydHNfYXQYCCABKANIBogBARIUCgdlbmRzX2F0GAkgASgDSAeIAQFCDQoLX3Byb2plY3RfaWRCDgoMX2Rlc2NyaXB0aW9uQgkKB19kdWVfYXRCDAoKX3JlbWluZF9hdEIOCgxfZHVlX2FsbF9kYXlCCwoJX2R1ZV96b25lQgwKCl9zdGFydHNfYXRCCgoIX2VuZHNfYXQi3wIKEVVwZGF0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhIKBXRpdGxlGAIgASgJSACIAQESEQoEZG9uZRgDIAEoCEgBiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAKIAQESEwoGZHVlX2F0GAUgASgDSAOIAQESFgoJcmVtaW5kX2F0GAYgASgDSASIAQESGAoLZHVlX2FsbF9kYXkYByABKAhIBYgBARIVCghkdWVfem9uZRgIIAEoCUgGiAEBEhYKCXN0YXJ0c19hdBgJIAEoA0gHiAEBEhQKB2VuZHNfYXQYCiABKANICIgBAUIICgZfdGl0bGVCBwoFX2RvbmVCDgoMX2Rlc2NyaXB0aW9uQgkKB19kdWVfYXRCDAoKX3JlbWluZF9hdEIOCgxfZHVlX2FsbF9kYXlCCwoJX2R1ZV96b25lQgwKCl9zdGFydHNfYXRCCgoIX2VuZHNfYXQiQQoPTW92ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJEhUKCGFmdGVyX2lkGAIgASgJSACIAQFCCwoJX2FmdGVyX2lkIh8KEURlbGV0ZVRvZG9SZXF1ZXN0EgoKAmlkGAEgASgJIhQKEkRlbGV0ZVRvZG9SZXNwb25zZTL+AwoLVG9kb1NlcnZpY2USUwoJTGlzdFRvZG9zEhguZG94LnYxLkxpc3RUb2Rvc1JlcXVlc3QaGS5kb3gudjEuTGlzdFRvZG9zUmVzcG9uc2UiEYLT5JMCCxIJL3YxL3RvZG9zEkcKB0dldFRvZG8SFi5kb3gudjEuR2V0VG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIWgtPkkwIQEg4vdjEvdG9kb3Mve2lkfRJLCgpDcmVhdGVUb2RvEhkuZG94LnYxLkNyZWF0ZVRvZG9SZXF1ZXN0GgwuZG94LnYxLlRvZG8iFILT5JMCDjoBKiIJL3YxL3RvZG9zElAKClVwZGF0ZVRvZG8SGS5kb3gudjEuVXBkYXRlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIZgtPkkwITOgEqMg4vdjEvdG9kb3Mve2lkfRJbCgpEZWxldGVUb2RvEhkuZG94LnYxLkRlbGV0ZVRvZG9SZXF1ZXN0GhouZG94LnYxLkRlbGV0ZVRvZG9SZXNwb25zZSIWgtPkkwIQKg4vdjEvdG9kb3Mve2lkfRJVCghNb3ZlVG9kbxIXLmRveC52MS5Nb3ZlVG9kb1JlcXVlc3QaDC5kb3gudjEuVG9kbyIigtPkkwIcOgEqMhcvdjEvdG9kb3Mve2lkfS9wb3NpdGlvbkI2WjRnaXRodWIuY29tL2xpbi1zbm93L2RveC9hcHBzL3NlcnZlci9nZW4vZG94L3YxO2RveHYxYgZwcm90bzM", [file_google_api_annotations]);
 
 /**
  * Todo is a single todo item, owned by a user and optionally scoped to a project.
@@ -110,6 +110,32 @@ export type Todo = Message<"dox.v1.Todo"> & {
    * @generated from field: optional int64 remind_at = 12;
    */
   remindAt?: bigint | undefined;
+
+  /**
+   * Manual ordering key inside the todo's list scope (its project, or the
+   * creator's Inbox). Higher sorts first; ties fall back to created_at DESC,
+   * which is why an untouched list keeps its creation order. Only MoveTodo
+   * assigns meaningful values: it renumbers the whole scope densely.
+   *
+   * @generated from field: int64 position = 13;
+   */
+  position: bigint;
+
+  /**
+   * Optional meeting window, UTC unix milliseconds. Both or neither: a todo
+   * with a start and an end is a meeting (project members are the invitees —
+   * they already receive its reminders), a todo with neither is a task.
+   * Independent of due_at: the window is when you meet, the deadline is when
+   * the work is owed.
+   *
+   * @generated from field: optional int64 starts_at = 14;
+   */
+  startsAt?: bigint | undefined;
+
+  /**
+   * @generated from field: optional int64 ends_at = 15;
+   */
+  endsAt?: bigint | undefined;
 };
 
 /**
@@ -231,6 +257,18 @@ export type CreateTodoRequest = Message<"dox.v1.CreateTodoRequest"> & {
    * @generated from field: optional string due_zone = 7;
    */
   dueZone?: string | undefined;
+
+  /**
+   * Meeting window, UTC unix milliseconds. Set both or neither.
+   *
+   * @generated from field: optional int64 starts_at = 8;
+   */
+  startsAt?: bigint | undefined;
+
+  /**
+   * @generated from field: optional int64 ends_at = 9;
+   */
+  endsAt?: bigint | undefined;
 };
 
 /**
@@ -294,6 +332,20 @@ export type UpdateTodoRequest = Message<"dox.v1.UpdateTodoRequest"> & {
    * @generated from field: optional string due_zone = 8;
    */
   dueZone?: string | undefined;
+
+  /**
+   * Patch the meeting window. Absent = unchanged; both 0 = clear; both > 0 =
+   * set (UTC unix milliseconds). A patch that leaves only one side set is
+   * rejected, so the window can never be half-written.
+   *
+   * @generated from field: optional int64 starts_at = 9;
+   */
+  startsAt?: bigint | undefined;
+
+  /**
+   * @generated from field: optional int64 ends_at = 10;
+   */
+  endsAt?: bigint | undefined;
 };
 
 /**
@@ -302,6 +354,31 @@ export type UpdateTodoRequest = Message<"dox.v1.UpdateTodoRequest"> & {
  */
 export const UpdateTodoRequestSchema: GenMessage<UpdateTodoRequest> = /*@__PURE__*/
   messageDesc(file_dox_v1_todo, 5);
+
+/**
+ * @generated from message dox.v1.MoveTodoRequest
+ */
+export type MoveTodoRequest = Message<"dox.v1.MoveTodoRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Place the todo directly after this one. Unset = move to the front of the
+   * scope. The anchor must be visible to the caller and in the same scope.
+   *
+   * @generated from field: optional string after_id = 2;
+   */
+  afterId?: string | undefined;
+};
+
+/**
+ * Describes the message dox.v1.MoveTodoRequest.
+ * Use `create(MoveTodoRequestSchema)` to create a new message.
+ */
+export const MoveTodoRequestSchema: GenMessage<MoveTodoRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_todo, 6);
 
 /**
  * @generated from message dox.v1.DeleteTodoRequest
@@ -318,7 +395,7 @@ export type DeleteTodoRequest = Message<"dox.v1.DeleteTodoRequest"> & {
  * Use `create(DeleteTodoRequestSchema)` to create a new message.
  */
 export const DeleteTodoRequestSchema: GenMessage<DeleteTodoRequest> = /*@__PURE__*/
-  messageDesc(file_dox_v1_todo, 6);
+  messageDesc(file_dox_v1_todo, 7);
 
 /**
  * @generated from message dox.v1.DeleteTodoResponse
@@ -331,7 +408,7 @@ export type DeleteTodoResponse = Message<"dox.v1.DeleteTodoResponse"> & {
  * Use `create(DeleteTodoResponseSchema)` to create a new message.
  */
 export const DeleteTodoResponseSchema: GenMessage<DeleteTodoResponse> = /*@__PURE__*/
-  messageDesc(file_dox_v1_todo, 7);
+  messageDesc(file_dox_v1_todo, 8);
 
 /**
  * TodoService manages todos for the authenticated user.
@@ -382,6 +459,23 @@ export const TodoService: GenService<{
     methodKind: "unary";
     input: typeof DeleteTodoRequestSchema;
     output: typeof DeleteTodoResponseSchema;
+  },
+  /**
+   * MoveTodo places a todo immediately after another todo in the same list
+   * scope (its project, or the creator's Inbox) and renumbers that scope
+   * densely. after_id unset = move to the front.
+   *
+   * Why an anchor and not an index: the client always knows the row it
+   * dropped beside, but two clients that reordered concurrently would
+   * disagree about what index N meant. The server resolves the anchor against
+   * what is actually stored, so the last write wins on a real position.
+   *
+   * @generated from rpc dox.v1.TodoService.MoveTodo
+   */
+  moveTodo: {
+    methodKind: "unary";
+    input: typeof MoveTodoRequestSchema;
+    output: typeof TodoSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_todo, 0);

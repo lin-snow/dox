@@ -10,6 +10,19 @@ export function dueInput(t: Todo): string {
   return formatWhenInput(Number(t.dueAt), t.dueAllDay ?? false, t.dueZone);
 }
 
+/**
+ * One-line meeting window. A same-day window drops the repeated date so the
+ * row still fits beside the other meta fields; anything spanning days keeps
+ * both ends readable.
+ */
+export function windowLabel(startMs: number, endMs: number): string {
+  const start = formatWhenInput(startMs, false);
+  const end = formatWhenInput(endMs, false);
+  return start.slice(0, 10) === end.slice(0, 10)
+    ? `${start} → ${end.slice(11)}`
+    : `${start} → ${end}`;
+}
+
 export function relativeTime(now: number, raw: unknown): string {
   const ms =
     typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;

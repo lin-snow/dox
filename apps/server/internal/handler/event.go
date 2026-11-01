@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"sort"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,6 +16,12 @@ import (
 const (
 	defaultEventsLimit = 20
 	maxEventsLimit     = 50
+
+	// Long-poll budget. 25s survives the usual 30–60s proxy idle timeout while
+	// keeping an idle desktop at roughly one request every half minute.
+	defaultWatchTimeout = 25 * time.Second
+	minWatchTimeout     = 100 * time.Millisecond
+	maxWatchTimeout     = 60 * time.Second
 )
 
 // Event implements EventService. Read-only: the feed is appended by mutation
@@ -23,11 +30,32 @@ const (
 // project events) or actor identity (for personal events).
 type Event struct {
 	doxv1.UnimplementedEventServiceServer
-	q *queries.Queries
+	q       *queries.Queries
+	changes *Changes
 }
 
-func NewEvent(q *queries.Queries) *Event {
-	return &Event{q: q}
+func NewEvent(q *queries.Queries, changes *Changes) *Event {
+	return &Event{q: q, changes: changes}
+}
+
+// WatchChanges long-polls the mutation counter. The timeout is clamped: too
+// short makes clients chatty, too long trips proxy and phone idle timeouts.
+func (s *Event) WatchChanges(ctx context.Context, req *doxv1.WatchChangesRequest) (*doxv1.WatchChangesResponse, error) {
+	timeout := time.Duration(req.GetTimeoutMs()) * time.Millisecond
+	switch {
+	case req.GetTimeoutMs() == 0:
+		timeout = defaultWatchTimeout
+	case timeout < minWatchTimeout:
+		timeout = minWatchTimeout
+	case timeout > maxWatchTimeout:
+		timeout = maxWatchTimeout
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return &doxv1.WatchChangesResponse{
+		Version: s.changes.Wait(waitCtx, req.GetSince()),
+	}, nil
 }
 
 func (s *Event) ListEvents(ctx context.Context, req *doxv1.ListEventsRequest) (*doxv1.ListEventsResponse, error) {

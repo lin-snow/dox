@@ -10,6 +10,8 @@
     <string>dev.linsnow.dox</string>
     <key>CFBundleExecutable</key>
     <string>dox-desktop</string>
+    <key>CFBundleIconFile</key>
+    <string>dox.icns</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

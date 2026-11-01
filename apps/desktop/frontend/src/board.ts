@@ -1,5 +1,7 @@
+import { localZone } from "@dox/core/browser";
+
 import type { Todo } from "./api";
-import { byUrgency, endOfToday, ms } from "./format";
+import { byUrgency, endOfToday, ms, startOfToday } from "./format";
 
 /** The board is grouped by deadline, not by state, so a task never jumps
  * columns while you are looking at it: marking it done keeps it in place. */
@@ -22,12 +24,42 @@ export function bucketOf(todo: Todo, now = Date.now()): Bucket {
   return "later";
 }
 
+/**
+ * Manual order first, urgency as the tiebreak. A list nobody has dragged has
+ * every position at 0, so it renders exactly as before; once a row is dragged
+ * the server renumbers the scope densely and that order wins.
+ */
+export function byOrder(a: Todo, b: Todo): number {
+  const pa = Number(a.position ?? 0);
+  const pb = Number(b.position ?? 0);
+  if (pa !== pb) return pb - pa;
+  return byUrgency(a, b);
+}
+
 export function group(todos: Todo[], now = Date.now()): Record<Bucket, Todo[]> {
   const out: Record<Bucket, Todo[]> = { later: [], week: [], today: [] };
-  for (const todo of [...todos].sort(byUrgency)) {
+  for (const todo of [...todos].sort(byOrder)) {
     out[bucketOf(todo, now)].push(todo);
   }
   return out;
+}
+
+/**
+ * Dropping a row on another column is a reschedule, not a reorder: the columns
+ * are deadlines, so "Today" means the todo is due today. "Later" is the only
+ * column that means "no deadline at all" — its empty state says so.
+ */
+export function dueForBucket(
+  bucket: Bucket,
+  now = Date.now(),
+): {
+  dueAt: number | null;
+  dueAllDay?: boolean;
+  dueZone?: string;
+} {
+  if (bucket === "later") return { dueAt: null };
+  const day = startOfToday(now) + (bucket === "week" ? WEEK : 0);
+  return { dueAt: day, dueAllDay: true, dueZone: localZone() };
 }
 
 /** Board order, top to bottom, left to right — the order the arrow keys walk. */

@@ -49,7 +49,7 @@ export function NotificationsView({
           <Box>
             <Text color={color.muted} dimColor>
               {reminders.length === 0
-                ? "nothing fired yet"
+                ? "No reminders yet"
                 : `${reminders.length} recent`}
             </Text>
             <Box flexGrow={1} />

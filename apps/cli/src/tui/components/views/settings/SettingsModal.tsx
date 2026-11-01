@@ -68,7 +68,7 @@ export function SettingsModal({
     return (
       <SettingsFormModal
         title="Edit Description"
-        help="Up to 256 chars. Shown to anyone hitting /v1/auth/server-info."
+        help="Up to 256 characters. Shown to anyone who connects to this server."
         fields={[
           {
             key: "description",
@@ -103,7 +103,7 @@ export function SettingsModal({
     return (
       <SettingsFormModal
         title="Change Password"
-        help="Enter your current password, then a new one (min 8 chars). Shown in cleartext — make sure nobody's looking."
+        help="Enter your current password, then a new one (at least 8 characters). It stays visible while you type."
         fields={[
           { key: "old", label: "current", placeholder: "current password" },
           { key: "new", label: "new", placeholder: "new password (8+ chars)" },
@@ -208,7 +208,7 @@ export function SettingsModal({
     return (
       <ConfirmAction
         title="Sign Out"
-        message="Clears the local token. Server URL stays. Re-login required to use this client."
+        message="You'll need to sign in again. The server address is kept."
         tone={color.danger}
         busy={state.settingsBusy}
         error={state.settingsError}

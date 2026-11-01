@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,7 +21,17 @@ type Config struct {
 	// TrustProxyHeaders makes the auth rate limiter read X-Forwarded-For.
 	// Enable only when a reverse proxy you control overwrites the header.
 	TrustProxyHeaders bool
+	// NtfyURL is the ntfy server root used for reminder pushes.
+	NtfyURL string
+	// NtfyTopic is the publish topic, optionally containing "{user}". Empty
+	// disables the channel: a third-party push must never be on by accident.
+	NtfyTopic string
+	// NtfyToken is an optional bearer token for a protected ntfy instance.
+	NtfyToken string
 }
+
+// defaultNtfyURL is the public relay; a self-hosted instance overrides it.
+const defaultNtfyURL = "https://ntfy.sh"
 
 const (
 	defaultEventRetention = 15 * 24 * time.Hour
@@ -44,7 +55,14 @@ func Load() (*Config, error) {
 		EventRetention:   defaultEventRetention,
 		ReminderInterval: defaultReminderInterval,
 		ReminderGrace:    defaultReminderGrace,
+		NtfyURL:          getenv("DOX_NTFY_URL", defaultNtfyURL),
+		// No default topic on purpose: an unset topic is the opt-out.
+		NtfyTopic: getenv("DOX_NTFY_TOPIC", ""),
+		NtfyToken: getenv("DOX_NTFY_TOKEN", ""),
 	}
+	// Deliverer code joins "<base>/<topic>"; a trailing slash would make it
+	// "<base>//<topic>", which some reverse proxies refuse to route.
+	cfg.NtfyURL = strings.TrimRight(cfg.NtfyURL, "/")
 	if err := durationEnv("DOX_EVENT_RETENTION", &cfg.EventRetention); err != nil {
 		return nil, err
 	}

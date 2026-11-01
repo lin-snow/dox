@@ -1,6 +1,7 @@
 import { Box, Text, useInput, useWindowSize } from "ink";
 
 import { color, icon } from "../../../theme";
+import { displayVersion } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { Logo } from "../../layout/Logo";
 
@@ -20,28 +21,33 @@ export function AboutView({ version, onClose }: AboutViewProps) {
     if (key.escape || key.return) onClose();
   });
 
-  const cardRows = 12;
+  const cardRows = 24;
   const topPad = Math.max(1, Math.floor((totalRows - cardRows - 2) / 2));
+  const shownVersion = displayVersion(version);
 
   return (
     <Box flexDirection="column" paddingX={1}>
       <Box height={topPad} />
       <Box justifyContent="center">
-        <Logo />
+        <Logo full />
       </Box>
       <Box marginTop={1} justifyContent="center">
-        <Text color={color.muted}>{`a self-hosted todo · ${version}`}</Text>
+        <Text color={color.muted}>
+          {shownVersion
+            ? `a quiet home for your todos · ${shownVersion}`
+            : "a quiet home for your todos"}
+        </Text>
       </Box>
       <Box marginTop={2} justifyContent="center">
         <Box flexDirection="column">
           <AboutRow label="author" value={AUTHOR} valueColor={color.accent2} />
-          <AboutRow label="repo" value={REPO} valueColor={color.accent2} />
+          <AboutRow label="source" value={REPO} valueColor={color.accent2} />
           <AboutRow label="license" value={LICENSE} valueColor={color.accent} />
         </Box>
       </Box>
       <Box marginTop={2} justifyContent="center">
         <Text color={color.muted} dimColor>
-          {icon.brand} thanks for trying dox
+          {icon.brand} thanks for using dox
         </Text>
       </Box>
       <Footer

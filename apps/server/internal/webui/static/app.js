@@ -17,6 +17,7 @@ let me = null; // the caller
 let projects = [];
 let todos = [];
 let detail = null; // fully-fetched todo while the detail view is open
+let view = "open"; // which slice of the list: "open" | "done"
 let mode = "login"; // auth tab: "login" | "register"
 let notice = ""; // message to show on the next render
 let noticeEl = null; // live slot for messages while a form is on screen
@@ -38,7 +39,7 @@ async function api(path, init = {}) {
   try {
     res = await fetch(path, { ...init, headers });
   } catch {
-    throw new ApiError("server unreachable", 0);
+    throw new ApiError("Can't reach the server.", 0);
   }
 
   if (res.status === 401) {
@@ -47,11 +48,11 @@ async function api(path, init = {}) {
     token = "";
     me = null;
     sessionStorage.removeItem(TOKEN_KEY);
-    throw new ApiError("your session expired — sign in again", 401);
+    throw new ApiError("Your session expired. Sign in again.", 401);
   }
 
   if (!res.ok) {
-    let message = `request failed (${res.status})`;
+    let message = `Request failed (${res.status}).`;
     try {
       const body = await res.json();
       if (body && body.message) message = body.message;
@@ -86,6 +87,26 @@ function el(tag, props = {}, ...children) {
     );
   }
   return node;
+}
+
+/** The repo logo, used wherever the page would otherwise repeat its name. */
+function logo() {
+  return el("img", {
+    class: "logo",
+    src: "/static/dox.png",
+    alt: "",
+    "aria-hidden": "true",
+  });
+}
+
+/** A Base UI Field: a mono label stacked over its control. */
+function field(label, input) {
+  return el(
+    "div",
+    { class: "field" },
+    el("label", { class: "field-label", for: input.id }, label),
+    input,
+  );
 }
 
 // int64 fields arrive as JSON strings because the gateway marshals protobuf.
@@ -160,7 +181,11 @@ function render() {
 
   if (fatal) {
     root.replaceChildren(
-      el("div", { class: "card" }, el("p", { class: "err" }, fatal)),
+      el(
+        "div",
+        { class: "auth" },
+        el("div", { class: "card" }, el("p", { class: "err" }, fatal)),
+      ),
     );
     return;
   }
@@ -169,7 +194,7 @@ function render() {
     return;
   }
   if (!me) {
-    root.replaceChildren(el("p", { class: "loading" }, "connecting…"));
+    root.replaceChildren(el("p", { class: "loading" }, "Connecting…"));
     return;
   }
   root.replaceChildren(renderApp());
@@ -188,14 +213,19 @@ function renderAuth() {
   );
   noticeEl = noticeBox;
 
-  const title = el("h1", {}, (info && info.serverName) || "dox");
+  const title = el(
+    "h1",
+    {},
+    logo(),
+    el("span", {}, (info && info.serverName) || "dox"),
+  );
   const subtitle = el(
     "p",
     { class: "sub" },
     firstRun
-      ? "this server has no accounts yet — the first one becomes the owner"
+      ? "This server has no accounts yet. The first one becomes the owner."
       : [
-          info && info.ownerName ? `by ${info.ownerName}` : "self-hosted",
+          info && info.ownerName ? `By ${info.ownerName}` : "Self-hosted",
           info && info.registrationOpen
             ? " · registration open"
             : info
@@ -209,7 +239,6 @@ function renderAuth() {
     name: "username",
     type: "text",
     autocomplete: "username",
-    placeholder: "username",
     required: true,
     spellcheck: "false",
   });
@@ -218,7 +247,6 @@ function renderAuth() {
     name: "password",
     type: "password",
     autocomplete: registering ? "new-password" : "current-password",
-    placeholder: "password",
     required: true,
   });
   const confirmInput = registering
@@ -227,7 +255,6 @@ function renderAuth() {
         name: "confirm",
         type: "password",
         autocomplete: "new-password",
-        placeholder: "confirm password",
         required: true,
       })
     : null;
@@ -237,7 +264,6 @@ function renderAuth() {
           id: "auth-invite",
           name: "invite",
           type: "text",
-          placeholder: "invite code",
           required: true,
           spellcheck: "false",
         })
@@ -247,7 +273,6 @@ function renderAuth() {
         id: "auth-server",
         name: "serverName",
         type: "text",
-        placeholder: "server name (optional)",
       })
     : null;
 
@@ -269,11 +294,11 @@ function renderAuth() {
 
           if (registering) {
             if (passInput.value.length < 8) {
-              fail(new Error("password must be at least 8 characters"));
+              fail(new Error("Password must be at least 8 characters."));
               return;
             }
             if (confirmInput.value !== passInput.value) {
-              fail(new Error("passwords do not match"));
+              fail(new Error("Passwords do not match."));
               return;
             }
           }
@@ -313,11 +338,11 @@ function renderAuth() {
         },
       },
     },
-    userInput,
-    passInput,
-    confirmInput,
-    inviteInput,
-    serverInput,
+    field("Username", userInput),
+    field("Password", passInput),
+    confirmInput ? field("Confirm password", confirmInput) : null,
+    inviteInput ? field("Invite code", inviteInput) : null,
+    serverInput ? field("Server name", serverInput) : null,
     submit,
   );
 
@@ -348,7 +373,15 @@ function renderAuth() {
         ),
       );
 
-  return el("div", { class: "card" }, title, subtitle, tabs, noticeBox, form);
+  // Base UI Tabs: the selected tab sits on the panel, sharing its border.
+  return el(
+    "div",
+    { class: "auth" },
+    title,
+    subtitle,
+    tabs,
+    el("div", { class: "card" }, noticeBox, form),
+  );
 }
 
 // ---- app -----------------------------------------------------------------
@@ -369,7 +402,7 @@ function renderApp() {
         },
       },
     },
-    "refresh",
+    "Refresh",
   );
   const signOutBtn = el(
     "button",
@@ -382,20 +415,31 @@ function renderApp() {
           me = null;
           detail = null;
           todos = [];
+          view = "open";
           notice = "";
           sessionStorage.removeItem(TOKEN_KEY);
           render();
         },
       },
     },
-    "sign out",
+    "Sign out",
   );
 
   const bar = el(
     "header",
     { class: "bar" },
-    el("div", { class: "brand" }, (info && info.serverName) || "dox"),
-    el("div", { class: "who" }, me.name, refreshBtn, signOutBtn),
+    el(
+      "div",
+      { class: "brand" },
+      logo(),
+      el("span", { class: "brand-name" }, (info && info.serverName) || "dox"),
+    ),
+    el(
+      "div",
+      { class: "who" },
+      el("span", { class: "who-name" }, me.name),
+      el("div", { class: "who-actions" }, refreshBtn, signOutBtn),
+    ),
   );
 
   const noticeBox = el(
@@ -408,12 +452,13 @@ function renderApp() {
   return el("div", {}, bar, noticeBox, detail ? renderDetail() : renderList());
 }
 
-function renderList() {
+/** The add box. Only rendered on the open view: a todo cannot be born done. */
+function addTodoForm() {
   const titleInput = el("input", {
     id: "new-title",
     name: "title",
     type: "text",
-    placeholder: "add a todo…",
+    placeholder: "Add a todo…",
     required: true,
     "aria-label": "new todo title",
   });
@@ -430,7 +475,7 @@ function renderList() {
     "aria-label": "due date",
   });
 
-  const form = el(
+  return el(
     "form",
     {
       class: "add",
@@ -455,11 +500,51 @@ function renderList() {
     dueInput,
     el("button", { class: "btn", type: "submit" }, "Add"),
   );
+}
 
-  const rows = todos.map((todo) => {
+/**
+ * Open work gets the list; finished work is one click away behind its own
+ * view instead of sitting inline where it reads as clutter. Both views are
+ * renderings of the same /v1/todos response: nothing is archived or hidden
+ * from the server.
+ */
+function renderList() {
+  const open = todos.filter((todo) => !todo.done);
+  // Newest first: updatedAt is the closest thing this resource has to
+  // "when it was ticked", so the view reads like a recent-completions log.
+  const done = todos
+    .filter((todo) => todo.done)
+    .sort((a, b) => num(b.updatedAt) - num(a.updatedAt));
+  const visible = view === "done" ? done : open;
+
+  const switcher = el(
+    "div",
+    { class: "views", role: "group", "aria-label": "which todos to show" },
+    [
+      ["open", "Open", open.length],
+      ["done", "Done", done.length],
+    ].map(([value, label, count]) =>
+      el(
+        "button",
+        {
+          type: "button",
+          "aria-pressed": view === value ? "true" : "false",
+          on: {
+            click: () => {
+              view = value;
+              render();
+            },
+          },
+        },
+        label,
+        el("span", { class: "count" }, String(count)),
+      ),
+    ),
+  );
+
+  const rows = visible.map((todo) => {
     const check = el("input", {
       type: "checkbox",
-      class: "check",
       "aria-label": todo.done ? "mark open" : "mark done",
       on: {
         change: async () => {
@@ -476,6 +561,8 @@ function renderList() {
     const project = projectById(todo.projectId);
     const overdue = isOverdue(todo);
 
+    // Fixed slots for the trailing metadata: the project column and the date
+    // column line up down the whole list even when a row is missing either.
     return el(
       "li",
       { class: todo.done ? "row done" : "row" },
@@ -498,14 +585,16 @@ function renderList() {
         },
         todo.title,
       ),
-      project ? el("span", { class: "chip" }, project.name) : null,
-      todo.dueAt
-        ? el(
-            "span",
-            { class: overdue ? "meta overdue" : "meta" },
-            dueLabel(todo),
-          )
-        : null,
+      el(
+        "span",
+        { class: "cell-project" },
+        project ? el("span", { class: "chip" }, project.name) : null,
+      ),
+      el(
+        "span",
+        { class: overdue ? "cell-due overdue" : "cell-due" },
+        todo.dueAt ? dueLabel(todo) : "",
+      ),
     );
   });
 
@@ -515,10 +604,184 @@ function renderList() {
       : el(
           "p",
           { class: "empty" },
-          "nothing here yet — add your first todo above",
+          view === "done"
+            ? "Nothing completed yet."
+            : "Nothing open. Add a todo above.",
         );
 
-  return el("div", {}, form, list);
+  return el("div", {}, view === "open" ? addTodoForm() : null, switcher, list);
+}
+
+// ---- markdown ------------------------------------------------------------
+
+/**
+ * A small GFM subset for todo descriptions: headings, lists, task lists,
+ * quotes, fenced code, rules, and inline emphasis/links. It builds DOM nodes
+ * instead of assigning innerHTML, so a description can never become markup.
+ */
+function inlineMarkdown(text) {
+  const nodes = [];
+  const pattern =
+    /(`[^`\n]+`)|(\*\*|__)([\s\S]+?)\2|(\*|_)([^*_\n]+?)\4|~~([\s\S]+?)~~|\[([^\]]+)\]\(([^)\s]+)\)/g;
+  let last = 0;
+  let match;
+  while ((match = pattern.exec(text))) {
+    if (match.index > last) {
+      nodes.push(document.createTextNode(text.slice(last, match.index)));
+    }
+    const [, code, , bold, , italic, strike, linkText, href] = match;
+    if (code) {
+      nodes.push(el("code", {}, code.slice(1, -1)));
+    } else if (bold) {
+      nodes.push(el("strong", {}, ...inlineMarkdown(bold)));
+    } else if (italic) {
+      nodes.push(el("em", {}, ...inlineMarkdown(italic)));
+    } else if (strike) {
+      nodes.push(el("del", {}, ...inlineMarkdown(strike)));
+    } else if (linkText) {
+      if (/^(https?:|mailto:)/i.test(href)) {
+        nodes.push(
+          el(
+            "a",
+            { href, target: "_blank", rel: "noreferrer noopener" },
+            ...inlineMarkdown(linkText),
+          ),
+        );
+      } else {
+        nodes.push(...inlineMarkdown(linkText));
+      }
+    }
+    last = pattern.lastIndex;
+  }
+  if (last < text.length) nodes.push(document.createTextNode(text.slice(last)));
+  return nodes;
+}
+
+function isBlockStart(line) {
+  return (
+    /^\s*```/.test(line) ||
+    /^\s{0,3}#{1,6}\s+/.test(line) ||
+    /^\s*>\s?/.test(line) ||
+    /^\s*([-*+]|\d+[.)])\s+/.test(line) ||
+    /^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)
+  );
+}
+
+function markdownBlocks(source) {
+  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  const blocks = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    const fence = /^\s*```(\w*)\s*$/.exec(line);
+    if (fence) {
+      const body = [];
+      i++;
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) {
+        body.push(lines[i++]);
+      }
+      i++;
+      blocks.push(
+        el(
+          "pre",
+          {},
+          el(
+            "code",
+            { class: fence[1] ? `language-${fence[1]}` : null },
+            body.join("\n"),
+          ),
+        ),
+      );
+      continue;
+    }
+
+    const heading = /^\s{0,3}(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      blocks.push(
+        el(`h${heading[1].length}`, {}, ...inlineMarkdown(heading[2])),
+      );
+      i++;
+      continue;
+    }
+
+    if (/^\s{0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+      blocks.push(el("hr"));
+      i++;
+      continue;
+    }
+
+    if (/^\s*>\s?/.test(line)) {
+      const quote = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        quote.push(lines[i++].replace(/^\s*>\s?/, ""));
+      }
+      blocks.push(el("blockquote", {}, ...markdownBlocks(quote.join("\n"))));
+      continue;
+    }
+
+    const item = /^\s*([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (item) {
+      const ordered = /^\d/.test(item[1]);
+      const list = el(ordered ? "ol" : "ul");
+      while (i < lines.length) {
+        const next = /^\s*([-*+]|\d+[.)])\s+(.*)$/.exec(lines[i]);
+        if (!next || /^\d/.test(next[1]) !== ordered) break;
+        const task = ordered ? null : /^\[([ xX])\]\s*(.*)$/.exec(next[2]);
+        if (task) {
+          list.append(
+            el(
+              "li",
+              { class: "task-item" },
+              el("input", {
+                type: "checkbox",
+                disabled: true,
+                checked: task[1] !== " " || null,
+              }),
+              el("span", {}, ...inlineMarkdown(task[2])),
+            ),
+          );
+        } else {
+          list.append(el("li", {}, ...inlineMarkdown(next[2])));
+        }
+        i++;
+      }
+      blocks.push(list);
+      continue;
+    }
+
+    const paragraph = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() !== "" &&
+      !isBlockStart(lines[i])
+    ) {
+      paragraph.push(lines[i++]);
+    }
+    if (paragraph.length === 0) {
+      i++;
+      continue;
+    }
+    const p = el("p");
+    paragraph.forEach((text, index) => {
+      if (index > 0) p.append(el("br"));
+      p.append(...inlineMarkdown(text));
+    });
+    blocks.push(p);
+  }
+
+  return blocks;
+}
+
+function renderMarkdown(source) {
+  const fragment = document.createDocumentFragment();
+  for (const node of markdownBlocks(source)) fragment.append(node);
+  return fragment;
 }
 
 function renderDetail() {
@@ -529,38 +792,22 @@ function renderDetail() {
     "section",
     { class: "detail" },
     el(
-      "button",
-      {
-        class: "ghost",
-        type: "button",
-        on: {
-          click: () => {
-            detail = null;
-            render();
+      "div",
+      { class: "detail-bar" },
+      el(
+        "button",
+        {
+          class: "ghost",
+          type: "button",
+          on: {
+            click: () => {
+              detail = null;
+              render();
+            },
           },
         },
-      },
-      "← back",
-    ),
-    el("h2", {}, todo.title),
-    el(
-      "div",
-      { class: "chips" },
-      el("span", { class: "chip" }, project ? project.name : "Inbox"),
-      todo.dueAt ? el("span", { class: "chip" }, dueLabel(todo)) : null,
-      el("span", { class: "chip" }, todo.done ? "done" : "open"),
-      el(
-        "span",
-        { class: "chip" },
-        `updated ${new Date(num(todo.updatedAt)).toLocaleString()}`,
+        "← Back",
       ),
-    ),
-    todo.description
-      ? el("pre", { class: "desc" }, todo.description)
-      : el("p", { class: "hint" }, "no description"),
-    el(
-      "div",
-      { class: "actions" },
       el(
         "button",
         {
@@ -579,6 +826,22 @@ function renderDetail() {
         todo.done ? "Mark open" : "Mark done",
       ),
     ),
+    el("h2", {}, todo.title),
+    el(
+      "div",
+      { class: "chips" },
+      el("span", { class: "chip" }, project ? project.name : "Inbox"),
+      todo.dueAt ? el("span", { class: "chip" }, dueLabel(todo)) : null,
+      el("span", { class: "chip" }, todo.done ? "done" : "open"),
+      el(
+        "span",
+        { class: "chip" },
+        `Updated ${new Date(num(todo.updatedAt)).toLocaleString()}`,
+      ),
+    ),
+    todo.description
+      ? el("div", { class: "desc" }, renderMarkdown(todo.description))
+      : el("p", { class: "hint" }, "No description"),
   );
 }
 
@@ -631,7 +894,7 @@ async function boot() {
   try {
     info = await api("/v1/auth/server-info");
   } catch (err) {
-    fatal = `cannot reach the server — ${err.message}`;
+    fatal = `Can't reach the server: ${err.message}`;
     render();
     return;
   }

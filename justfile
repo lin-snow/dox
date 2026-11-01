@@ -102,6 +102,17 @@ desktop-build: desktop-frontend
     go build -tags private_mac_apis \
         -ldflags "-X main.version={{SERVER_VERSION}}" \
         -o bin/Dox.app/Contents/MacOS/dox-desktop .
+    # The repo logo is the app icon: build every size iconutil expects.
+    iconset="$(mktemp -d)/dox.iconset"
+    mkdir -p "$iconset" bin/Dox.app/Contents/Resources
+    for size in 16 32 128 256 512; do
+        sips -z "$size" "$size" packaging/dox.png \
+            --out "$iconset/icon_${size}x${size}.png" >/dev/null
+        sips -z "$((size * 2))" "$((size * 2))" packaging/dox.png \
+            --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+    done
+    iconutil -c icns "$iconset" -o bin/Dox.app/Contents/Resources/dox.icns
+    rm -rf "$iconset"
     sed "s/__VERSION__/${version}/" packaging/Info.plist > bin/Dox.app/Contents/Info.plist
     codesign --force --sign - bin/Dox.app
     echo ">>> built apps/desktop/bin/Dox.app ({{SERVER_VERSION}})"

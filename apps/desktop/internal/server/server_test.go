@@ -235,7 +235,7 @@ func TestSignInProxiesAndKeepsTokenOutOfTheResponse(t *testing.T) {
 func TestPrefsRoundTrip(t *testing.T) {
 	handler, _ := newApp(t)
 
-	rec := request(t, handler, http.MethodPut, "/__dox/prefs", `{"lastView":"project:p1","notificationsEnabled":false}`)
+	rec := request(t, handler, http.MethodPut, "/__dox/prefs", `{"lastView":"project:p1","notificationsEnabled":false,"showCompleted":true}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d (%s)", rec.Code, rec.Body.String())
 	}
@@ -245,7 +245,7 @@ func TestPrefsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(got.Body.Bytes(), &prefs); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if prefs.LastView != "project:p1" || prefs.NotificationsEnabled {
+	if prefs.LastView != "project:p1" || prefs.NotificationsEnabled || !prefs.ShowCompleted {
 		t.Errorf("prefs = %+v", prefs)
 	}
 }

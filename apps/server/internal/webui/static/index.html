@@ -4,15 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#f9f9f9"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0a0a0a"
+      media="(prefers-color-scheme: dark)"
+    />
     <title>dox</title>
-    <!-- data: favicon keeps the browser from requesting /favicon.ico, which is
-         not served: the only public paths are / and /static/. -->
-    <link rel="icon" href="data:," />
+    <link rel="icon" href="/static/dox-icon.png" />
+    <link rel="apple-touch-icon" href="/static/dox-icon.png" />
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
     <main id="app"></main>
-    <noscript>this page needs JavaScript — use the dox CLI instead</noscript>
+    <noscript>This page needs JavaScript. Use the dox CLI instead.</noscript>
     <script type="module" src="/static/app.js"></script>
   </body>
 </html>

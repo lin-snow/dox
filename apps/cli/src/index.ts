@@ -9,7 +9,7 @@ import * as notifications from "./cli/notifications";
 import * as project from "./cli/project";
 import * as server from "./cli/server";
 import * as todo from "./cli/todo";
-import { VERSION } from "./version";
+import { displayVersion } from "./version";
 
 const args = process.argv.slice(2);
 
@@ -27,8 +27,8 @@ if (args[0] === "--version" || args[0] === "-V" || args[0] === "version") {
 const program = new Command();
 program
   .name("dox")
-  .description("Self-hosted personal todo — thin client")
-  .version(VERSION)
+  .description("A quiet home for your todos")
+  .version(displayVersion() || "local")
   .option("--json", "output JSON for machine consumption");
 
 program
@@ -97,6 +97,11 @@ program
     'deadline: 2026-11-05 | "2026-11-05 09:30" | 09:30 | +2h',
   )
   .option("--remind <when>", "remind at: same forms as --due (default: at due)")
+  .option(
+    "--start <when>",
+    'meeting start: "2026-11-05 09:30" | 09:30 | +2h (needs --end)',
+  )
+  .option("--end <when>", "meeting end: same forms as --start")
   .action(function (this: Command, title: string) {
     return todo.add(title, this.optsWithGlobals());
   });
@@ -138,8 +143,28 @@ program
   .option("--clear-due", "remove the deadline (and its all-day flag/zone)")
   .option("--remind <when>", "set the reminder instant")
   .option("--clear-remind", "remove the reminder (falls back to the deadline)")
+  .option("--start <when>", "set the meeting start (needs --end)")
+  .option("--end <when>", "set the meeting end")
+  .option("--clear-meeting", "turn the meeting back into a plain todo")
   .action(function (this: Command, id: string) {
     return todo.edit(id, this.optsWithGlobals());
+  });
+
+program
+  .command("move <id>")
+  .description("Reorder a todo within its list")
+  .option("--after <id>", "place it directly below this todo (default: top)")
+  .action(function (this: Command, id: string) {
+    return todo.move(id, this.optsWithGlobals());
+  });
+
+program
+  .command("ics")
+  .description("Export meetings as an iCalendar file (stdout by default)")
+  .option("--project <id>", "only this project, 'inbox', or 'all'")
+  .option("--out <path>", "write to a file instead of stdout")
+  .action(function (this: Command) {
+    return todo.ics(this.optsWithGlobals());
   });
 
 program

@@ -3,6 +3,7 @@ package feed_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -17,13 +18,22 @@ type recorder struct {
 	notified  []string
 	unread    int
 	unreadHit int
+	// fail makes Notify report the platform refusing the notification, which is
+	// what a denied macOS permission looks like.
+	fail bool
 }
 
-func (r *recorder) Notify(reminder feed.Reminder) {
+func (r *recorder) Notify(reminder feed.Reminder) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.fail {
+		return errRefused
+	}
 	r.notified = append(r.notified, reminder.ID)
+	return nil
 }
+
+var errRefused = errors.New("notifications are not allowed for this application")
 
 func (r *recorder) Unread(count int) {
 	r.mu.Lock()
@@ -101,6 +111,36 @@ func TestRunAnnouncesEachReminderOnce(t *testing.T) {
 	if unread != 1 {
 		t.Errorf("unread = %d, want 1", unread)
 	}
+}
+
+func TestRunRetriesWhenThePlatformRefuses(t *testing.T) {
+	// A denied macOS permission is exactly this shape: the ledger has the row,
+	// the OS refuses it. The row must stay unannounced so the next tick tries
+	// again instead of vanishing.
+	src := &source{}
+	src.set([]feed.Reminder{{ID: "r1", TodoID: "t1"}}, 1)
+	sink := &recorder{fail: true}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go feed.Run(ctx, src, sink, feed.Config{
+		Interval: 10 * time.Millisecond,
+		Enabled:  func() bool { return true },
+	})
+
+	time.Sleep(60 * time.Millisecond)
+	if notified, _ := sink.snapshot(); len(notified) != 0 {
+		t.Fatalf("notified %v while the sink refused", notified)
+	}
+
+	sink.mu.Lock()
+	sink.fail = false
+	sink.mu.Unlock()
+
+	waitFor(t, func() bool {
+		notified, _ := sink.snapshot()
+		return len(notified) == 1
+	})
 }
 
 func TestRunSkipsPollsWhenDisabled(t *testing.T) {

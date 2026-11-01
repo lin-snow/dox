@@ -72,6 +72,51 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/changes:
+        get:
+            tags:
+                - EventService
+            description: |-
+                WatchChanges long-polls the server's change counter: it returns as soon as
+                 any /v1 mutation has committed since `since`, or when timeout_ms elapses.
+
+                 Why a counter and not pushed events: the gateway is plain HTTP/JSON, and a
+                 webhook-style feed would need either an SSE route outside the auth chain or
+                 a token in a query string. One monotonic integer is cheaper than either, and
+                 it is coarse on purpose — a client that wakes up refetches what it already
+                 knows how to render, so visibility rules stay in the list endpoints where
+                 they already live.
+            operationId: EventService_WatchChanges
+            parameters:
+                - name: since
+                  in: query
+                  description: |-
+                    The version the caller already knows about. 0 = "tell me the current
+                     version immediately", which is how a client bootstraps.
+                  schema:
+                    type: string
+                - name: timeoutMs
+                  in: query
+                  description: |-
+                    How long to hold the connection open while nothing changes. Server clamps
+                     to [100, 60000]; 0 uses 25000 — short enough to survive proxy idle
+                     timeouts, long enough that an idle client is not chatty.
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/WatchChangesResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/events:
         get:
             tags:
@@ -645,6 +690,45 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /v1/todos/{id}/position:
+        patch:
+            tags:
+                - TodoService
+            description: |-
+                MoveTodo places a todo immediately after another todo in the same list
+                 scope (its project, or the creator's Inbox) and renumbers that scope
+                 densely. after_id unset = move to the front.
+
+                 Why an anchor and not an index: the client always knows the row it
+                 dropped beside, but two clients that reordered concurrently would
+                 disagree about what index N meant. The server resolves the anchor against
+                 what is actually stored, so the last write wins on a real position.
+            operationId: TodoService_MoveTodo
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/MoveTodoRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Todo'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /v1/users:
         get:
             tags:
@@ -807,6 +891,11 @@ components:
                 dueZone:
                     type: string
                     description: IANA zone for an all-day due_at. Requires due_at.
+                startsAt:
+                    type: string
+                    description: Meeting window, UTC unix milliseconds. Set both or neither.
+                endsAt:
+                    type: string
         DeleteProjectResponse:
             type: object
             properties: {}
@@ -959,6 +1048,16 @@ components:
                     type: string
                 role:
                     type: string
+        MoveTodoRequest:
+            type: object
+            properties:
+                id:
+                    type: string
+                afterId:
+                    type: string
+                    description: |-
+                        Place the todo directly after this one. Unset = move to the front of the
+                         scope. The anchor must be visible to the caller and in the same scope.
         Notification:
             type: object
             properties:
@@ -1216,6 +1315,23 @@ components:
                         Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
                          May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
                          all-day todo this must be set explicitly, otherwise no reminder fires.
+                position:
+                    type: string
+                    description: |-
+                        Manual ordering key inside the todo's list scope (its project, or the
+                         creator's Inbox). Higher sorts first; ties fall back to created_at DESC,
+                         which is why an untouched list keeps its creation order. Only MoveTodo
+                         assigns meaningful values: it renumbers the whole scope densely.
+                startsAt:
+                    type: string
+                    description: |-
+                        Optional meeting window, UTC unix milliseconds. Both or neither: a todo
+                         with a start and an end is a meeting (project members are the invitees —
+                         they already receive its reminders), a todo with neither is a task.
+                         Independent of due_at: the window is when you meet, the deadline is when
+                         the work is owed.
+                endsAt:
+                    type: string
             description: Todo is a single todo item, owned by a user and optionally scoped to a project.
         UpdateProjectRequest:
             type: object
@@ -1268,6 +1384,14 @@ components:
                 dueZone:
                     type: string
                     description: IANA zone for an all-day deadline. Empty string clears it.
+                startsAt:
+                    type: string
+                    description: |-
+                        Patch the meeting window. Absent = unchanged; both 0 = clear; both > 0 =
+                         set (UTC unix milliseconds). A patch that leaves only one side set is
+                         rejected, so the window can never be half-written.
+                endsAt:
+                    type: string
         User:
             type: object
             properties:
@@ -1280,6 +1404,14 @@ components:
                     description: '"owner" or "member".'
                 createdAt:
                     type: string
+        WatchChangesResponse:
+            type: object
+            properties:
+                version:
+                    type: string
+                    description: |-
+                        Current counter value. Equal to the request's `since` when the wait timed
+                         out without a change.
 tags:
     - name: AuthService
       description: |-

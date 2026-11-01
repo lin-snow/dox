@@ -32,7 +32,9 @@ type Source interface {
 
 // Sink is the platform side: a native notification plus the tray badge.
 type Sink interface {
-	Notify(reminder Reminder)
+	// Notify delivers one reminder. A non-nil error means the platform did not
+	// take it — the reminder stays unannounced and the next tick retries.
+	Notify(reminder Reminder) error
 	Unread(count int)
 }
 
@@ -69,8 +71,16 @@ func Run(ctx context.Context, source Source, sink Sink, cfg Config) {
 			if _, dup := seen[reminder.ID]; dup {
 				continue
 			}
+			// Only a delivered reminder is marked seen: a denied or dropped
+			// platform notification must not silently consume the row, or the
+			// user would never learn about it (macOS refuses sends while the
+			// authorization prompt is unanswered, for instance).
+			if err := sink.Notify(reminder); err != nil {
+				slog.Warn("reminder notification failed",
+					"err", err, "notification", reminder.ID, "todo", reminder.TodoID)
+				continue
+			}
 			seen[reminder.ID] = struct{}{}
-			sink.Notify(reminder)
 		}
 		// The ledger only grows while reminders fire; keep the set bounded for
 		// long-running sessions where the app is never restarted.

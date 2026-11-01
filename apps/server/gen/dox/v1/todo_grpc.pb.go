@@ -24,6 +24,7 @@ const (
 	TodoService_CreateTodo_FullMethodName = "/dox.v1.TodoService/CreateTodo"
 	TodoService_UpdateTodo_FullMethodName = "/dox.v1.TodoService/UpdateTodo"
 	TodoService_DeleteTodo_FullMethodName = "/dox.v1.TodoService/DeleteTodo"
+	TodoService_MoveTodo_FullMethodName   = "/dox.v1.TodoService/MoveTodo"
 )
 
 // TodoServiceClient is the client API for TodoService service.
@@ -40,6 +41,15 @@ type TodoServiceClient interface {
 	CreateTodo(ctx context.Context, in *CreateTodoRequest, opts ...grpc.CallOption) (*Todo, error)
 	UpdateTodo(ctx context.Context, in *UpdateTodoRequest, opts ...grpc.CallOption) (*Todo, error)
 	DeleteTodo(ctx context.Context, in *DeleteTodoRequest, opts ...grpc.CallOption) (*DeleteTodoResponse, error)
+	// MoveTodo places a todo immediately after another todo in the same list
+	// scope (its project, or the creator's Inbox) and renumbers that scope
+	// densely. after_id unset = move to the front.
+	//
+	// Why an anchor and not an index: the client always knows the row it
+	// dropped beside, but two clients that reordered concurrently would
+	// disagree about what index N meant. The server resolves the anchor against
+	// what is actually stored, so the last write wins on a real position.
+	MoveTodo(ctx context.Context, in *MoveTodoRequest, opts ...grpc.CallOption) (*Todo, error)
 }
 
 type todoServiceClient struct {
@@ -100,6 +110,16 @@ func (c *todoServiceClient) DeleteTodo(ctx context.Context, in *DeleteTodoReques
 	return out, nil
 }
 
+func (c *todoServiceClient) MoveTodo(ctx context.Context, in *MoveTodoRequest, opts ...grpc.CallOption) (*Todo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Todo)
+	err := c.cc.Invoke(ctx, TodoService_MoveTodo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TodoServiceServer is the server API for TodoService service.
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility.
@@ -114,6 +134,15 @@ type TodoServiceServer interface {
 	CreateTodo(context.Context, *CreateTodoRequest) (*Todo, error)
 	UpdateTodo(context.Context, *UpdateTodoRequest) (*Todo, error)
 	DeleteTodo(context.Context, *DeleteTodoRequest) (*DeleteTodoResponse, error)
+	// MoveTodo places a todo immediately after another todo in the same list
+	// scope (its project, or the creator's Inbox) and renumbers that scope
+	// densely. after_id unset = move to the front.
+	//
+	// Why an anchor and not an index: the client always knows the row it
+	// dropped beside, but two clients that reordered concurrently would
+	// disagree about what index N meant. The server resolves the anchor against
+	// what is actually stored, so the last write wins on a real position.
+	MoveTodo(context.Context, *MoveTodoRequest) (*Todo, error)
 	mustEmbedUnimplementedTodoServiceServer()
 }
 
@@ -138,6 +167,9 @@ func (UnimplementedTodoServiceServer) UpdateTodo(context.Context, *UpdateTodoReq
 }
 func (UnimplementedTodoServiceServer) DeleteTodo(context.Context, *DeleteTodoRequest) (*DeleteTodoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteTodo not implemented")
+}
+func (UnimplementedTodoServiceServer) MoveTodo(context.Context, *MoveTodoRequest) (*Todo, error) {
+	return nil, status.Error(codes.Unimplemented, "method MoveTodo not implemented")
 }
 func (UnimplementedTodoServiceServer) mustEmbedUnimplementedTodoServiceServer() {}
 func (UnimplementedTodoServiceServer) testEmbeddedByValue()                     {}
@@ -250,6 +282,24 @@ func _TodoService_DeleteTodo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoService_MoveTodo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MoveTodoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TodoServiceServer).MoveTodo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TodoService_MoveTodo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TodoServiceServer).MoveTodo(ctx, req.(*MoveTodoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TodoService_ServiceDesc is the grpc.ServiceDesc for TodoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +326,10 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteTodo",
 			Handler:    _TodoService_DeleteTodo_Handler,
+		},
+		{
+			MethodName: "MoveTodo",
+			Handler:    _TodoService_MoveTodo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

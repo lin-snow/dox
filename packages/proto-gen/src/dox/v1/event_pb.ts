@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dox/v1/event.proto.
  */
 export const file_dox_v1_event: GenFile = /*@__PURE__*/
-  fileDesc("ChJkb3gvdjEvZXZlbnQucHJvdG8SBmRveC52MSLaAQoFRXZlbnQSCgoCaWQYASABKAkSDAoEdmVyYhgCIAEoCRIQCghhY3Rvcl9pZBgDIAEoCRISCgphY3Rvcl9uYW1lGAQgASgJEhIKCnByb2plY3RfaWQYBSABKAkSFAoMcHJvamVjdF9uYW1lGAYgASgJEhUKDXByb2plY3RfY29sb3IYByABKAkSEwoLdGFyZ2V0X3R5cGUYCCABKAkSEQoJdGFyZ2V0X2lkGAkgASgJEhQKDHRhcmdldF9sYWJlbBgKIAEoCRISCgpjcmVhdGVkX2F0GAsgASgDIiIKEUxpc3RFdmVudHNSZXF1ZXN0Eg0KBWxpbWl0GAEgASgNIjMKEkxpc3RFdmVudHNSZXNwb25zZRIdCgZldmVudHMYASADKAsyDS5kb3gudjEuRXZlbnQyZwoMRXZlbnRTZXJ2aWNlElcKCkxpc3RFdmVudHMSGS5kb3gudjEuTGlzdEV2ZW50c1JlcXVlc3QaGi5kb3gudjEuTGlzdEV2ZW50c1Jlc3BvbnNlIhKC0+STAgwSCi92MS9ldmVudHNCNlo0Z2l0aHViLmNvbS9saW4tc25vdy9kb3gvYXBwcy9zZXJ2ZXIvZ2VuL2RveC92MTtkb3h2MWIGcHJvdG8z", [file_google_api_annotations]);
+  fileDesc("ChJkb3gvdjEvZXZlbnQucHJvdG8SBmRveC52MSLaAQoFRXZlbnQSCgoCaWQYASABKAkSDAoEdmVyYhgCIAEoCRIQCghhY3Rvcl9pZBgDIAEoCRISCgphY3Rvcl9uYW1lGAQgASgJEhIKCnByb2plY3RfaWQYBSABKAkSFAoMcHJvamVjdF9uYW1lGAYgASgJEhUKDXByb2plY3RfY29sb3IYByABKAkSEwoLdGFyZ2V0X3R5cGUYCCABKAkSEQoJdGFyZ2V0X2lkGAkgASgJEhQKDHRhcmdldF9sYWJlbBgKIAEoCRISCgpjcmVhdGVkX2F0GAsgASgDIiIKEUxpc3RFdmVudHNSZXF1ZXN0Eg0KBWxpbWl0GAEgASgNIjMKEkxpc3RFdmVudHNSZXNwb25zZRIdCgZldmVudHMYASADKAsyDS5kb3gudjEuRXZlbnQiOAoTV2F0Y2hDaGFuZ2VzUmVxdWVzdBINCgVzaW5jZRgBIAEoBBISCgp0aW1lb3V0X21zGAIgASgNIicKFFdhdGNoQ2hhbmdlc1Jlc3BvbnNlEg8KB3ZlcnNpb24YASABKAQyxwEKDEV2ZW50U2VydmljZRJXCgpMaXN0RXZlbnRzEhkuZG94LnYxLkxpc3RFdmVudHNSZXF1ZXN0GhouZG94LnYxLkxpc3RFdmVudHNSZXNwb25zZSISgtPkkwIMEgovdjEvZXZlbnRzEl4KDFdhdGNoQ2hhbmdlcxIbLmRveC52MS5XYXRjaENoYW5nZXNSZXF1ZXN0GhwuZG94LnYxLldhdGNoQ2hhbmdlc1Jlc3BvbnNlIhOC0+STAg0SCy92MS9jaGFuZ2VzQjZaNGdpdGh1Yi5jb20vbGluLXNub3cvZG94L2FwcHMvc2VydmVyL2dlbi9kb3gvdjE7ZG94djFiBnByb3RvMw", [file_google_api_annotations]);
 
 /**
  * Event is a single activity row visible to the caller. Emitted by the server
@@ -145,6 +145,55 @@ export const ListEventsResponseSchema: GenMessage<ListEventsResponse> = /*@__PUR
   messageDesc(file_dox_v1_event, 2);
 
 /**
+ * @generated from message dox.v1.WatchChangesRequest
+ */
+export type WatchChangesRequest = Message<"dox.v1.WatchChangesRequest"> & {
+  /**
+   * The version the caller already knows about. 0 = "tell me the current
+   * version immediately", which is how a client bootstraps.
+   *
+   * @generated from field: uint64 since = 1;
+   */
+  since: bigint;
+
+  /**
+   * How long to hold the connection open while nothing changes. Server clamps
+   * to [100, 60000]; 0 uses 25000 — short enough to survive proxy idle
+   * timeouts, long enough that an idle client is not chatty.
+   *
+   * @generated from field: uint32 timeout_ms = 2;
+   */
+  timeoutMs: number;
+};
+
+/**
+ * Describes the message dox.v1.WatchChangesRequest.
+ * Use `create(WatchChangesRequestSchema)` to create a new message.
+ */
+export const WatchChangesRequestSchema: GenMessage<WatchChangesRequest> = /*@__PURE__*/
+  messageDesc(file_dox_v1_event, 3);
+
+/**
+ * @generated from message dox.v1.WatchChangesResponse
+ */
+export type WatchChangesResponse = Message<"dox.v1.WatchChangesResponse"> & {
+  /**
+   * Current counter value. Equal to the request's `since` when the wait timed
+   * out without a change.
+   *
+   * @generated from field: uint64 version = 1;
+   */
+  version: bigint;
+};
+
+/**
+ * Describes the message dox.v1.WatchChangesResponse.
+ * Use `create(WatchChangesResponseSchema)` to create a new message.
+ */
+export const WatchChangesResponseSchema: GenMessage<WatchChangesResponse> = /*@__PURE__*/
+  messageDesc(file_dox_v1_event, 4);
+
+/**
  * EventService surfaces the activity feed for the authenticated user.
  *
  * @generated from service dox.v1.EventService
@@ -160,6 +209,24 @@ export const EventService: GenService<{
     methodKind: "unary";
     input: typeof ListEventsRequestSchema;
     output: typeof ListEventsResponseSchema;
+  },
+  /**
+   * WatchChanges long-polls the server's change counter: it returns as soon as
+   * any /v1 mutation has committed since `since`, or when timeout_ms elapses.
+   *
+   * Why a counter and not pushed events: the gateway is plain HTTP/JSON, and a
+   * webhook-style feed would need either an SSE route outside the auth chain or
+   * a token in a query string. One monotonic integer is cheaper than either, and
+   * it is coarse on purpose — a client that wakes up refetches what it already
+   * knows how to render, so visibility rules stay in the list endpoints where
+   * they already live.
+   *
+   * @generated from rpc dox.v1.EventService.WatchChanges
+   */
+  watchChanges: {
+    methodKind: "unary";
+    input: typeof WatchChangesRequestSchema;
+    output: typeof WatchChangesResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dox_v1_event, 0);

@@ -51,6 +51,25 @@ function makeFakeApi(initial: Todo[] = []): FakeApi {
   const deleteMock = mock(async (id: string) => {
     store.delete(id);
   });
+  // Real contract: pull the todo out, then reinsert it right after the anchor
+  // (or at the front when there is none), so the in-memory list order is what
+  // a follow-up listTodos would return.
+  const moveMock = mock(async (id: string, afterId?: string) => {
+    const todo = store.get(id);
+    if (!todo) throw new Error(`not found: ${id}`);
+    const rest = Array.from(store.entries()).filter(([key]) => key !== id);
+    const at =
+      afterId === undefined
+        ? 0
+        : rest.findIndex(([key]) => key === afterId) + 1;
+    if (afterId !== undefined && at === 0) {
+      throw new Error(`not found: ${afterId}`);
+    }
+    rest.splice(at, 0, [id, todo]);
+    store.clear();
+    for (const [key, value] of rest) store.set(key, value);
+    return todo;
+  });
   return {
     api: {
       listTodos: async () => Array.from(store.values()),
@@ -61,6 +80,7 @@ function makeFakeApi(initial: Todo[] = []): FakeApi {
       },
       createTodo: createMock,
       updateTodo: updateMock,
+      moveTodo: moveMock,
       deleteTodo: deleteMock,
     },
     createMock,
@@ -95,7 +115,7 @@ describe("App (integration smokes)", () => {
   test("empty list shows the add-todo placeholder", async () => {
     const { api } = makeFakeApi([]);
     const { settle } = mountApp(api);
-    await settle((f) => f.includes("nothing here"));
+    await settle((f) => f.includes("Nothing here"));
   });
 
   test("d deletes the cursored todo", async () => {
@@ -104,14 +124,14 @@ describe("App (integration smokes)", () => {
     const { press, settle } = mountApp(api);
     await settle((f) => f.includes("doomed"));
     press("d");
-    await settle((f) => f.includes("nothing here"));
+    await settle((f) => f.includes("Nothing here"));
     expect(deleteMock).toHaveBeenCalledWith(a.id);
   });
 
   test("Ctrl-S with blank title cancels add mode", async () => {
     const { api, createMock } = makeFakeApi([]);
     const { press, settle } = mountApp(api);
-    await settle((f) => f.includes("nothing here"));
+    await settle((f) => f.includes("Nothing here"));
     press("i");
     await settle((f) => f.includes("New todo"));
     press("\x13");
@@ -122,11 +142,11 @@ describe("App (integration smokes)", () => {
   test("? toggles the help overlay", async () => {
     const { api } = makeFakeApi([]);
     const { press, settle } = mountApp(api);
-    await settle((f) => f.includes("nothing here"));
+    await settle((f) => f.includes("Nothing here"));
     press("?");
-    await settle((f) => f.includes("keybindings"));
+    await settle((f) => f.includes("Keyboard shortcuts"));
     press("?");
-    await settle((f) => !f.includes("keybindings"));
+    await settle((f) => !f.includes("Keyboard shortcuts"));
   });
 
   test("/ opens search and narrows results live", async () => {
@@ -163,7 +183,12 @@ describe("App (integration smokes)", () => {
       targetLabel: "fix login bug",
       createdAt: String(Date.now() - 30_000),
     };
-    const events: EventsApi = { list: async () => [event] };
+    const events: EventsApi = {
+      list: async () => [event],
+      // The TUI does not long-poll changes yet; the mock only has to satisfy
+      // the SDK contract.
+      watchChanges: async (since: number) => since,
+    };
     const { settle } = mountApp(api, events);
     await settle((f) => f.includes("alice") && f.includes("fix login bug"));
   });

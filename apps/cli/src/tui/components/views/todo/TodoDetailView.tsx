@@ -4,7 +4,7 @@ import type { Project, Todo } from "@dox/core";
 import { formatWhenInput, isOverdue } from "@dox/core";
 
 import { color, icon } from "../../../theme";
-import { relativeTime, swatchColor } from "../../../util";
+import { relativeTime, swatchColor, windowLabel } from "../../../util";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
 import { Markdown, MarkdownEmpty } from "../../primitives/Markdown";
@@ -139,6 +139,13 @@ export function TodoDetailView({
                   </Text>
                 </MetaRow>
               )}
+              {todo.startsAt !== undefined && todo.endsAt !== undefined && (
+                <MetaRow label="Window">
+                  <Text color={color.accent2}>
+                    {windowLabel(Number(todo.startsAt), Number(todo.endsAt))}
+                  </Text>
+                </MetaRow>
+              )}
             </Box>
           </Box>
 
@@ -157,7 +164,7 @@ export function TodoDetailView({
             {todo.description ? (
               <Markdown source={todo.description} width={panelWidth - 6} />
             ) : (
-              <MarkdownEmpty hint="no description — press 'e' to add one" />
+              <MarkdownEmpty hint="No description yet. Press e to add one." />
             )}
           </Box>
         </TitledPanel>

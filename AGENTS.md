@@ -60,13 +60,13 @@ Package responsibilities (do not invent new ones — see `dox-server-layout` mem
 - `caller/` — `Caller{UserID, UserName, Role}` carried through `context.Context`. Middleware writes, handlers read via `MustFrom`.
 - `authn/` — JWT verification + middleware. `publicPaths` is the **only** allowlist: `/v1/auth/server-info`, `/v1/auth/register`, `/v1/auth/login`. Everything else requires a bearer token.
 - `authz/` — three project-scoped predicates: `CanReadProject`, `CanWriteProjectTodos`, `CanAdminProject`. Status-code policy is explicit: **reads on invisible objects return NotFound (no existence leak); writes by visible-but-unprivileged callers return PermissionDenied.**
-- `notifier/` — the due-date reminder sweep: a ticker goroutine (same shape as the retention sweep) that scans open todos by `COALESCE(remind_at, due_at)`, writes idempotent `notifications` rows and hands them to optional `Deliverer`s. Deliberately **not** a `bus` subscriber: the bus is tx-bound and reentrant with mutations, reminders are time-triggered.
-- `handler/` — RPC handlers. One file per service. Mutations that need to publish bus messages atomically wrap the write + `bus.Publish` in `runInTx` (`handler/events.go`) so a subscriber failure rolls the mutation back. `handler/notification.go` is read/ack only — clients can never fabricate reminders.
+- `notifier/` — the due-date reminder sweep: a ticker goroutine (same shape as the retention sweep) that scans open todos by `COALESCE(remind_at, due_at)`, writes idempotent `notifications` rows and hands them to optional `Deliverer`s. Deliberately **not** a `bus` subscriber: the bus is tx-bound and reentrant with mutations, reminders are time-triggered. The only `Deliverer` today is the ntfy broadcast channel (`ntfy.go`), enabled by `DOX_NTFY_TOPIC`; the in-app channel is still "clients poll the ledger".
+- `handler/` — RPC handlers. One file per service. Mutations that need to publish bus messages atomically wrap the write + `bus.Publish` in `runInTx` (`handler/events.go`) so a subscriber failure rolls the mutation back. `handler/notification.go` is read/ack only — clients can never fabricate reminders. `EventService.WatchChanges` long-polls the process-wide change counter (`handler/changes.go`); the counter is bumped by `app.countChanges`, a middleware that fires after any 2xx write on `/v1` — the only point where the HTTP surface proves a transaction committed.
 - `bus/` — in-process synchronous pub/sub. Mutation handlers publish typed `Msg` values; the default `ActivityRecorder` subscriber persists them as `events` rows. To add a new activity verb: declare a struct + `msg()` method in `bus/bus.go`, add a recorder case, publish from the handler. Adding a new subscriber (webhook/audit) means passing it to `bus.New(...)` in `app.go` — handler code is untouched.
 - `app/` — wiring + the retention sweep loop in `cleanup.go`.
-- `config/` — env-driven (`DOX_DB_PATH`, `DOX_LISTEN_ADDR`, `DOX_LOG_LEVEL`, `DOX_EVENT_RETENTION`).
+- `config/` — env-driven (`DOX_DB_PATH`, `DOX_LISTEN_ADDR`, `DOX_LOG_LEVEL`, `DOX_EVENT_RETENTION`; reminder pushes: `DOX_NTFY_URL` defaults to `https://ntfy.sh`, `DOX_NTFY_TOPIC` (may contain `{user}`) is the on-switch and empty means disabled, `DOX_NTFY_TOKEN` is an optional bearer token).
 - `version/` — `version`, `commit`, `date`, `builtBy` are injected via `-ldflags` (see `justfile` / `release.yml`).
-- `webui/` — the minimal, build-stepless web UI: `//go:embed static`, served at exactly `GET /` and `GET /static/...`. It is mounted **outside** the auth chain because it is public static bytes; the page authenticates itself against `/v1` with a bearer token in `sessionStorage`, so `publicPaths` stays at three entries and there is no cookie/CSRF surface. Scope is frozen at sign-in / list / add / toggle / read — a richer UI belongs in `apps/desktop`, not here.
+- `webui/` — the minimal, build-stepless web UI: `//go:embed static`, served at exactly `GET /` and `GET /static/...`. It is mounted **outside** the auth chain because it is public static bytes; the page authenticates itself against `/v1` with a bearer token in `sessionStorage`, so `publicPaths` stays at three entries and there is no cookie/CSRF surface. Scope is frozen at sign-in / list / add / toggle / read, with the list split into Open and Done views over the same `/v1/todos` response — a richer UI belongs in `apps/desktop`, not here.
 
 ### Desktop (apps/desktop/)
 
@@ -98,7 +98,14 @@ Non-obvious decisions, in order of importance:
 3. **The frontend is a build artifact.** `apps/desktop/dist` is embedded with
    `//go:embed`, so `just desktop-frontend` (or any recipe that depends on it)
    must run before `go build`/`go test` in that module.
-4. **macOS notifications require an .app bundle.** `UNUserNotificationCenter`
+4. **Staying current is one long poll, not a stream.** `watch.go` polls
+   `GET /v1/changes?since=N` and publishes `{type:"data"}` on the Hub, so every
+   open window refetches. The server never pushes into the webview: the renderer
+   is same-origin with this process, not with the server, and a server-side
+   stream would have to be proxied anyway. The counter is coarse by design — it
+   only says "something changed", and the refetch goes through the same
+   visibility-filtered endpoints everything else uses.
+5. **macOS notifications require an .app bundle.** `UNUserNotificationCenter`
    aborts the process with an uncatchable ObjC exception when the binary runs
    outside a bundle, so `notificationsUsable()` skips notification setup instead
    of crashing. `just desktop-build` produces the signed .app.
@@ -119,6 +126,10 @@ SQLite, via sqlc, with goose-style migrations.
 IDs are ULIDs (`oklog/ulid/v2`). Timestamps are `int64` unix milliseconds. Inbox = `project_id IS NULL`.
 
 Deadlines: `todos.due_at` (the deadline), `todos.remind_at` (the ping instant, NULL = at `due_at`), `todos.due_all_day` + `todos.due_zone` (calendar date + display zone; an all-day todo without an explicit `remind_at` never fires). `notifications` is a delivery ledger keyed `UNIQUE (user_id, todo_id, kind, scheduled_for)` — rows are written only when a reminder fires, so editing a deadline self-invalidates and re-running a sweep is a no-op.
+
+Order: `todos.position` is the manual key inside a list scope (a project, or the creator's Inbox) and sorts **descending** — `ORDER BY position DESC, created_at DESC`, so a list nobody has dragged is still newest-first. `MoveTodo(after_id)` is the only writer that matters: it resolves the anchor against what is stored and renumbers the whole scope densely, bumping `updated_at` on the moved row alone. A new todo takes `MAX(position)+1` in its scope, i.e. the top. Reorder is deliberately **not** a bus activity verb.
+
+Meetings: a todo with `starts_at` + `ends_at` **is** the meeting — there is no separate table, because project members already receive its reminders via `notifier.ListTodoRecipients`. Both sides or neither, `ends_at > starts_at`, validated in the handler (SQLite cannot add a CHECK to an existing table). Independent of `due_at`: the window is when you meet, the deadline is when the work is owed. `dox todo ics` renders VEVENTs client-side; the server grows no calendar surface.
 
 ### Client (apps/cli/, packages/core/)
 

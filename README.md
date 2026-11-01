@@ -73,7 +73,7 @@ client address, and passwords are hashed with argon2id.
 process can reach SQLite, `503` otherwise. The container image uses it as its
 `HEALTHCHECK`.
 
-## Dev
+## Development
 
 ```
        ┌──────────┐   ┌──────────┐   ┌──────────┐

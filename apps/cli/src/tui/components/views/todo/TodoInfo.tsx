@@ -3,8 +3,9 @@ import { Box, Text } from "ink";
 import type { Project, Todo } from "@dox/core";
 import { dueLabel, isOverdue } from "@dox/core";
 
+import { renderMarkdown } from "../../primitives/Markdown";
 import { color, icon } from "../../../theme";
-import { relativeTime, swatchColor } from "../../../util";
+import { relativeTime, swatchColor, windowLabel } from "../../../util";
 
 interface TodoInfoProps {
   todo: Todo | null;
@@ -44,8 +45,14 @@ export function TodoInfo({
   const allDay = todo.dueAllDay ?? false;
   const remindAt =
     todo.remindAt === undefined ? undefined : Number(todo.remindAt);
+  const startsAt =
+    todo.startsAt === undefined ? undefined : Number(todo.startsAt);
+  const endsAt = todo.endsAt === undefined ? undefined : Number(todo.endsAt);
+  const hasWindow = startsAt !== undefined && endsAt !== undefined;
   const metaRows =
-    (dueAt !== undefined ? 1 : 0) + (remindAt !== undefined ? 1 : 0);
+    (dueAt !== undefined ? 1 : 0) +
+    (remindAt !== undefined ? 1 : 0) +
+    (hasWindow ? 1 : 0);
 
   const contentW = Math.max(10, panelWidth - PANEL_CHROME);
   const contentH = Math.max(0, panelHeight - PANEL_CHROME);
@@ -56,7 +63,7 @@ export function TodoInfo({
   const rawDesc = todo.description?.trim() ?? "";
   const preview =
     rawDesc && descBudget > 0
-      ? previewDescription(rawDesc, contentW, descBudget)
+      ? renderMarkdown(rawDesc, contentW, descBudget)
       : null;
   const overflowed =
     Boolean(preview?.truncated) || (rawDesc.length > 0 && descBudget === 0);
@@ -125,6 +132,11 @@ export function TodoInfo({
             </Text>
           </InfoRow>
         )}
+        {startsAt !== undefined && endsAt !== undefined && (
+          <InfoRow label="Window">
+            <Text color={color.accent2}>{windowLabel(startsAt, endsAt)}</Text>
+          </InfoRow>
+        )}
       </Box>
 
       {}
@@ -133,11 +145,7 @@ export function TodoInfo({
           <Text color={color.muted} dimColor>
             {"─ Description ".padEnd(Math.max(0, contentW), "─")}
           </Text>
-          {preview.lines.map((line, idx) => (
-            <Text key={idx} color={color.muted}>
-              {line || " "}
-            </Text>
-          ))}
+          <Text color={color.muted}>{preview.text}</Text>
         </Box>
       )}
 
@@ -148,7 +156,7 @@ export function TodoInfo({
           <Text color={color.accent} bold>
             ⏎
           </Text>{" "}
-          {overflowed ? "to read full description" : "for details"}
+          {overflowed ? "to read the full description" : "for details"}
         </Text>
       </Box>
     </Box>
@@ -170,66 +178,4 @@ function InfoRow({
       {children}
     </Box>
   );
-}
-
-interface WrappedPreview {
-  lines: string[];
-  truncated: boolean;
-}
-function previewDescription(
-  text: string,
-  width: number,
-  maxLines: number,
-): WrappedPreview {
-  const lines: string[] = [];
-  let overflowed = false;
-
-  outer: for (const para of text.split(/\r?\n/)) {
-    if (para === "") {
-      lines.push("");
-      if (lines.length >= maxLines) break;
-      continue;
-    }
-    let buf = "";
-    for (const word of para.split(/\s+/).filter(Boolean)) {
-      const next = buf ? `${buf} ${word}` : word;
-      if (next.length <= width) {
-        buf = next;
-        continue;
-      }
-      if (buf) {
-        lines.push(buf);
-        if (lines.length >= maxLines) {
-          overflowed = true;
-          break outer;
-        }
-      }
-      let rest = word;
-      while (rest.length > width) {
-        lines.push(rest.slice(0, width));
-        if (lines.length >= maxLines) {
-          overflowed = true;
-          break outer;
-        }
-        rest = rest.slice(width);
-      }
-      buf = rest;
-    }
-    if (buf) {
-      lines.push(buf);
-      if (lines.length >= maxLines) break;
-    }
-  }
-
-  const consumedChars = lines.reduce((n, l) => n + l.length, 0);
-  if (consumedChars < text.replace(/\s+/g, "").length) overflowed = true;
-
-  if (overflowed && lines.length > 0) {
-    const last = lines[lines.length - 1] ?? "";
-    lines[lines.length - 1] =
-      last.length + 1 <= width
-        ? `${last}…`
-        : `${last.slice(0, Math.max(0, width - 1))}…`;
-  }
-  return { lines, truncated: overflowed };
 }

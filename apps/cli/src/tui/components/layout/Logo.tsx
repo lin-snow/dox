@@ -1,19 +1,13 @@
 import { Box, Text } from "ink";
 
+import { LOGO_FULL, LOGO_MARK } from "../../../logo";
 import { color } from "../../theme";
 
-const ROWS = [
-  "       __          ",
-  "  ____/ /___  _  __",
-  " / __  / __ \\| |/_/",
-  "/ /_/ / /_/ />  <  ",
-  "\\__,_/\\____/_/|_|  ",
-] as const;
-
-export function Logo() {
+export function Logo({ full = false }: { full?: boolean }) {
+  const rows = full ? LOGO_FULL : LOGO_MARK;
   return (
     <Box flexDirection="column">
-      {ROWS.map((row, idx) => (
+      {rows.map((row, idx) => (
         <Text key={idx} color={color.brand} bold>
           {row}
         </Text>

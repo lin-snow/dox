@@ -46,11 +46,12 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	b := bus.New(bus.NewActivityRecorder())
+	changes := handler.NewChanges()
 	user := handler.NewUser(dbConn, q, b, secret)
 	proj := handler.NewProject(q)
 	inv := handler.NewInvite(dbConn, q, b, secret)
 	td := handler.NewTodo(dbConn, q, b)
-	ev := handler.NewEvent(q)
+	ev := handler.NewEvent(q, changes)
 	nt := handler.NewNotification(q)
 
 	mux := runtime.NewServeMux()
@@ -92,7 +93,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	web := webui.Handler()
 	root.Handle("GET /{$}", web)
 	root.Handle("GET /static/", web)
-	root.Handle("/", authn.Middleware(authn.NewJWTVerifier(secret))(authLimiter.Middleware(mux)))
+	root.Handle("/", authn.Middleware(authn.NewJWTVerifier(secret))(authLimiter.Middleware(countChanges(changes, mux))))
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
@@ -111,6 +112,11 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	// The reminder sweep owns its own goroutine for the same reason: it talks to
 	// the DB outside any request transaction and must drain before the pool
 	// closes.
+	var deliverers []notifier.Deliverer
+	if cfg.NtfyTopic != "" {
+		deliverers = append(deliverers, notifier.NewNtfy(notifier.NtfyConfig{BaseURL: cfg.NtfyURL, Topic: cfg.NtfyTopic, Token: cfg.NtfyToken}))
+		slog.Info("reminder broadcast enabled", "channel", "ntfy")
+	}
 	reminderCtx, stopReminders := context.WithCancel(ctx)
 	defer stopReminders()
 	reminderDone := make(chan struct{})
@@ -120,7 +126,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 			Interval: cfg.ReminderInterval,
 			Grace:    cfg.ReminderGrace,
 			Now:      time.Now,
-		}).Run(reminderCtx)
+		}, deliverers...).Run(reminderCtx)
 	}()
 
 	v := version.Get()

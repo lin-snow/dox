@@ -1,5 +1,6 @@
 import { Box, Text, useWindowSize } from "ink";
 
+import { displayVersion } from "../../../version";
 import { color, icon } from "../../theme";
 
 interface FooterProps {
@@ -9,7 +10,7 @@ interface FooterProps {
   outerPadX?: number;
 }
 
-const POWERED_BY = "powered by dox";
+const POWERED_BY = "dox · self-hosted todo";
 
 export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
   const { columns: cols } = useWindowSize();
@@ -19,7 +20,8 @@ export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
     0,
   );
   const modeCell = ` ${mode.toUpperCase()} `;
-  const brandCell = version ? `  ${icon.brand} dox` : "";
+  const shownVersion = displayVersion(version);
+  const brandCell = shownVersion ? `  ${icon.brand} ${shownVersion}` : "";
   const leftLen = POWERED_BY.length + 2;
   const visibleRightLen = 2 + hintLen + 4 + modeCell.length + brandCell.length;
   const SAFETY = 2;
@@ -52,13 +54,13 @@ export function Footer({ mode, version, hints, outerPadX = 0 }: FooterProps) {
         <Text color={color.accent} inverse bold>
           {modeCell}
         </Text>
-        {version && (
+        {shownVersion && (
           <Text>
             <Text color={color.muted}>{"  "}</Text>
             <Text color={color.accent2} bold>
               {icon.brand}
             </Text>
-            <Text color={color.accent2}> dox</Text>
+            <Text color={color.accent2}> {shownVersion}</Text>
           </Text>
         )}
       </Text>

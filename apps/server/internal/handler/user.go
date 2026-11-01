@@ -451,16 +451,16 @@ func seedExampleTodos(ctx context.Context, q *queries.Queries, userID string, no
 		description string
 	}{
 		{
-			title:       "Mark this todo as done with [space]",
-			description: "Pressing **space** toggles a todo between open and done.\nDone todos still appear in the **Done** tab and contribute to the Activity chart at the top of the screen.",
+			title:       "Mark this todo as done",
+			description: "Use the checkbox beside a todo to mark it done.\n\nDone todos stay in the **Done** filter and count toward the activity chart.",
 		},
 		{
-			title:       "Create a project with [p] to share todos",
-			description: "Projects let you collaborate with other people.\n\n- `p` in the TUI to create a project\n- `dox project invite <project-id> --role editor` from the CLI to invite someone\n\nThe person you invite redeems the code with `dox accept <code>` and joins as an editor or viewer.",
+			title:       "Create a project to share todos",
+			description: "Projects let you collaborate with other people.\n\n- Create a project from your client\n- Invite someone with `dox project invite <project-id> --role editor`\n- They join with `dox accept <code>`\n\nMembers can edit; viewers can only read.",
 		},
 		{
-			title:       "Welcome to dox — press [?] anytime for keybindings",
-			description: "This is your **Private** tab — todos here are visible only to you.\n\nBasics:\n- `i` to add a new todo\n- `enter` to open this detail view\n- `e` to edit, `d` to delete\n- `h` / `l` or `tab` to switch between Private and your projects\n- `?` to see the full keybinding overlay",
+			title:       "Welcome to dox",
+			description: "This is your **Inbox** — todos here are visible only to you.\n\n- Use your client's add button, or press `i` in the TUI\n- Open a todo to edit it\n- Press `?` in the TUI for the full keyboard map\n- Projects appear in the sidebar when you make one",
 		},
 	}
 	for i, seed := range seeds {

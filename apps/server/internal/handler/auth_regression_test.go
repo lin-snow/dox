@@ -42,7 +42,7 @@ func newAuthFixture(t *testing.T) *authFixture {
 		users: handler.NewUser(conn, q, b, testSecret),
 		inv:   handler.NewInvite(conn, q, b, testSecret),
 		proj:  handler.NewProject(q),
-		ev:    handler.NewEvent(q),
+		ev:    handler.NewEvent(q, handler.NewChanges()),
 	}
 }
 

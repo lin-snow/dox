@@ -55,7 +55,7 @@ import {
 import type { Filter } from "./components/layout/Sidebar";
 import { filterKey } from "./components/layout/Sidebar";
 
-import { VERSION } from "../version";
+import { displayVersion, VERSION } from "../version";
 
 const POLL_INTERVAL_MS = 30_000;
 const EVENTS_POLL_INTERVAL_MS = 60_000;
@@ -555,6 +555,8 @@ export function App({
     description: string;
     due: string;
     remind: string;
+    meetStart: string;
+    meetEnd: string;
   }) => {
     const title = payload.title.trim();
     if (!title) {
@@ -579,6 +581,39 @@ export function App({
       });
       return;
     }
+    // A meeting is a window: both ends or none. One-sided input is a mistake,
+    // not a half-window the server should have to reconcile.
+    const meetStartRaw = payload.meetStart.trim();
+    const meetEndRaw = payload.meetEnd.trim();
+    const meetStart = meetStartRaw ? parseWhen(meetStartRaw) : null;
+    const meetEnd = meetEndRaw ? parseWhen(meetEndRaw) : null;
+    if ((meetStartRaw === "") !== (meetEndRaw === "")) {
+      dispatch({
+        type: "LOAD_ERROR",
+        error: `a meeting needs both a start and an end - add the ${
+          meetStartRaw ? "end" : "start"
+        } too`,
+      });
+      return;
+    }
+    if (meetStartRaw && (!meetStart || !meetEnd)) {
+      dispatch({
+        type: "LOAD_ERROR",
+        error: `invalid meeting window - try 2026-11-05 09:30`,
+      });
+      return;
+    }
+    if (meetStart && meetEnd && meetEnd.at <= meetStart.at) {
+      dispatch({
+        type: "LOAD_ERROR",
+        error: "the meeting must end after it starts",
+      });
+      return;
+    }
+    const meeting =
+      meetStart && meetEnd
+        ? { startsAt: meetStart.at, endsAt: meetEnd.at }
+        : null;
     const description = payload.description;
     // Empty due input means "no deadline": send explicit clears on edit so a
     // removed date really goes away, and omit them on create.
@@ -600,6 +635,8 @@ export function App({
         dueAllDay?: boolean;
         dueZone?: string;
         remindAt?: number;
+        startsAt?: number;
+        endsAt?: number;
       } = {};
       if (projectId) opts.projectId = projectId;
       if (description.length > 0) opts.description = description;
@@ -609,6 +646,10 @@ export function App({
         opts.dueZone = dueFields.dueZone;
       }
       if (remindAt !== null) opts.remindAt = remindAt;
+      if (meeting) {
+        opts.startsAt = meeting.startsAt;
+        opts.endsAt = meeting.endsAt;
+      }
       void (async () => {
         try {
           const todo = await api.createTodo(title, opts);
@@ -619,6 +660,14 @@ export function App({
       })();
     } else if (state.mode === "edit" && state.editingId) {
       const id = state.editingId;
+      const existing = state.todos.find((t) => t.id === id);
+      // Clearing a window means clearing it whole: sending one side alone is a
+      // half window, and the server reads a 0 start as "drop both".
+      const meetingFields = meeting
+        ? { startsAt: meeting.startsAt, endsAt: meeting.endsAt }
+        : existing?.startsAt !== undefined
+          ? { startsAt: null }
+          : {};
       void (async () => {
         try {
           const updated = await api.updateTodo(id, {
@@ -628,6 +677,7 @@ export function App({
             dueAllDay: dueFields?.dueAllDay ?? false,
             dueZone: dueFields?.dueZone ?? "",
             remindAt,
+            ...meetingFields,
           });
           dispatch({ type: "TODO_UPDATED", todo: updated });
           dispatch({ type: "EXIT_MODE" });
@@ -751,6 +801,16 @@ export function App({
       state.mode === "edit" && state.editingId
         ? (state.todos.find((t) => t.id === state.editingId) ?? null)
         : null;
+    // A meeting window is edited as text, same vocabulary as every other time
+    // field, so the stored instants are rendered back through the shared
+    // formatter rather than reimplemented here.
+    const editingWindow =
+      editingTodo?.startsAt !== undefined && editingTodo.endsAt !== undefined
+        ? {
+            start: formatWhenInput(Number(editingTodo.startsAt), false),
+            end: formatWhenInput(Number(editingTodo.endsAt), false),
+          }
+        : null;
     return (
       <TodoEditorView
         mode={state.mode}
@@ -762,6 +822,8 @@ export function App({
         }
         defaultDue={state.mode === "edit" ? state.editingDue : undefined}
         defaultRemind={state.mode === "edit" ? state.editingRemind : undefined}
+        defaultMeetStart={editingWindow?.start}
+        defaultMeetEnd={editingWindow?.end}
         onSubmit={handleSubmit}
         onCancel={() => dispatch({ type: "EXIT_MODE" })}
       />
@@ -1019,10 +1081,7 @@ export function App({
               >
                 <Logo />
                 <Box marginTop={1}>
-                  <Text color={color.muted}>serving at </Text>
-                  <Text color={color.accent2} wrap="truncate">
-                    {identity?.server ?? "local"}
-                  </Text>
+                  <Text color={color.muted}>self-hosted todo</Text>
                 </Box>
               </Box>
             </TitledPanel>
@@ -1155,17 +1214,17 @@ export function App({
               ) : visible.length === 0 ? (
                 state.filter === "done" ? (
                   <Text color={color.muted} dimColor>
-                    {"  "}no completions yet — finished todos land here
+                    {"  "}No completions yet. Finished todos land here.
                   </Text>
                 ) : state.filter === "today" ? (
                   <Text color={color.muted} dimColor>
-                    {"  "}nothing due today — give a todo a due date with{" "}
-                    <Text color={color.accent}>e</Text>
+                    {"  "}Nothing due today. Give a todo a due date with{" "}
+                    <Text color={color.accent}>e</Text>.
                   </Text>
                 ) : (
                   <Text color={color.muted} dimColor>
-                    {"  "}nothing here — press{" "}
-                    <Text color={color.accent}>i</Text> to add a todo
+                    {"  "}Nothing here. Press{" "}
+                    <Text color={color.accent}>i</Text> to add a todo.
                   </Text>
                 )
               ) : (
@@ -1290,26 +1349,19 @@ function StatusPanel({
   clientVersion: string;
   syncing: boolean;
 }) {
-  const rows: ReadonlyArray<readonly [string, string, string | undefined]> = [
+  const serverVersion = displayVersion(serverInfo?.version ?? "");
+  const client = displayVersion(clientVersion);
+  const rows: Array<[string, string, string | undefined]> = [
     ["user", userName ?? "—", color.accent2],
-    ["host", server ? stripScheme(server) : "local", color.accent2],
-    [
-      "srv",
-      serverInfo?.version || (serverInfo ? "unknown" : "—"),
-      color.accent,
-    ],
-    [
-      "sha",
-      serverInfo?.commit
-        ? shortSha(serverInfo.commit)
-        : serverInfo
-          ? "unknown"
-          : "—",
-      color.accent,
-    ],
-    ["cli", clientVersion, color.accent],
-    ["cfg", configPath ? tildifyPath(configPath) : "—", color.muted],
+    ["server", server ? stripScheme(server) : "local", color.accent2],
+    ["version", serverVersion || (serverInfo ? "local" : "—"), color.accent],
   ];
+  if (client) rows.push(["client", client, color.accent]);
+  rows.push([
+    "config",
+    configPath ? tildifyPath(configPath) : "—",
+    color.muted,
+  ]);
   const connTint = serverInfo
     ? color.success
     : server
@@ -1322,7 +1374,7 @@ function StatusPanel({
     <Box flexDirection="column">
       {rows.map(([label, value, tint]) => (
         <Box key={label}>
-          <Box width={5}>
+          <Box width={7}>
             <Text color={color.muted}>{label}</Text>
           </Box>
           <Text color={tint} wrap="truncate">
@@ -1343,10 +1395,6 @@ function StatusPanel({
 
 function stripScheme(url: string): string {
   return url.replace(/^https?:\/\//, "");
-}
-
-function shortSha(sha: string): string {
-  return /^[0-9a-f]{7,}$/i.test(sha) ? sha.slice(0, 7) : sha;
 }
 
 function tildifyPath(path: string): string {

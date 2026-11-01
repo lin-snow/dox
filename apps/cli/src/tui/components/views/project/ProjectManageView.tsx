@@ -7,6 +7,7 @@ import { color, icon } from "../../../theme";
 import { relativeTime, swatchColor } from "../../../util";
 import { VERSION } from "../../../../version";
 import { Footer } from "../../layout/Footer";
+import { Markdown } from "../../primitives/Markdown";
 import { TitledPanel } from "../../primitives/TitledPanel";
 
 interface ProjectManageViewProps {
@@ -123,6 +124,7 @@ export function ProjectManageView({
             project={project}
             memberCount={members.length}
             membersLoaded={membersLoaded}
+            width={cardWidth - 8}
           />
 
           <Box marginTop={1} flexDirection="column">
@@ -178,10 +180,12 @@ function Header({
   project,
   memberCount,
   membersLoaded,
+  width,
 }: {
   project: Project;
   memberCount: number;
   membersLoaded: boolean;
+  width: number;
 }) {
   const tint = swatchColor(project.color);
   return (
@@ -201,9 +205,7 @@ function Header({
       </Box>
       {project.description && (
         <Box marginTop={1}>
-          <Text color={color.muted} wrap="wrap">
-            {project.description}
-          </Text>
+          <Markdown source={project.description} width={width} />
         </Box>
       )}
     </Box>

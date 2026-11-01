@@ -43,6 +43,19 @@ service EventService {
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
     option (google.api.http) = {get: "/v1/events"};
   }
+
+  // WatchChanges long-polls the server's change counter: it returns as soon as
+  // any /v1 mutation has committed since `since`, or when timeout_ms elapses.
+  //
+  // Why a counter and not pushed events: the gateway is plain HTTP/JSON, and a
+  // webhook-style feed would need either an SSE route outside the auth chain or
+  // a token in a query string. One monotonic integer is cheaper than either, and
+  // it is coarse on purpose — a client that wakes up refetches what it already
+  // knows how to render, so visibility rules stay in the list endpoints where
+  // they already live.
+  rpc WatchChanges(WatchChangesRequest) returns (WatchChangesResponse) {
+    option (google.api.http) = {get: "/v1/changes"};
+  }
 }
 
 message ListEventsRequest {
@@ -52,4 +65,20 @@ message ListEventsRequest {
 
 message ListEventsResponse {
   repeated Event events = 1;
+}
+
+message WatchChangesRequest {
+  // The version the caller already knows about. 0 = "tell me the current
+  // version immediately", which is how a client bootstraps.
+  uint64 since = 1;
+  // How long to hold the connection open while nothing changes. Server clamps
+  // to [100, 60000]; 0 uses 25000 — short enough to survive proxy idle
+  // timeouts, long enough that an idle client is not chatty.
+  uint32 timeout_ms = 2;
+}
+
+message WatchChangesResponse {
+  // Current counter value. Equal to the request's `since` when the wait timed
+  // out without a change.
+  uint64 version = 1;
 }

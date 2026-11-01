@@ -15,6 +15,14 @@ export interface Todo {
   dueZone?: string;
   /** Reminder instant; absent = remind at dueAt. */
   remindAt?: string;
+  /**
+   * Manual ordering key in the todo's list scope. Higher sorts first; the
+   * server renumbers the scope densely on every move.
+   */
+  position?: string;
+  /** Meeting window; both sides present or neither. */
+  startsAt?: string;
+  endsAt?: string;
 }
 
 /**
@@ -30,6 +38,9 @@ export interface TodoPatch {
   dueAllDay?: boolean;
   dueZone?: string;
   remindAt?: number | null;
+  /** Meeting window. 0 clears both sides; absent leaves them untouched. */
+  startsAt?: number | null;
+  endsAt?: number | null;
 }
 
 export interface TodoCreateOptions {
@@ -39,6 +50,9 @@ export interface TodoCreateOptions {
   dueAllDay?: boolean;
   dueZone?: string;
   remindAt?: number;
+  /** Meeting window, UTC ms. Both or neither. */
+  startsAt?: number;
+  endsAt?: number;
 }
 
 export type TodoFilter = string | "inbox" | undefined;

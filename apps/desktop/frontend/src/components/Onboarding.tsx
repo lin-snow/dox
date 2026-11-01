@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { desktop, type Probe, type Session } from "../api";
+import { versionLabel } from "../format";
 
 interface Props {
   initialServer: string;
@@ -35,6 +36,7 @@ export function Onboarding({ initialServer, notice, onDone }: Props) {
   const registering = firstRun || mode === "register";
   const needsInvite =
     registering && probe !== null && probe.hasUsers && !probe.registrationOpen;
+  const shownVersion = versionLabel(probe?.version);
 
   async function connect(event: FormEvent) {
     event.preventDefault();
@@ -58,11 +60,11 @@ export function Onboarding({ initialServer, notice, onDone }: Props) {
     setError("");
     if (registering) {
       if (password.length < 8) {
-        setError("password must be at least 8 characters");
+        setError("Password must be at least 8 characters.");
         return;
       }
       if (password !== confirm) {
-        setError("passwords do not match");
+        setError("Passwords do not match.");
         return;
       }
     }
@@ -91,20 +93,21 @@ export function Onboarding({ initialServer, notice, onDone }: Props) {
       <div className="onboarding">
         <div className="card">
           <div className="brand-line">
-            <span className="mark">◆</span> dox
+            <img className="brand-mark" src="/dox.png" alt="" />
+            dox
           </div>
 
-          <h1>{probe ? probe.serverName || "dox" : "Connect a server"}</h1>
+          <h1>{probe ? probe.serverName || "dox" : "Connect to a server"}</h1>
           <p className="sub">
             {probe
               ? [
-                  probe.ownerName ? `by ${probe.ownerName}` : "self-hosted",
+                  probe.ownerName ? `By ${probe.ownerName}` : "Self-hosted",
                   probe.registrationOpen ? "registration open" : "invite only",
-                  probe.version.startsWith("(")
-                    ? probe.version
-                    : `v${probe.version}`,
-                ].join(" · ")
-              : "point this app at the dox server you run"}
+                  shownVersion ? `v${shownVersion}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Point dox at the server you run."}
           </p>
 
           <div className="chips">
@@ -114,8 +117,8 @@ export function Onboarding({ initialServer, notice, onDone }: Props) {
             {probe ? (
               <span className="chip">
                 {probe.hasUsers
-                  ? "existing server"
-                  : "first user becomes owner"}
+                  ? "server already set up"
+                  : "first account becomes the owner"}
               </span>
             ) : null}
           </div>
@@ -230,7 +233,7 @@ export function Onboarding({ initialServer, notice, onDone }: Props) {
 
               <button className="btn primary" type="submit" disabled={busy}>
                 {busy
-                  ? "Working…"
+                  ? "Please wait…"
                   : registering
                     ? firstRun
                       ? "Create owner account"

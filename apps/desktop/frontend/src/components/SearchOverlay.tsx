@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { Project, Todo } from "../api";
+import { useDialog } from "../dialog";
 import { IconSearch } from "./Icons";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 export function SearchOverlay({ todos, projects, onOpen, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
+  const { ref, onKeyDown } = useDialog<HTMLDivElement>();
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -39,8 +41,16 @@ export function SearchOverlay({ todos, projects, onOpen, onClose }: Props) {
         className="search-dialog"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
-        aria-label="search"
+        aria-modal="true"
+        aria-labelledby="search-title"
+        ref={ref}
+        onKeyDown={onKeyDown}
       >
+        {/* There is no visible heading — the field is the title — so the
+            dialog takes its name from a hidden one instead of aria-label. */}
+        <h2 id="search-title" className="sr-only">
+          Search todos
+        </h2>
         <div className="search-field">
           <IconSearch size={16} />
           <input

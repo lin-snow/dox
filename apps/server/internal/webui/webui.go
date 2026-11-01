@@ -1,10 +1,13 @@
 // Package webui serves the minimal, build-stepless web UI.
 //
 // Scope is deliberately frozen at "sign in, look at my todos, add one, tick
-// one off, read one". This surface exists so a deployment is usable from any
-// browser with zero installs; the full experience belongs in a real client.
-// Growing this page into a second full client is the failure mode this
-// comment exists to prevent — add it to apps/desktop instead.
+// one off, read one". Finished todos are rendered in a view of their own
+// rather than inline: the list is open work, and the Done view is the same
+// /v1/todos response filtered in the page, not a second endpoint. This
+// surface exists so a deployment is usable from any browser with zero
+// installs; the full experience belongs in a real client. Growing this page
+// into a second full client is the failure mode this comment exists to
+// prevent — add it to apps/desktop instead.
 //
 // The page is public static bytes, so it is mounted outside the auth chain:
 // it authenticates itself against /v1 with a bearer token kept in

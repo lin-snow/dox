@@ -10,19 +10,48 @@ interface MarkdownProps {
   width?: number;
 }
 
+export interface RenderedMarkdown {
+  text: string;
+  truncated: boolean;
+}
+
+/** Shared renderer for full markdown and for bounded previews. */
+export function renderMarkdown(
+  source: string,
+  width = 80,
+  maxLines?: number,
+): RenderedMarkdown {
+  const md = new Marked();
+  md.use(
+    markedTerminal({
+      width,
+      reflowText: true,
+      tab: 2,
+    }),
+  );
+  const out = md.parse(source, { async: false });
+  const rendered = (typeof out === "string" ? out : String(out)).replace(
+    /\n+$/,
+    "",
+  );
+  if (!maxLines) {
+    return { text: rendered, truncated: false };
+  }
+  const lines = rendered.split("\n");
+  if (lines.length <= maxLines) {
+    return { text: rendered, truncated: false };
+  }
+  return {
+    text: `${lines.slice(0, maxLines).join("\n").replace(/\s+$/, "")}…`,
+    truncated: true,
+  };
+}
+
 export function Markdown({ source, width }: MarkdownProps) {
-  const rendered = useMemo(() => {
-    const md = new Marked();
-    md.use(
-      markedTerminal({
-        width: width ?? 80,
-        reflowText: true,
-        tab: 2,
-      }),
-    );
-    const out = md.parse(source, { async: false });
-    return typeof out === "string" ? out.replace(/\n+$/, "") : String(out);
-  }, [source, width]);
+  const rendered = useMemo(
+    () => renderMarkdown(source, width ?? 80).text,
+    [source, width],
+  );
 
   if (!rendered) {
     return null;

@@ -104,7 +104,7 @@ export function buildServerTab(args: BuildSettingsArgs): SettingsTabSpec {
     label: "Server",
     hint: owner
       ? "Server info and settings. You're the owner."
-      : "View only — only the owner can change these.",
+      : "View only. Only the owner can change these.",
     rows,
     hints: owner
       ? [
@@ -153,7 +153,7 @@ export function buildAccountTab(args: BuildSettingsArgs): SettingsTabSpec {
       key: "sign-out",
       label: "Sign Out",
       detail:
-        "Sign out on this device. Your account stays — log back in any time to keep using dox.",
+        "Sign out on this device. Your account stays; sign back in any time.",
       onEnter: args.on.signOut,
       enterLabel: "sign out",
     },

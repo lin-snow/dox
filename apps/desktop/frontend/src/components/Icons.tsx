@@ -73,9 +73,18 @@ export const IconClose = ({ size = 16 }: Props) => (
   </svg>
 );
 
+/** A stroked tick reads lopsided at 13px: the arms are 6.4 : 13.4 long and the
+ * round caps push the ink off-centre. This is the filled, optically centred
+ * shape instead. */
 export const IconCheck = ({ size = 16 }: Props) => (
-  <svg {...base(size)} strokeWidth={2.2}>
-    <path d="m5 12.5 4.5 4.5L19 7" />
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden
+  >
+    <path d="M9 16.2 4.6 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
   </svg>
 );
 

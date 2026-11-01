@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventService_ListEvents_FullMethodName = "/dox.v1.EventService/ListEvents"
+	EventService_ListEvents_FullMethodName   = "/dox.v1.EventService/ListEvents"
+	EventService_WatchChanges_FullMethodName = "/dox.v1.EventService/WatchChanges"
 )
 
 // EventServiceClient is the client API for EventService service.
@@ -31,6 +32,16 @@ type EventServiceClient interface {
 	// ListEvents returns recent events from the caller's visible projects, newest
 	// first. Empty response when the caller has no project memberships.
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
+	// WatchChanges long-polls the server's change counter: it returns as soon as
+	// any /v1 mutation has committed since `since`, or when timeout_ms elapses.
+	//
+	// Why a counter and not pushed events: the gateway is plain HTTP/JSON, and a
+	// webhook-style feed would need either an SSE route outside the auth chain or
+	// a token in a query string. One monotonic integer is cheaper than either, and
+	// it is coarse on purpose — a client that wakes up refetches what it already
+	// knows how to render, so visibility rules stay in the list endpoints where
+	// they already live.
+	WatchChanges(ctx context.Context, in *WatchChangesRequest, opts ...grpc.CallOption) (*WatchChangesResponse, error)
 }
 
 type eventServiceClient struct {
@@ -51,6 +62,16 @@ func (c *eventServiceClient) ListEvents(ctx context.Context, in *ListEventsReque
 	return out, nil
 }
 
+func (c *eventServiceClient) WatchChanges(ctx context.Context, in *WatchChangesRequest, opts ...grpc.CallOption) (*WatchChangesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WatchChangesResponse)
+	err := c.cc.Invoke(ctx, EventService_WatchChanges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EventServiceServer is the server API for EventService service.
 // All implementations must embed UnimplementedEventServiceServer
 // for forward compatibility.
@@ -60,6 +81,16 @@ type EventServiceServer interface {
 	// ListEvents returns recent events from the caller's visible projects, newest
 	// first. Empty response when the caller has no project memberships.
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
+	// WatchChanges long-polls the server's change counter: it returns as soon as
+	// any /v1 mutation has committed since `since`, or when timeout_ms elapses.
+	//
+	// Why a counter and not pushed events: the gateway is plain HTTP/JSON, and a
+	// webhook-style feed would need either an SSE route outside the auth chain or
+	// a token in a query string. One monotonic integer is cheaper than either, and
+	// it is coarse on purpose — a client that wakes up refetches what it already
+	// knows how to render, so visibility rules stay in the list endpoints where
+	// they already live.
+	WatchChanges(context.Context, *WatchChangesRequest) (*WatchChangesResponse, error)
 	mustEmbedUnimplementedEventServiceServer()
 }
 
@@ -72,6 +103,9 @@ type UnimplementedEventServiceServer struct{}
 
 func (UnimplementedEventServiceServer) ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEvents not implemented")
+}
+func (UnimplementedEventServiceServer) WatchChanges(context.Context, *WatchChangesRequest) (*WatchChangesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method WatchChanges not implemented")
 }
 func (UnimplementedEventServiceServer) mustEmbedUnimplementedEventServiceServer() {}
 func (UnimplementedEventServiceServer) testEmbeddedByValue()                      {}
@@ -112,6 +146,24 @@ func _EventService_ListEvents_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_WatchChanges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WatchChangesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).WatchChanges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventService_WatchChanges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventServiceServer).WatchChanges(ctx, req.(*WatchChangesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EventService_ServiceDesc is the grpc.ServiceDesc for EventService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -122,6 +174,10 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEvents",
 			Handler:    _EventService_ListEvents_Handler,
+		},
+		{
+			MethodName: "WatchChanges",
+			Handler:    _EventService_WatchChanges_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

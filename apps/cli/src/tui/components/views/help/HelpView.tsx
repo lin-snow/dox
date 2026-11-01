@@ -27,14 +27,15 @@ const act: ReadonlyArray<readonly [string, string]> = [
   ["/", "search todos"],
   ["n", "reminders"],
   ["r", "refresh"],
+  ["start/end", "meeting window (editor)"],
 ];
-
 const app: ReadonlyArray<readonly [string, string]> = [
   ["s", "open settings"],
   ["A", "about dox"],
   ["?", "toggle this help"],
   ["q / Ctrl+C", "quit"],
   ["esc", "close / cancel"],
+  ["dox todo move", "reorder from the shell"],
 ];
 
 export function HelpView({ onClose }: HelpViewProps) {
@@ -45,7 +46,7 @@ export function HelpView({ onClose }: HelpViewProps) {
   });
 
   const cardWidth = Math.min(86, Math.max(60, cols - 4));
-  const cardRows = 17;
+  const cardRows = 20;
   const topPad = Math.max(1, Math.floor((totalRows - cardRows - 3) / 2));
 
   return (
@@ -61,7 +62,7 @@ export function HelpView({ onClose }: HelpViewProps) {
           width={cardWidth}
         >
           <Text bold color={color.accent}>
-            {icon.brand} keybindings
+            {icon.brand} Keyboard shortcuts
           </Text>
           <Box marginTop={1}>
             {}

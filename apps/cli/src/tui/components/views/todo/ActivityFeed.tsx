@@ -20,11 +20,11 @@ export function ActivityFeed({ events, nowMs }: ActivityFeedProps) {
         justifyContent="center"
       >
         <Text color={color.muted} dimColor>
-          no activity yet
+          No activity yet
         </Text>
         <Box marginTop={1}>
           <Text color={color.muted} dimColor>
-            invite teammates to a project to see updates
+            Invite a teammate to a project to see updates here.
           </Text>
         </Box>
       </Box>

@@ -6,7 +6,9 @@
 export type AppEvent =
   | { type: "open"; todoId: string }
   | { type: "reminder"; todoId: string; title: string }
-  | { type: "session" };
+  | { type: "session" }
+  /** The server's change counter moved: refetch what you render. */
+  | { type: "data" };
 
 export function subscribe(onEvent: (event: AppEvent) => void): () => void {
   const source = new EventSource("/__dox/events");

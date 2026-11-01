@@ -1,4 +1,5 @@
 import type { ActivityEvent } from "../api";
+import { useDialog } from "../dialog";
 import { sinceLabel } from "../format";
 import { IconClose, IconRefresh } from "./Icons";
 
@@ -14,14 +15,25 @@ interface Props {
   onClose: () => void;
 }
 
-/** Activity as a slide-over: the board stays visible behind it. */
+/** Activity as a slide-over: the board stays visible behind it. Visually it is
+ * a panel, semantically it is a dialog — aria-modal is what tells AT to stay
+ * inside, and focus has to follow the same rule. */
 export function ActivitySheet({ events, onRefresh, onClose }: Props) {
+  const { ref, onKeyDown } = useDialog<HTMLElement>();
+
   return (
     <>
       <div className="sheet-veil" onClick={onClose} />
-      <aside className="sheet" aria-label="activity">
+      <aside
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="activity-title"
+        ref={ref}
+        onKeyDown={onKeyDown}
+      >
         <header className="sheet-head">
-          <h2>Activity</h2>
+          <h2 id="activity-title">Activity</h2>
           <div className="sheet-actions">
             <button
               type="button"
@@ -44,7 +56,7 @@ export function ActivitySheet({ events, onRefresh, onClose }: Props) {
 
         <div className="sheet-body">
           {events.length === 0 ? (
-            <p className="col-empty">nothing yet</p>
+            <p className="col-empty">No activity yet</p>
           ) : (
             events.map((event) => (
               <article key={event.id} className="event">

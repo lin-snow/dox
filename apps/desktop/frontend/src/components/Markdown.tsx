@@ -9,7 +9,13 @@ marked.setOptions({ gfm: true, breaks: true });
  * link clicks are swallowed so a stray URL cannot navigate the webview away
  * from the app.
  */
-export function Markdown({ source }: { source: string }) {
+export function Markdown({
+  source,
+  className,
+}: {
+  source: string;
+  className?: string;
+}) {
   const html = useMemo(() => {
     const rendered = marked.parse(source, { async: false });
     return DOMPurify.sanitize(rendered);
@@ -17,7 +23,7 @@ export function Markdown({ source }: { source: string }) {
 
   return (
     <div
-      className="md"
+      className={className ? `md ${className}` : "md"}
       dangerouslySetInnerHTML={{ __html: html }}
       onClick={(event) => {
         if ((event.target as HTMLElement).closest("a")) event.preventDefault();

@@ -56,7 +56,19 @@ type Todo struct {
 	// Optional reminder instant, UTC unix milliseconds. Unset = remind at due_at.
 	// May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
 	// all-day todo this must be set explicitly, otherwise no reminder fires.
-	RemindAt      *int64 `protobuf:"varint,12,opt,name=remind_at,json=remindAt,proto3,oneof" json:"remind_at,omitempty"`
+	RemindAt *int64 `protobuf:"varint,12,opt,name=remind_at,json=remindAt,proto3,oneof" json:"remind_at,omitempty"`
+	// Manual ordering key inside the todo's list scope (its project, or the
+	// creator's Inbox). Higher sorts first; ties fall back to created_at DESC,
+	// which is why an untouched list keeps its creation order. Only MoveTodo
+	// assigns meaningful values: it renumbers the whole scope densely.
+	Position int64 `protobuf:"varint,13,opt,name=position,proto3" json:"position,omitempty"`
+	// Optional meeting window, UTC unix milliseconds. Both or neither: a todo
+	// with a start and an end is a meeting (project members are the invitees —
+	// they already receive its reminders), a todo with neither is a task.
+	// Independent of due_at: the window is when you meet, the deadline is when
+	// the work is owed.
+	StartsAt      *int64 `protobuf:"varint,14,opt,name=starts_at,json=startsAt,proto3,oneof" json:"starts_at,omitempty"`
+	EndsAt        *int64 `protobuf:"varint,15,opt,name=ends_at,json=endsAt,proto3,oneof" json:"ends_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,6 +183,27 @@ func (x *Todo) GetDueZone() string {
 func (x *Todo) GetRemindAt() int64 {
 	if x != nil && x.RemindAt != nil {
 		return *x.RemindAt
+	}
+	return 0
+}
+
+func (x *Todo) GetPosition() int64 {
+	if x != nil {
+		return x.Position
+	}
+	return 0
+}
+
+func (x *Todo) GetStartsAt() int64 {
+	if x != nil && x.StartsAt != nil {
+		return *x.StartsAt
+	}
+	return 0
+}
+
+func (x *Todo) GetEndsAt() int64 {
+	if x != nil && x.EndsAt != nil {
+		return *x.EndsAt
 	}
 	return 0
 }
@@ -333,7 +366,10 @@ type CreateTodoRequest struct {
 	// Marks due_at as a calendar date. Requires due_at.
 	DueAllDay *bool `protobuf:"varint,6,opt,name=due_all_day,json=dueAllDay,proto3,oneof" json:"due_all_day,omitempty"`
 	// IANA zone for an all-day due_at. Requires due_at.
-	DueZone       *string `protobuf:"bytes,7,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
+	DueZone *string `protobuf:"bytes,7,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
+	// Meeting window, UTC unix milliseconds. Set both or neither.
+	StartsAt      *int64 `protobuf:"varint,8,opt,name=starts_at,json=startsAt,proto3,oneof" json:"starts_at,omitempty"`
+	EndsAt        *int64 `protobuf:"varint,9,opt,name=ends_at,json=endsAt,proto3,oneof" json:"ends_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -417,6 +453,20 @@ func (x *CreateTodoRequest) GetDueZone() string {
 	return ""
 }
 
+func (x *CreateTodoRequest) GetStartsAt() int64 {
+	if x != nil && x.StartsAt != nil {
+		return *x.StartsAt
+	}
+	return 0
+}
+
+func (x *CreateTodoRequest) GetEndsAt() int64 {
+	if x != nil && x.EndsAt != nil {
+		return *x.EndsAt
+	}
+	return 0
+}
+
 type UpdateTodoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -432,7 +482,12 @@ type UpdateTodoRequest struct {
 	// Mark due_at as a calendar date. Requires a deadline after this patch.
 	DueAllDay *bool `protobuf:"varint,7,opt,name=due_all_day,json=dueAllDay,proto3,oneof" json:"due_all_day,omitempty"`
 	// IANA zone for an all-day deadline. Empty string clears it.
-	DueZone       *string `protobuf:"bytes,8,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
+	DueZone *string `protobuf:"bytes,8,opt,name=due_zone,json=dueZone,proto3,oneof" json:"due_zone,omitempty"`
+	// Patch the meeting window. Absent = unchanged; both 0 = clear; both > 0 =
+	// set (UTC unix milliseconds). A patch that leaves only one side set is
+	// rejected, so the window can never be half-written.
+	StartsAt      *int64 `protobuf:"varint,9,opt,name=starts_at,json=startsAt,proto3,oneof" json:"starts_at,omitempty"`
+	EndsAt        *int64 `protobuf:"varint,10,opt,name=ends_at,json=endsAt,proto3,oneof" json:"ends_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -523,6 +578,74 @@ func (x *UpdateTodoRequest) GetDueZone() string {
 	return ""
 }
 
+func (x *UpdateTodoRequest) GetStartsAt() int64 {
+	if x != nil && x.StartsAt != nil {
+		return *x.StartsAt
+	}
+	return 0
+}
+
+func (x *UpdateTodoRequest) GetEndsAt() int64 {
+	if x != nil && x.EndsAt != nil {
+		return *x.EndsAt
+	}
+	return 0
+}
+
+type MoveTodoRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Place the todo directly after this one. Unset = move to the front of the
+	// scope. The anchor must be visible to the caller and in the same scope.
+	AfterId       *string `protobuf:"bytes,2,opt,name=after_id,json=afterId,proto3,oneof" json:"after_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MoveTodoRequest) Reset() {
+	*x = MoveTodoRequest{}
+	mi := &file_dox_v1_todo_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MoveTodoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MoveTodoRequest) ProtoMessage() {}
+
+func (x *MoveTodoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_todo_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MoveTodoRequest.ProtoReflect.Descriptor instead.
+func (*MoveTodoRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_todo_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MoveTodoRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MoveTodoRequest) GetAfterId() string {
+	if x != nil && x.AfterId != nil {
+		return *x.AfterId
+	}
+	return ""
+}
+
 type DeleteTodoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -532,7 +655,7 @@ type DeleteTodoRequest struct {
 
 func (x *DeleteTodoRequest) Reset() {
 	*x = DeleteTodoRequest{}
-	mi := &file_dox_v1_todo_proto_msgTypes[6]
+	mi := &file_dox_v1_todo_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -544,7 +667,7 @@ func (x *DeleteTodoRequest) String() string {
 func (*DeleteTodoRequest) ProtoMessage() {}
 
 func (x *DeleteTodoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_todo_proto_msgTypes[6]
+	mi := &file_dox_v1_todo_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -557,7 +680,7 @@ func (x *DeleteTodoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTodoRequest) Descriptor() ([]byte, []int) {
-	return file_dox_v1_todo_proto_rawDescGZIP(), []int{6}
+	return file_dox_v1_todo_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteTodoRequest) GetId() string {
@@ -575,7 +698,7 @@ type DeleteTodoResponse struct {
 
 func (x *DeleteTodoResponse) Reset() {
 	*x = DeleteTodoResponse{}
-	mi := &file_dox_v1_todo_proto_msgTypes[7]
+	mi := &file_dox_v1_todo_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -587,7 +710,7 @@ func (x *DeleteTodoResponse) String() string {
 func (*DeleteTodoResponse) ProtoMessage() {}
 
 func (x *DeleteTodoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_dox_v1_todo_proto_msgTypes[7]
+	mi := &file_dox_v1_todo_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -600,14 +723,14 @@ func (x *DeleteTodoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTodoResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTodoResponse) Descriptor() ([]byte, []int) {
-	return file_dox_v1_todo_proto_rawDescGZIP(), []int{7}
+	return file_dox_v1_todo_proto_rawDescGZIP(), []int{8}
 }
 
 var File_dox_v1_todo_proto protoreflect.FileDescriptor
 
 const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
-	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\xc0\x03\n" +
+	"\x11dox/v1/todo.proto\x12\x06dox.v1\x1a\x1cgoogle/api/annotations.proto\"\xb6\x04\n" +
 	"\x04Todo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x12\n" +
@@ -625,14 +748,21 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\vdue_all_day\x18\n" +
 	" \x01(\bH\x03R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
 	"\bdue_zone\x18\v \x01(\tH\x04R\adueZone\x88\x01\x01\x12 \n" +
-	"\tremind_at\x18\f \x01(\x03H\x05R\bremindAt\x88\x01\x01B\r\n" +
+	"\tremind_at\x18\f \x01(\x03H\x05R\bremindAt\x88\x01\x01\x12\x1a\n" +
+	"\bposition\x18\r \x01(\x03R\bposition\x12 \n" +
+	"\tstarts_at\x18\x0e \x01(\x03H\x06R\bstartsAt\x88\x01\x01\x12\x1c\n" +
+	"\aends_at\x18\x0f \x01(\x03H\aR\x06endsAt\x88\x01\x01B\r\n" +
 	"\v_project_idB\x0e\n" +
 	"\f_descriptionB\t\n" +
 	"\a_due_atB\x0e\n" +
 	"\f_due_all_dayB\v\n" +
 	"\t_due_zoneB\f\n" +
 	"\n" +
-	"_remind_at\"v\n" +
+	"_remind_atB\f\n" +
+	"\n" +
+	"_starts_atB\n" +
+	"\n" +
+	"\b_ends_at\"v\n" +
 	"\x10ListTodosRequest\x12\"\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12/\n" +
@@ -641,7 +771,7 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\x11ListTodosResponse\x12\"\n" +
 	"\x05todos\x18\x01 \x03(\v2\f.dox.v1.TodoR\x05todos\" \n" +
 	"\x0eGetTodoRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xcc\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa6\x03\n" +
 	"\x11CreateTodoRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\"\n" +
 	"\n" +
@@ -650,14 +780,20 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\x06due_at\x18\x04 \x01(\x03H\x02R\x05dueAt\x88\x01\x01\x12 \n" +
 	"\tremind_at\x18\x05 \x01(\x03H\x03R\bremindAt\x88\x01\x01\x12#\n" +
 	"\vdue_all_day\x18\x06 \x01(\bH\x04R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
-	"\bdue_zone\x18\a \x01(\tH\x05R\adueZone\x88\x01\x01B\r\n" +
+	"\bdue_zone\x18\a \x01(\tH\x05R\adueZone\x88\x01\x01\x12 \n" +
+	"\tstarts_at\x18\b \x01(\x03H\x06R\bstartsAt\x88\x01\x01\x12\x1c\n" +
+	"\aends_at\x18\t \x01(\x03H\aR\x06endsAt\x88\x01\x01B\r\n" +
 	"\v_project_idB\x0e\n" +
 	"\f_descriptionB\t\n" +
 	"\a_due_atB\f\n" +
 	"\n" +
 	"_remind_atB\x0e\n" +
 	"\f_due_all_dayB\v\n" +
-	"\t_due_zone\"\xda\x02\n" +
+	"\t_due_zoneB\f\n" +
+	"\n" +
+	"_starts_atB\n" +
+	"\n" +
+	"\b_ends_at\"\xb4\x03\n" +
 	"\x11UpdateTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x17\n" +
@@ -666,7 +802,10 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\x06due_at\x18\x05 \x01(\x03H\x03R\x05dueAt\x88\x01\x01\x12 \n" +
 	"\tremind_at\x18\x06 \x01(\x03H\x04R\bremindAt\x88\x01\x01\x12#\n" +
 	"\vdue_all_day\x18\a \x01(\bH\x05R\tdueAllDay\x88\x01\x01\x12\x1e\n" +
-	"\bdue_zone\x18\b \x01(\tH\x06R\adueZone\x88\x01\x01B\b\n" +
+	"\bdue_zone\x18\b \x01(\tH\x06R\adueZone\x88\x01\x01\x12 \n" +
+	"\tstarts_at\x18\t \x01(\x03H\aR\bstartsAt\x88\x01\x01\x12\x1c\n" +
+	"\aends_at\x18\n" +
+	" \x01(\x03H\bR\x06endsAt\x88\x01\x01B\b\n" +
 	"\x06_titleB\a\n" +
 	"\x05_doneB\x0e\n" +
 	"\f_descriptionB\t\n" +
@@ -674,10 +813,18 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
 	"_remind_atB\x0e\n" +
 	"\f_due_all_dayB\v\n" +
-	"\t_due_zone\"#\n" +
+	"\t_due_zoneB\f\n" +
+	"\n" +
+	"_starts_atB\n" +
+	"\n" +
+	"\b_ends_at\"N\n" +
+	"\x0fMoveTodoRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\bafter_id\x18\x02 \x01(\tH\x00R\aafterId\x88\x01\x01B\v\n" +
+	"\t_after_id\"#\n" +
 	"\x11DeleteTodoRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x14\n" +
-	"\x12DeleteTodoResponse2\xa7\x03\n" +
+	"\x12DeleteTodoResponse2\xfe\x03\n" +
 	"\vTodoService\x12S\n" +
 	"\tListTodos\x12\x18.dox.v1.ListTodosRequest\x1a\x19.dox.v1.ListTodosResponse\"\x11\x82\xd3\xe4\x93\x02\v\x12\t/v1/todos\x12G\n" +
 	"\aGetTodo\x12\x16.dox.v1.GetTodoRequest\x1a\f.dox.v1.Todo\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/todos/{id}\x12K\n" +
@@ -686,7 +833,8 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\n" +
 	"UpdateTodo\x12\x19.dox.v1.UpdateTodoRequest\x1a\f.dox.v1.Todo\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*2\x0e/v1/todos/{id}\x12[\n" +
 	"\n" +
-	"DeleteTodo\x12\x19.dox.v1.DeleteTodoRequest\x1a\x1a.dox.v1.DeleteTodoResponse\"\x16\x82\xd3\xe4\x93\x02\x10*\x0e/v1/todos/{id}B6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
+	"DeleteTodo\x12\x19.dox.v1.DeleteTodoRequest\x1a\x1a.dox.v1.DeleteTodoResponse\"\x16\x82\xd3\xe4\x93\x02\x10*\x0e/v1/todos/{id}\x12U\n" +
+	"\bMoveTodo\x12\x17.dox.v1.MoveTodoRequest\x1a\f.dox.v1.Todo\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*2\x17/v1/todos/{id}/positionB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
 var (
 	file_dox_v1_todo_proto_rawDescOnce sync.Once
@@ -700,7 +848,7 @@ func file_dox_v1_todo_proto_rawDescGZIP() []byte {
 	return file_dox_v1_todo_proto_rawDescData
 }
 
-var file_dox_v1_todo_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_dox_v1_todo_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_dox_v1_todo_proto_goTypes = []any{
 	(*Todo)(nil),               // 0: dox.v1.Todo
 	(*ListTodosRequest)(nil),   // 1: dox.v1.ListTodosRequest
@@ -708,8 +856,9 @@ var file_dox_v1_todo_proto_goTypes = []any{
 	(*GetTodoRequest)(nil),     // 3: dox.v1.GetTodoRequest
 	(*CreateTodoRequest)(nil),  // 4: dox.v1.CreateTodoRequest
 	(*UpdateTodoRequest)(nil),  // 5: dox.v1.UpdateTodoRequest
-	(*DeleteTodoRequest)(nil),  // 6: dox.v1.DeleteTodoRequest
-	(*DeleteTodoResponse)(nil), // 7: dox.v1.DeleteTodoResponse
+	(*MoveTodoRequest)(nil),    // 6: dox.v1.MoveTodoRequest
+	(*DeleteTodoRequest)(nil),  // 7: dox.v1.DeleteTodoRequest
+	(*DeleteTodoResponse)(nil), // 8: dox.v1.DeleteTodoResponse
 }
 var file_dox_v1_todo_proto_depIdxs = []int32{
 	0, // 0: dox.v1.ListTodosResponse.todos:type_name -> dox.v1.Todo
@@ -717,14 +866,16 @@ var file_dox_v1_todo_proto_depIdxs = []int32{
 	3, // 2: dox.v1.TodoService.GetTodo:input_type -> dox.v1.GetTodoRequest
 	4, // 3: dox.v1.TodoService.CreateTodo:input_type -> dox.v1.CreateTodoRequest
 	5, // 4: dox.v1.TodoService.UpdateTodo:input_type -> dox.v1.UpdateTodoRequest
-	6, // 5: dox.v1.TodoService.DeleteTodo:input_type -> dox.v1.DeleteTodoRequest
-	2, // 6: dox.v1.TodoService.ListTodos:output_type -> dox.v1.ListTodosResponse
-	0, // 7: dox.v1.TodoService.GetTodo:output_type -> dox.v1.Todo
-	0, // 8: dox.v1.TodoService.CreateTodo:output_type -> dox.v1.Todo
-	0, // 9: dox.v1.TodoService.UpdateTodo:output_type -> dox.v1.Todo
-	7, // 10: dox.v1.TodoService.DeleteTodo:output_type -> dox.v1.DeleteTodoResponse
-	6, // [6:11] is the sub-list for method output_type
-	1, // [1:6] is the sub-list for method input_type
+	7, // 5: dox.v1.TodoService.DeleteTodo:input_type -> dox.v1.DeleteTodoRequest
+	6, // 6: dox.v1.TodoService.MoveTodo:input_type -> dox.v1.MoveTodoRequest
+	2, // 7: dox.v1.TodoService.ListTodos:output_type -> dox.v1.ListTodosResponse
+	0, // 8: dox.v1.TodoService.GetTodo:output_type -> dox.v1.Todo
+	0, // 9: dox.v1.TodoService.CreateTodo:output_type -> dox.v1.Todo
+	0, // 10: dox.v1.TodoService.UpdateTodo:output_type -> dox.v1.Todo
+	8, // 11: dox.v1.TodoService.DeleteTodo:output_type -> dox.v1.DeleteTodoResponse
+	0, // 12: dox.v1.TodoService.MoveTodo:output_type -> dox.v1.Todo
+	7, // [7:13] is the sub-list for method output_type
+	1, // [1:7] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -739,13 +890,14 @@ func file_dox_v1_todo_proto_init() {
 	file_dox_v1_todo_proto_msgTypes[1].OneofWrappers = []any{}
 	file_dox_v1_todo_proto_msgTypes[4].OneofWrappers = []any{}
 	file_dox_v1_todo_proto_msgTypes[5].OneofWrappers = []any{}
+	file_dox_v1_todo_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dox_v1_todo_proto_rawDesc), len(file_dox_v1_todo_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

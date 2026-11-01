@@ -106,8 +106,8 @@ func resolve() Info {
 }
 
 func fillDefaults(info *Info) {
-	if info.Version == "" {
-		info.Version = "dev"
+	if info.Version == "" || info.Version == "dev" || strings.HasPrefix(info.Version, "(devel)") {
+		info.Version = "local"
 	}
 	if info.Commit == "" {
 		info.Commit = "unknown"
@@ -120,12 +120,19 @@ func fillDefaults(info *Info) {
 // String returns a single-line human summary, e.g.
 // "dox v0.3.1 (abcdef12, go1.26.2 darwin/arm64)".
 func (i Info) String() string {
-	return fmt.Sprintf("dox %s (%s, %s %s/%s)",
-		i.Version, i.Commit, i.GoVersion, i.OS, i.Arch)
+	commit := ""
+	if i.Commit != "" && i.Commit != "unknown" {
+		commit = i.Commit + ", "
+	}
+	return fmt.Sprintf("dox %s (%s%s %s/%s)",
+		i.Version, commit, i.GoVersion, i.OS, i.Arch)
 }
 
 // Short returns just "<version> (<commit>)", useful for log lines.
 func (i Info) Short() string {
+	if i.Commit == "" || i.Commit == "unknown" {
+		return i.Version
+	}
 	return fmt.Sprintf("%s (%s)", i.Version, i.Commit)
 }
 

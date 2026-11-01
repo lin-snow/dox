@@ -79,6 +79,9 @@ type Todo struct {
 	DueAllDay   bool
 	DueZone     sql.NullString
 	RemindAt    sql.NullInt64
+	Position    int64
+	StartsAt    sql.NullInt64
+	EndsAt      sql.NullInt64
 }
 
 type User struct {

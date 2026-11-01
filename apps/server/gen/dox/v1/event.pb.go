@@ -252,6 +252,109 @@ func (x *ListEventsResponse) GetEvents() []*Event {
 	return nil
 }
 
+type WatchChangesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The version the caller already knows about. 0 = "tell me the current
+	// version immediately", which is how a client bootstraps.
+	Since uint64 `protobuf:"varint,1,opt,name=since,proto3" json:"since,omitempty"`
+	// How long to hold the connection open while nothing changes. Server clamps
+	// to [100, 60000]; 0 uses 25000 — short enough to survive proxy idle
+	// timeouts, long enough that an idle client is not chatty.
+	TimeoutMs     uint32 `protobuf:"varint,2,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchChangesRequest) Reset() {
+	*x = WatchChangesRequest{}
+	mi := &file_dox_v1_event_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchChangesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchChangesRequest) ProtoMessage() {}
+
+func (x *WatchChangesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_event_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchChangesRequest.ProtoReflect.Descriptor instead.
+func (*WatchChangesRequest) Descriptor() ([]byte, []int) {
+	return file_dox_v1_event_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WatchChangesRequest) GetSince() uint64 {
+	if x != nil {
+		return x.Since
+	}
+	return 0
+}
+
+func (x *WatchChangesRequest) GetTimeoutMs() uint32 {
+	if x != nil {
+		return x.TimeoutMs
+	}
+	return 0
+}
+
+type WatchChangesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current counter value. Equal to the request's `since` when the wait timed
+	// out without a change.
+	Version       uint64 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WatchChangesResponse) Reset() {
+	*x = WatchChangesResponse{}
+	mi := &file_dox_v1_event_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchChangesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchChangesResponse) ProtoMessage() {}
+
+func (x *WatchChangesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_dox_v1_event_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchChangesResponse.ProtoReflect.Descriptor instead.
+func (*WatchChangesResponse) Descriptor() ([]byte, []int) {
+	return file_dox_v1_event_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *WatchChangesResponse) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 var File_dox_v1_event_proto protoreflect.FileDescriptor
 
 const file_dox_v1_event_proto_rawDesc = "" +
@@ -277,11 +380,18 @@ const file_dox_v1_event_proto_rawDesc = "" +
 	"\x11ListEventsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\";\n" +
 	"\x12ListEventsResponse\x12%\n" +
-	"\x06events\x18\x01 \x03(\v2\r.dox.v1.EventR\x06events2g\n" +
+	"\x06events\x18\x01 \x03(\v2\r.dox.v1.EventR\x06events\"J\n" +
+	"\x13WatchChangesRequest\x12\x14\n" +
+	"\x05since\x18\x01 \x01(\x04R\x05since\x12\x1d\n" +
+	"\n" +
+	"timeout_ms\x18\x02 \x01(\rR\ttimeoutMs\"0\n" +
+	"\x14WatchChangesResponse\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\x04R\aversion2\xc7\x01\n" +
 	"\fEventService\x12W\n" +
 	"\n" +
 	"ListEvents\x12\x19.dox.v1.ListEventsRequest\x1a\x1a.dox.v1.ListEventsResponse\"\x12\x82\xd3\xe4\x93\x02\f\x12\n" +
-	"/v1/eventsB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
+	"/v1/events\x12^\n" +
+	"\fWatchChanges\x12\x1b.dox.v1.WatchChangesRequest\x1a\x1c.dox.v1.WatchChangesResponse\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/v1/changesB6Z4github.com/lin-snow/dox/apps/server/gen/dox/v1;doxv1b\x06proto3"
 
 var (
 	file_dox_v1_event_proto_rawDescOnce sync.Once
@@ -295,18 +405,22 @@ func file_dox_v1_event_proto_rawDescGZIP() []byte {
 	return file_dox_v1_event_proto_rawDescData
 }
 
-var file_dox_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_dox_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_dox_v1_event_proto_goTypes = []any{
-	(*Event)(nil),              // 0: dox.v1.Event
-	(*ListEventsRequest)(nil),  // 1: dox.v1.ListEventsRequest
-	(*ListEventsResponse)(nil), // 2: dox.v1.ListEventsResponse
+	(*Event)(nil),                // 0: dox.v1.Event
+	(*ListEventsRequest)(nil),    // 1: dox.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),   // 2: dox.v1.ListEventsResponse
+	(*WatchChangesRequest)(nil),  // 3: dox.v1.WatchChangesRequest
+	(*WatchChangesResponse)(nil), // 4: dox.v1.WatchChangesResponse
 }
 var file_dox_v1_event_proto_depIdxs = []int32{
 	0, // 0: dox.v1.ListEventsResponse.events:type_name -> dox.v1.Event
 	1, // 1: dox.v1.EventService.ListEvents:input_type -> dox.v1.ListEventsRequest
-	2, // 2: dox.v1.EventService.ListEvents:output_type -> dox.v1.ListEventsResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	3, // 2: dox.v1.EventService.WatchChanges:input_type -> dox.v1.WatchChangesRequest
+	2, // 3: dox.v1.EventService.ListEvents:output_type -> dox.v1.ListEventsResponse
+	4, // 4: dox.v1.EventService.WatchChanges:output_type -> dox.v1.WatchChangesResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -323,7 +437,7 @@ func file_dox_v1_event_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dox_v1_event_proto_rawDesc), len(file_dox_v1_event_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

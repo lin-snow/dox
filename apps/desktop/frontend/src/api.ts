@@ -55,6 +55,8 @@ export interface Probe {
 export interface Prefs {
   lastView: string;
   notificationsEnabled: boolean;
+  /** Keep finished rows on the board; off means the board is open work only. */
+  showCompleted: boolean;
 }
 
 /** Saving a server also returns what it reported, so onboarding can branch. */

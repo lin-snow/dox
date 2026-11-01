@@ -29,6 +29,9 @@ func TestDefaultsOnFirstOpen(t *testing.T) {
 	if !prefs.NotificationsEnabled {
 		t.Error("notifications must default to on")
 	}
+	if prefs.ShowCompleted {
+		t.Error("completed todos must default to hidden")
+	}
 }
 
 func TestPartialPrefsDocumentKeepsDefaults(t *testing.T) {
@@ -49,6 +52,9 @@ func TestPartialPrefsDocumentKeepsDefaults(t *testing.T) {
 	}
 	if !prefs.NotificationsEnabled {
 		t.Error("an absent notifications flag must keep the default (on)")
+	}
+	if prefs.ShowCompleted {
+		t.Error("an absent showCompleted flag must keep the default (hidden)")
 	}
 }
 

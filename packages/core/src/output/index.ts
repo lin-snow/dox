@@ -1,6 +1,6 @@
 import type { IO } from "../io";
 import type { ReminderList } from "../notifications/domain";
-import { dueLabel, elapsedLabel } from "../time";
+import { dueLabel, elapsedLabel, formatWhenInput } from "../time";
 import type { Todo } from "../todo/domain";
 
 export interface Output {
@@ -80,7 +80,20 @@ export class JsonOutput implements Output {
 function formatTodo(t: Todo): string {
   const mark = t.done ? "[x]" : "[ ]";
   const id = t.id.slice(0, 6);
-  return `${mark} ${id}…  ${t.title}${formatDeadline(t)}`;
+  return `${mark} ${id}…  ${t.title}${formatMeeting(t)}${formatDeadline(t)}`;
+}
+
+/**
+ * Window badge for a meeting: the start carries the date, the end only the
+ * clock, so a row stays short. Local time throughout — a meeting is an
+ * instant, unlike an all-day deadline which is pinned to a zone.
+ */
+function formatMeeting(t: Todo): string {
+  if (t.startsAt === undefined || t.endsAt === undefined) return "";
+  const start = Number(t.startsAt);
+  const end = new Date(Number(t.endsAt));
+  const clock = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
+  return `  🗓 ${formatWhenInput(start, false)}–${clock}`;
 }
 
 /**

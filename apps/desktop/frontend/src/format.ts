@@ -2,6 +2,25 @@ import { elapsedLabel, localZone } from "@dox/core/browser";
 
 import type { Todo } from "./api";
 
+/** Source builds carry no tag; keep that implementation detail out of the UI. */
+export function versionLabel(version?: string): string {
+  const value = version?.trim() ?? "";
+  if (
+    !value ||
+    value === "dev" ||
+    value === "local" ||
+    value.startsWith("(devel)")
+  ) {
+    return "";
+  }
+  return value;
+}
+
+export function buildLabel(version?: string): string {
+  const value = versionLabel(version);
+  return value ? ` · ${value}` : "";
+}
+
 /** grpc-gateway renders int64 as a JSON string; "" and undefined mean unset. */
 export function ms(value?: string | number | null): number {
   return value === undefined || value === null || value === ""
@@ -90,6 +109,40 @@ export function dueFields(date: string, time: string): DueFields {
     dueAllDay: true,
     dueZone: localZone(),
   };
+}
+
+/**
+ * Meeting window inputs → patch. Both empty clears the window (0 on either
+ * side does that server-side); the Composer rejects a half-filled pair before
+ * this is called, so no partial window can leave the client.
+ */
+export function meetingFields(
+  start: string,
+  end: string,
+): {
+  startsAt: number | null;
+  endsAt: number | null;
+} {
+  if (!start && !end) return { startsAt: null, endsAt: null };
+  return {
+    startsAt: new Date(start).getTime(),
+    endsAt: new Date(end).getTime(),
+  };
+}
+
+/** Window chip: the date once, then both clocks — "Nov 5 9:30 AM–10:30 AM". */
+export function chipMeeting(start: number, end: number): string {
+  if (!start || !end) return "";
+  const day = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(start));
+  const clock = (at: number) =>
+    new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(at));
+  return `${day} ${clock(start)}–${clock(end)}`;
 }
 
 /** Chip label: "Nov 5" for a calendar day, "Nov 5 7:30 PM" for an instant. */

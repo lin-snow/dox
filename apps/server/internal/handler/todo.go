@@ -144,6 +144,13 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 	if err != nil {
 		return nil, err
 	}
+	meeting, err := normalizeMeeting(meetingValues{}, req.StartsAt, req.EndsAt, now)
+	if err != nil {
+		return nil, err
+	}
+	if meeting == nil {
+		meeting = &meetingValues{}
+	}
 
 	var projectID sql.NullString
 	if req.ProjectId != nil && *req.ProjectId != "" {
@@ -156,7 +163,16 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 	id := ulid.Make().String()
 	var row queries.CreateTodoRow
 	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
-		var err error
+		// "Top of the list" is a stored fact now, not a sorting accident: the
+		// new row takes the scope's highest position so it appears first even
+		// after someone has dragged the list into their own order.
+		position, err := q.NextTodoPosition(ctx, queries.NextTodoPositionParams{
+			ProjectID: projectID.String,
+			UserID:    c.UserID,
+		})
+		if err != nil {
+			return err
+		}
 		row, err = q.CreateTodo(ctx, queries.CreateTodoParams{
 			ID:          id,
 			Title:       title,
@@ -165,6 +181,9 @@ func (s *Todo) CreateTodo(ctx context.Context, req *doxv1.CreateTodoRequest) (*d
 			DueAllDay:   due.AllDay,
 			DueZone:     due.Zone,
 			RemindAt:    remindAtOf(remind),
+			StartsAt:    meeting.StartsAt,
+			EndsAt:      meeting.EndsAt,
+			Position:    position,
 			ProjectID:   projectID,
 			CreatedBy:   c.UserID,
 			CreatedAt:   now,
@@ -237,6 +256,12 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		if err != nil {
 			return err
 		}
+		// The window resolves against the current row too, so "the meeting ends
+		// later" is one field while the pair stays complete.
+		meeting, err := normalizeMeeting(meetingOf(view), req.StartsAt, req.EndsAt, now)
+		if err != nil {
+			return err
+		}
 
 		if title != nil {
 			row, err := q.UpdateTodoTitle(ctx, queries.UpdateTodoTitleParams{
@@ -277,6 +302,15 @@ func (s *Todo) UpdateTodo(ctx context.Context, req *doxv1.UpdateTodoRequest) (*d
 		if remind != nil {
 			row, err := q.UpdateTodoRemind(ctx, queries.UpdateTodoRemindParams{
 				RemindAt: *remind, UpdatedAt: now, ID: id,
+			})
+			if err != nil {
+				return updateTodoError(err, id)
+			}
+			view = todoView(row)
+		}
+		if meeting != nil {
+			row, err := q.UpdateTodoMeeting(ctx, queries.UpdateTodoMeetingParams{
+				StartsAt: meeting.StartsAt, EndsAt: meeting.EndsAt, UpdatedAt: now, ID: id,
 			})
 			if err != nil {
 				return updateTodoError(err, id)
@@ -325,6 +359,106 @@ func (s *Todo) DeleteTodo(ctx context.Context, req *doxv1.DeleteTodoRequest) (*d
 		return nil, status.Errorf(codes.Internal, "delete todo: %v", err)
 	}
 	return &doxv1.DeleteTodoResponse{}, nil
+}
+
+// MoveTodo reorders a todo inside its own list scope (a project, or the
+// caller's Inbox) by placing it directly after an anchor row and renumbering
+// the scope densely.
+//
+// Not an activity verb: nothing about the work changed, only where it sits, so
+// no bus message is published -- otherwise the feed would fill with "moved".
+func (s *Todo) MoveTodo(ctx context.Context, req *doxv1.MoveTodoRequest) (*doxv1.Todo, error) {
+	c := caller.MustFrom(ctx)
+	id, err := s.resolveID(ctx, c.UserID, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	now := s.now()
+	var view todoView
+	err = runInTx(ctx, s.db, s.q, func(q *queries.Queries) error {
+		current, err := q.GetTodo(ctx, id)
+		if err != nil {
+			return translateGetTodoErr(err, id)
+		}
+		view = todoView(current)
+		if err := assertWritable(ctx, q, c.UserID, view); err != nil {
+			return err
+		}
+
+		// One predicate for both scopes: '' means the caller's Inbox.
+		rows, err := q.ListScopeTodos(ctx, queries.ListScopeTodosParams{
+			ProjectID: view.ProjectID.String,
+			UserID:    c.UserID,
+		})
+		if err != nil {
+			return err
+		}
+		order := make([]queries.ListScopeTodosRow, 0, len(rows))
+		for _, row := range rows {
+			if row.ID != id {
+				order = append(order, row)
+			}
+		}
+
+		target := 0
+		if req.AfterId != nil && *req.AfterId != "" {
+			anchor, err := s.resolveID(ctx, c.UserID, *req.AfterId)
+			if err != nil {
+				return err
+			}
+			if anchor == id {
+				// Dropped on itself: the list is already what the caller meant.
+				return nil
+			}
+			at := -1
+			for i, row := range order {
+				if row.ID == anchor {
+					at = i
+					break
+				}
+			}
+			if at < 0 {
+				return status.Errorf(codes.InvalidArgument, "after_id %q is not in this list", *req.AfterId)
+			}
+			target = at + 1
+		}
+
+		next := make([]queries.ListScopeTodosRow, 0, len(order)+1)
+		next = append(next, order[:target]...)
+		next = append(next, queries.ListScopeTodosRow{ID: id})
+		next = append(next, order[target:]...)
+
+		// Dense renumber, highest = top. Rows already at their target are
+		// skipped, and only the moved row's updated_at moves -- the diff other
+		// clients see stays "one todo moved", not "the whole list changed".
+		for i, row := range next {
+			pos := int64(len(next) - 1 - i)
+			if row.ID == id {
+				touched, err := q.TouchTodoPosition(ctx, queries.TouchTodoPositionParams{
+					Position: pos, UpdatedAt: now, ID: id,
+				})
+				if err != nil {
+					return updateTodoError(err, id)
+				}
+				view = todoView(touched)
+				continue
+			}
+			if row.Position == pos {
+				continue
+			}
+			if err := q.SetTodoPosition(ctx, queries.SetTodoPositionParams{
+				Position: pos, ID: row.ID,
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return view.toProto(true), nil
 }
 
 // resolveID accepts either a full ULID or a unique prefix (scoped to the
@@ -399,6 +533,9 @@ type todoView struct {
 	DueAllDay   bool
 	DueZone     sql.NullString
 	RemindAt    sql.NullInt64
+	StartsAt    sql.NullInt64
+	EndsAt      sql.NullInt64
+	Position    int64
 	ProjectID   sql.NullString
 	CreatedBy   string
 	CreatedAt   int64
@@ -490,6 +627,54 @@ func remindAtOf(v *sql.NullInt64) sql.NullInt64 {
 	return *v
 }
 
+// meetingValues is the optional meeting window as stored. Both sides or
+// neither: a half window is not a fact anyone can act on.
+type meetingValues struct {
+	StartsAt sql.NullInt64
+	EndsAt   sql.NullInt64
+}
+
+func meetingOf(t todoView) meetingValues {
+	return meetingValues{StartsAt: t.StartsAt, EndsAt: t.EndsAt}
+}
+
+// normalizeMeeting resolves a starts_at/ends_at create or patch against the
+// current window. Returns nil when the request touches neither field, so the
+// caller skips the UPDATE.
+//
+// Patch semantics: absent = unchanged; 0 on either side clears the whole
+// window; otherwise the effective pair -- stored value plus what the patch
+// sets -- must be complete and ordered. That way "the meeting ends an hour
+// later" is one field, and no patch can leave a start without an end.
+func normalizeMeeting(cur meetingValues, start, end *int64, now int64) (*meetingValues, error) {
+	if start == nil && end == nil {
+		return nil, nil
+	}
+	if (start != nil && *start == 0) || (end != nil && *end == 0) {
+		return &meetingValues{}, nil
+	}
+	next := cur
+	if start != nil {
+		if err := validateInstant("starts_at", *start, now); err != nil {
+			return nil, err
+		}
+		next.StartsAt = sql.NullInt64{Int64: *start, Valid: true}
+	}
+	if end != nil {
+		if err := validateInstant("ends_at", *end, now); err != nil {
+			return nil, err
+		}
+		next.EndsAt = sql.NullInt64{Int64: *end, Valid: true}
+	}
+	if !next.StartsAt.Valid || !next.EndsAt.Valid {
+		return nil, status.Error(codes.InvalidArgument, "starts_at and ends_at must be set together")
+	}
+	if next.EndsAt.Int64 <= next.StartsAt.Int64 {
+		return nil, status.Error(codes.InvalidArgument, "ends_at must be after starts_at")
+	}
+	return &next, nil
+}
+
 func validateInstant(field string, ms, now int64) error {
 	if ms < 0 {
 		return status.Errorf(codes.InvalidArgument, "%s must be a unix millisecond timestamp", field)
@@ -530,6 +715,15 @@ func (t todoView) toProto(includeDescription bool) *doxv1.Todo {
 	if t.RemindAt.Valid {
 		at := t.RemindAt.Int64
 		out.RemindAt = &at
+	}
+	out.Position = t.Position
+	if t.StartsAt.Valid {
+		at := t.StartsAt.Int64
+		out.StartsAt = &at
+	}
+	if t.EndsAt.Valid {
+		at := t.EndsAt.Int64
+		out.EndsAt = &at
 	}
 	return out
 }

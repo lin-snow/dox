@@ -71,7 +71,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         }
       } catch (err) {
         if (cancelled) return;
-        setError(`couldn't reach server: ${(err as Error).message}`);
+        setError(`Couldn't reach the server: ${(err as Error).message}`);
         setStage("server");
       }
     })();
@@ -177,7 +177,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
       return;
     }
     if (raw.length < MIN_PASSWORD_LEN) {
-      setError(`password must be at least ${MIN_PASSWORD_LEN} characters`);
+      setError(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
       return;
     }
     setError(null);
@@ -187,7 +187,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
 
   const submitConfirmPassword = (raw: string) => {
     if (raw !== password) {
-      setError("passwords don't match");
+      setError("Passwords do not match.");
       return;
     }
     setError(null);
@@ -221,8 +221,8 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         <Text color={color.muted}>
           {"   "}
           {reason === "reauth"
-            ? "your saved login was rejected — let's reconnect."
-            : "welcome — let's get you connected."}
+            ? "Your saved login was rejected. Let's reconnect."
+            : "Welcome. Let's get you connected."}
         </Text>
       </Box>
 
@@ -252,7 +252,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
         <Panel focused paddingY={1} width={64}>
           {stage === "server" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>where does your dox server live?</Text>
+              <Text color={color.muted}>Where does your dox server live?</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
                 <TextInput
@@ -265,12 +265,12 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           )}
 
           {stage === "probing" && (
-            <Spinner label={`connecting to ${server}…`} />
+            <Spinner label={`Connecting to ${server}…`} />
           )}
 
           {stage === "choose-branch" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>how would you like to connect?</Text>
+              <Text color={color.muted}>How would you like to connect?</Text>
               <Box flexDirection="column" marginTop={1}>
                 <Box>
                   <Text color={color.accent} bold>
@@ -291,14 +291,14 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
                 </Box>
               </Box>
               <Box marginTop={1}>
-                <Text color={color.muted}>press 1 or 2</Text>
+                <Text color={color.muted}>Press 1 or 2.</Text>
               </Box>
             </Box>
           )}
 
           {stage === "enter-invite" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>paste your invite code</Text>
+              <Text color={color.muted}>Paste your invite code.</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
                 <TextInput placeholder="ABCD-EFGH" onSubmit={submitInvite} />
@@ -309,7 +309,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-username" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                {intent === "login" ? "your username" : "pick a username"}
+                {intent === "login" ? "Your username." : "Pick a username."}
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -322,8 +322,8 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
             <Box flexDirection="column">
               <Text color={color.muted}>
                 {intent === "login"
-                  ? "your password"
-                  : `pick a password (min ${MIN_PASSWORD_LEN} chars)`}
+                  ? "Your password."
+                  : `Pick a password (at least ${MIN_PASSWORD_LEN} characters).`}
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -334,7 +334,7 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
 
           {stage === "confirm-password" && (
             <Box flexDirection="column">
-              <Text color={color.muted}>confirm password</Text>
+              <Text color={color.muted}>Confirm your password.</Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
                 <TextInput
@@ -348,8 +348,8 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-server-name" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                give this server a display name{" "}
-                <Text dimColor>(leave blank to skip)</Text>
+                Give this server a display name.{" "}
+                <Text dimColor>(Leave blank to skip.)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>
@@ -364,7 +364,8 @@ export function Onboarding({ reason = "fresh", onDone }: OnboardingProps) {
           {stage === "enter-server-description" && (
             <Box flexDirection="column">
               <Text color={color.muted}>
-                one-line description <Text dimColor>(leave blank to skip)</Text>
+                Add a one-line description.{" "}
+                <Text dimColor>(Leave blank to skip.)</Text>
               </Text>
               <Box marginTop={1}>
                 <Text color={color.muted}>{">  "}</Text>

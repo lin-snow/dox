@@ -40,6 +40,18 @@ message Todo {
   // May be set without due_at ("ping me Tuesday 15:00", no deadline). For an
   // all-day todo this must be set explicitly, otherwise no reminder fires.
   optional int64 remind_at = 12;
+  // Manual ordering key inside the todo's list scope (its project, or the
+  // creator's Inbox). Higher sorts first; ties fall back to created_at DESC,
+  // which is why an untouched list keeps its creation order. Only MoveTodo
+  // assigns meaningful values: it renumbers the whole scope densely.
+  int64 position = 13;
+  // Optional meeting window, UTC unix milliseconds. Both or neither: a todo
+  // with a start and an end is a meeting (project members are the invitees —
+  // they already receive its reminders), a todo with neither is a task.
+  // Independent of due_at: the window is when you meet, the deadline is when
+  // the work is owed.
+  optional int64 starts_at = 14;
+  optional int64 ends_at = 15;
 }
 
 // TodoService manages todos for the authenticated user.
@@ -71,6 +83,21 @@ service TodoService {
 
   rpc DeleteTodo(DeleteTodoRequest) returns (DeleteTodoResponse) {
     option (google.api.http) = {delete: "/v1/todos/{id}"};
+  }
+
+  // MoveTodo places a todo immediately after another todo in the same list
+  // scope (its project, or the creator's Inbox) and renumbers that scope
+  // densely. after_id unset = move to the front.
+  //
+  // Why an anchor and not an index: the client always knows the row it
+  // dropped beside, but two clients that reordered concurrently would
+  // disagree about what index N meant. The server resolves the anchor against
+  // what is actually stored, so the last write wins on a real position.
+  rpc MoveTodo(MoveTodoRequest) returns (Todo) {
+    option (google.api.http) = {
+      patch: "/v1/todos/{id}/position"
+      body: "*"
+    };
   }
 }
 
@@ -105,6 +132,9 @@ message CreateTodoRequest {
   optional bool due_all_day = 6;
   // IANA zone for an all-day due_at. Requires due_at.
   optional string due_zone = 7;
+  // Meeting window, UTC unix milliseconds. Set both or neither.
+  optional int64 starts_at = 8;
+  optional int64 ends_at = 9;
 }
 
 message UpdateTodoRequest {
@@ -122,6 +152,18 @@ message UpdateTodoRequest {
   optional bool due_all_day = 7;
   // IANA zone for an all-day deadline. Empty string clears it.
   optional string due_zone = 8;
+  // Patch the meeting window. Absent = unchanged; both 0 = clear; both > 0 =
+  // set (UTC unix milliseconds). A patch that leaves only one side set is
+  // rejected, so the window can never be half-written.
+  optional int64 starts_at = 9;
+  optional int64 ends_at = 10;
+}
+
+message MoveTodoRequest {
+  string id = 1;
+  // Place the todo directly after this one. Unset = move to the front of the
+  // scope. The anchor must be visible to the caller and in the same scope.
+  optional string after_id = 2;
 }
 
 message DeleteTodoRequest {

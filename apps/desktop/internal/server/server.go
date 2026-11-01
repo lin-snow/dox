@@ -449,7 +449,7 @@ func apiMessage(raw []byte, status int) string {
 	if json.Unmarshal(raw, &body) == nil && body.Message != "" {
 		return body.Message
 	}
-	return fmt.Sprintf("server returned %d", status)
+	return fmt.Sprintf("The server returned an error (%d).", status)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

@@ -1,5 +1,5 @@
 import { ApiError } from "@dox/core/browser";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   api,
@@ -13,14 +13,19 @@ import {
 } from "./api";
 import {
   BUCKETS,
+  bucketOf,
+  dueForBucket,
   flatten,
   group,
-  writeChecklist,
   readChecklist,
+  writeChecklist,
+  type Bucket,
 } from "./board";
 import { ActivitySheet } from "./components/ActivitySheet";
 import { Column } from "./components/Column";
 import { Composer, type Draft } from "./components/Composer";
+import { HelpSheet } from "./components/HelpSheet";
+import { LiveRegion, useAnnouncer } from "./components/LiveRegion";
 import { Onboarding } from "./components/Onboarding";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SettingsModal } from "./components/SettingsModal";
@@ -34,9 +39,9 @@ const isUnauthorized = (error: unknown) =>
   error instanceof ApiError && (error.status === 401 || error.status === 403);
 
 const EMPTY: Record<"later" | "week" | "today", string> = {
-  later: "nothing unscheduled",
-  week: "nothing this week",
-  today: "all clear",
+  later: "Nothing waiting",
+  week: "Nothing this week",
+  today: "All clear",
 };
 
 /** Re-bucket on the minute so "Today" stays true across midnight. */
@@ -54,13 +59,17 @@ export function App() {
   const [prefs, setPrefs] = useState<Prefs>({
     lastView: "all",
     notificationsEnabled: true,
+    showCompleted: false,
   });
   const [filter, setFilter] = useState("all");
   const [todos, setTodos] = useState<Todo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  /** undefined: closed, null: new, todo: editing. */
-  const [editing, setEditing] = useState<Todo | null | undefined>(undefined);
+  /** undefined: closed; todo: null means a new one, preset picks the column. */
+  const [editing, setEditing] = useState<
+    { todo: Todo | null; preset?: Bucket } | undefined
+  >(undefined);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [cursorId, setCursorId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -68,12 +77,25 @@ export function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  /** Drag in flight: the row, plus where the pointer currently is. */
+  const [drag, setDrag] = useState<{
+    id: string;
+    over: { id: string | null; bucket: Bucket };
+  } | null>(null);
 
   const now = useNow();
+  const { status, announce } = useAnnouncer();
+
+  // The `notice` string is the other half-visible message in this app (the
+  // toast is the first); it feeds the shared polite region rather than growing
+  // a live region of its own.
+  useEffect(() => {
+    if (notice) announce(notice);
+  }, [announce, notice]);
 
   const handleError = useCallback((caught: unknown) => {
     if (isUnauthorized(caught)) {
-      setNotice("your session expired — sign in again");
+      setNotice("Your session expired. Sign in again.");
       setEditing(undefined);
       setSession((current) =>
         current ? { ...current, signedIn: false, user: null } : current,
@@ -103,7 +125,7 @@ export function App() {
       api.events.list({ limit: 40 }),
     ]);
     setTodos(list);
-    setProjects(projectList.filter((project) => !project.archived));
+    setProjects(projectList);
     setEvents(feed);
   }, []);
 
@@ -142,32 +164,64 @@ export function App() {
   const openTodo = useCallback(
     (id: string) => {
       void guard(async () => {
-        setEditing(await api.todos.getTodo(id));
+        setEditing({ todo: await api.todos.getTodo(id) });
       });
     },
     [guard],
   );
 
-  // Backend pushes: notification taps, tray "open", session changes.
+  /**
+   * Coalesce server-change wakeups: the backend long-polls the change counter,
+   * so a burst of writes elsewhere arrives as several `data` frames within a
+   * few milliseconds and must not become several full refetches.
+   */
+  const refreshTimer = useRef<number | undefined>(undefined);
+  const scheduleRefresh = useCallback(() => {
+    window.clearTimeout(refreshTimer.current);
+    refreshTimer.current = window.setTimeout(() => {
+      void guard(refreshAll);
+    }, 150);
+  }, [guard, refreshAll]);
+
+  useEffect(() => () => window.clearTimeout(refreshTimer.current), []);
+
+  // Backend pushes: notification taps, tray "open", session changes, and — from
+  // the change watcher — "the server has data you have not seen".
   useEffect(() => {
     if (!session?.signedIn) return;
     return subscribe((event) => {
       if (event.type === "open") openTodo(event.todoId);
-      if (event.type === "reminder" || event.type === "session") {
+      if (event.type === "data") scheduleRefresh();
+      if (event.type === "reminder") {
         void guard(refreshSession);
+        scheduleRefresh();
       }
+      if (event.type === "session") void guard(refreshSession);
     });
-  }, [session?.signedIn, openTodo, guard, refreshSession]);
+  }, [session?.signedIn, openTodo, guard, refreshSession, scheduleRefresh]);
 
   const columns = useMemo(() => {
+    // Finished rows are held in `todos` but kept off the board unless asked
+    // for: nothing is hidden from search, and re-enabling the pref in
+    // Settings re-reveals them without a refetch.
+    const list = prefs.showCompleted
+      ? todos
+      : todos.filter((todo) => !todo.done);
     const scoped =
       filter === "all"
-        ? todos
-        : todos.filter((todo) => todo.projectId === filter);
+        ? list
+        : filter === "inbox"
+          ? list.filter((todo) => !todo.projectId)
+          : list.filter((todo) => todo.projectId === filter);
     return group(scoped, now);
-  }, [filter, now, todos]);
+  }, [filter, now, prefs.showCompleted, todos]);
 
   const ordered = useMemo(() => flatten(columns), [columns]);
+
+  const activeProjects = useMemo(
+    () => projects.filter((project) => !project.archived),
+    [projects],
+  );
 
   const projectById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
@@ -193,10 +247,18 @@ export function App() {
       const before = todos;
       setTodos(apply);
       setEditing((current) =>
-        current && current.id === todo.id
-          ? { ...current, done: next }
+        current?.todo?.id === todo.id
+          ? { todo: { ...current.todo, done: next }, preset: current.preset }
           : current,
       );
+      // Completing while finished rows are hidden makes the cursor's own row
+      // disappear, so hand the cursor to the row that takes its place rather
+      // than leaving the selection on something that is no longer drawn.
+      if (next && !prefs.showCompleted && cursorId === todo.id) {
+        const rows = columns[bucketOf(todo, now)];
+        const at = rows.findIndex((item) => item.id === todo.id);
+        setCursorId((rows[at + 1] ?? rows[at - 1])?.id ?? null);
+      }
       try {
         // Field-level patch: never resend title/description, so a concurrent
         // edit from another client survives.
@@ -206,7 +268,7 @@ export function App() {
         handleError(caught);
       }
     },
-    [handleError, todos],
+    [columns, cursorId, handleError, now, prefs.showCompleted, todos],
   );
 
   const patchTodo = useCallback(
@@ -216,13 +278,68 @@ export function App() {
         setTodos((list) =>
           list.map((item) => (item.id === updated.id ? updated : item)),
         );
+        announce("saved");
         return updated;
       } catch (caught) {
         handleError(caught);
         throw caught;
       }
     },
-    [handleError],
+    [announce, handleError],
+  );
+
+  /**
+   * Reorder inside one list. Scopes matter: the board can show every project
+   * at once, but MoveTodo renumbers a single scope, so a drop beside a row
+   * from another project has no meaning and is refused rather than guessed.
+   */
+  const reorder = useCallback(
+    async (moved: Todo, anchor?: Todo) => {
+      if (anchor && (moved.projectId ?? "") !== (anchor.projectId ?? "")) {
+        setNotice("Open a single project to reorder todos.");
+        return;
+      }
+      await guard(async () => {
+        await api.todos.moveTodo(moved.id, anchor?.id);
+        await refreshAll();
+        announce(`moved: ${moved.title}`);
+      });
+    },
+    [announce, guard, refreshAll],
+  );
+
+  /** Drop = reorder inside a column, reschedule into another one. */
+  const dropInto = useCallback(
+    async (target: { id: string | null; bucket: Bucket }) => {
+      const current = drag;
+      setDrag(null);
+      if (!current || current.id === target.id) return;
+      const moved = todos.find((todo) => todo.id === current.id);
+      if (!moved) return;
+
+      if (bucketOf(moved, now) !== target.bucket) {
+        await guard(async () => {
+          await api.todos.updateTodo(
+            moved.id,
+            dueForBucket(target.bucket, now),
+          );
+          await refreshAll();
+          announce(`rescheduled: ${moved.title}`);
+        });
+        return;
+      }
+
+      const rows = columns[target.bucket].filter((t) => t.id !== moved.id);
+      if (target.id === null) {
+        await reorder(moved, rows[rows.length - 1]);
+        return;
+      }
+      // The indicator sits above the row under the pointer, so the anchor is
+      // that row's predecessor -- or nothing, for the top of the column.
+      const at = rows.findIndex((t) => t.id === target.id);
+      await reorder(moved, at <= 0 ? undefined : rows[at - 1]);
+    },
+    [announce, columns, drag, guard, now, refreshAll, reorder, todos],
   );
 
   const create = useCallback(
@@ -234,14 +351,18 @@ export function App() {
           dueAt: draft.dueAt ?? undefined,
           dueAllDay: draft.dueAt ? !!draft.dueAllDay : undefined,
           dueZone: draft.dueAt ? (draft.dueZone ?? "") : undefined,
+          remindAt: draft.remindAt,
+          startsAt: draft.startsAt,
+          endsAt: draft.endsAt,
         });
         await refreshAll();
+        announce(`created: ${draft.title}`);
       } catch (caught) {
         handleError(caught);
         throw caught;
       }
     },
-    [handleError, refreshAll],
+    [announce, handleError, refreshAll],
   );
 
   const remove = useCallback(
@@ -250,12 +371,13 @@ export function App() {
         await api.todos.deleteTodo(todo.id);
         setEditing(undefined);
         await refreshAll();
+        announce(`deleted: ${todo.title}`);
       } catch (caught) {
         handleError(caught);
         throw caught;
       }
     },
-    [handleError, refreshAll],
+    [announce, handleError, refreshAll],
   );
 
   const toggleCheck = useCallback(
@@ -300,8 +422,9 @@ export function App() {
       setProjects([]);
       setEvents([]);
       setEditing(undefined);
+      announce("signed out");
     });
-  }, [guard]);
+  }, [announce, guard]);
 
   const savePrefs = useCallback(
     async (patch: Partial<Prefs>) => {
@@ -333,10 +456,23 @@ export function App() {
     [guard, refreshAll],
   );
 
-  const archiveProject = useCallback(
+  const setArchived = useCallback(
+    async (id: string, archived: boolean) => {
+      await guard(async () => {
+        await api.projects.update(id, { archived });
+        if (archived && filter === id) chooseFilter("all");
+        await refreshAll();
+      });
+    },
+    [chooseFilter, filter, guard, refreshAll],
+  );
+
+  // Deleting a project also deletes its todos (the schema cascades), so the
+  // settings row asks for a second click first.
+  const deleteProject = useCallback(
     async (id: string) => {
       await guard(async () => {
-        await api.projects.update(id, { archived: true });
+        await api.projects.remove(id);
         if (filter === id) chooseFilter("all");
         await refreshAll();
       });
@@ -364,7 +500,7 @@ export function App() {
       }
       if (meta && event.key.toLowerCase() === "n") {
         event.preventDefault();
-        setEditing(null);
+        setEditing({ todo: null });
         return;
       }
       if (meta && event.key.toLowerCase() === "r") {
@@ -381,12 +517,58 @@ export function App() {
         setSearchOpen(false);
         setSettingsOpen(false);
         setActivityOpen(false);
+        setHelpOpen(false);
         setEditing(undefined);
         return;
       }
       if (typing) return;
 
+      // A dialog owns the keyboard while it is open. Without this, a cursor
+      // key pressed on a dialog button would move the board selection behind
+      // the dialog, and `n` would stack a second composer on the first.
+      if (
+        editing !== undefined ||
+        searchOpen ||
+        settingsOpen ||
+        activityOpen ||
+        helpOpen
+      ) {
+        return;
+      }
+
+      if (event.key === "n") {
+        event.preventDefault();
+        setEditing({ todo: null });
+        return;
+      }
+      if (event.key === "?") {
+        event.preventDefault();
+        setHelpOpen(true);
+        return;
+      }
+
       const index = ordered.findIndex((todo) => todo.id === cursorId);
+
+      // Alt+arrows are the keyboard equivalent of a drag: same reorder, same
+      // server call, so the feature is not pointer-only.
+      if (
+        event.altKey &&
+        (event.key === "ArrowDown" || event.key === "ArrowUp")
+      ) {
+        event.preventDefault();
+        const target = ordered.find((todo) => todo.id === cursorId);
+        if (!target) return;
+        const rows = columns[bucketOf(target, now)];
+        const at = rows.findIndex((todo) => todo.id === target.id);
+        if (event.key === "ArrowDown") {
+          if (at >= rows.length - 1) return;
+          void reorder(target, rows[at + 1]);
+        } else {
+          void reorder(target, at <= 1 ? undefined : rows[at - 2]);
+        }
+        return;
+      }
+
       if (event.key === "ArrowDown" || event.key === "j") {
         event.preventDefault();
         const next = ordered[Math.min(index + 1, ordered.length - 1)];
@@ -414,7 +596,22 @@ export function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [cursorId, guard, openTodo, ordered, refreshAll, toggle]);
+  }, [
+    activityOpen,
+    columns,
+    cursorId,
+    editing,
+    guard,
+    helpOpen,
+    now,
+    openTodo,
+    ordered,
+    refreshAll,
+    reorder,
+    searchOpen,
+    settingsOpen,
+    toggle,
+  ]);
 
   useEffect(() => {
     if (!error) return;
@@ -424,25 +621,34 @@ export function App() {
 
   if (booting) {
     return (
-      <div className="splash">
-        <span className="mark">◆</span> loading…
-      </div>
+      <>
+        <LiveRegion status={status} alert={error} />
+        <div className="splash">
+          <img className="brand-mark" src="/dox.png" alt="" />
+          <span>Loading…</span>
+        </div>
+      </>
     );
   }
 
   if (!session) {
     return (
-      <div className="splash">
-        <p className="error">
-          {error || "the desktop backend is not answering"}
-        </p>
-      </div>
+      <>
+        <LiveRegion status={status} alert={error} />
+        <div className="splash">
+          <p className="error">{error || "Can't reach the server."}</p>
+        </div>
+      </>
     );
   }
 
   if (!session.signedIn || !session.user) {
     return (
       <>
+        {/* The signed-out root keeps its own region: App remounts between
+            branches, and a live region only announces what changes while it
+            is on screen. */}
+        <LiveRegion status={status} alert={error} />
         <Onboarding
           initialServer={session.server}
           notice={notice}
@@ -461,6 +667,14 @@ export function App() {
 
   return (
     <div className="app">
+      <LiveRegion status={status} alert={error} />
+      {/* One hint for every row: each row points here with aria-describedby,
+          so the equivalent of a drag is spoken once instead of three times per
+          column. */}
+      <p id="task-reorder-hint" className="sr-only">
+        Draggable. Or select it with j and k, then press Alt with the up or down
+        arrow to move it within its column.
+      </p>
       <div className="drag" />
       <TopBar
         onSearch={() => setSearchOpen(true)}
@@ -472,29 +686,59 @@ export function App() {
         {BUCKETS.map((bucket, index) => (
           <Column
             key={bucket.key}
+            bucket={bucket.key}
             label={bucket.label}
             count={counts[bucket.key]}
             todos={columns[bucket.key]}
-            projects={projects}
+            projects={activeProjects}
             filter={filter}
             cursorId={cursorId}
             showFilters={index === 0}
             empty={EMPTY[bucket.key]}
+            addLabel="New todo"
+            dragId={drag?.id ?? null}
+            dropOver={drag?.over ?? null}
             onFilter={chooseFilter}
             onCreateProject={(name) => void createProject(name, "")}
+            onAdd={() => setEditing({ todo: null, preset: bucket.key })}
             onToggle={(todo) => void toggle(todo)}
-            onOpen={(todo) => setEditing(todo)}
+            onOpen={(todo) => setEditing({ todo })}
             onChecklist={toggleCheck}
+            onDragStart={(todo) =>
+              setDrag({ id: todo.id, over: { id: null, bucket: bucket.key } })
+            }
+            onDragOverRow={(todo) =>
+              setDrag((current) =>
+                current
+                  ? { ...current, over: { id: todo.id, bucket: bucket.key } }
+                  : current,
+              )
+            }
+            onDragOverColumn={() =>
+              setDrag((current) =>
+                current
+                  ? { ...current, over: { id: null, bucket: bucket.key } }
+                  : current,
+              )
+            }
+            onDropRow={(todo) =>
+              void dropInto({ id: todo.id, bucket: bucket.key })
+            }
+            onDropColumn={() => void dropInto({ id: null, bucket: bucket.key })}
+            onDragEnd={() => setDrag(null)}
           />
         ))}
       </div>
 
       {editing !== undefined ? (
         <Composer
-          key={editing?.id ?? "new"}
-          todo={editing}
-          projects={projects}
-          defaultProjectId={filter === "all" ? undefined : filter}
+          key={editing.todo?.id ?? "new"}
+          todo={editing.todo}
+          preset={editing.preset}
+          projects={activeProjects}
+          defaultProjectId={
+            filter === "all" || filter === "inbox" ? undefined : filter
+          }
           onClose={() => setEditing(undefined)}
           onCreate={create}
           onPatch={patchTodo}
@@ -530,12 +774,16 @@ export function App() {
           canManageProjects={canManageProjects}
           onPrefs={savePrefs}
           onRenameProject={renameProject}
-          onArchiveProject={archiveProject}
+          onArchiveProject={(id) => setArchived(id, true)}
+          onRestoreProject={(id) => setArchived(id, false)}
+          onDeleteProject={deleteProject}
           onSignOut={signOut}
           onChangeServer={signOut}
           onClose={() => setSettingsOpen(false)}
         />
       ) : null}
+
+      {helpOpen ? <HelpSheet onClose={() => setHelpOpen(false)} /> : null}
 
       {error ? (
         <button type="button" className="toast" onClick={() => setError("")}>

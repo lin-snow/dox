@@ -44,8 +44,12 @@ import (
 //go:embed all:dist
 var assets embed.FS
 
-// version is injected at build time (-ldflags -X main.version=...).
-var version = "dev"
+//go:embed packaging/tray.png
+var trayPNG []byte
+
+// version is injected at build time (-ldflags -X main.version=...). A source
+// build stays empty so the UI never has to explain a "dev" build to a user.
+var version = ""
 
 const appName = "dox"
 
@@ -103,6 +107,7 @@ func main() {
 		// Headless: the reminder poller still runs (so unread counts and the
 		// event stream behave exactly as in the window) but nothing is shown.
 		startFeed(state, desktopSink{hub: hub, unread: &unread}, *reminderInterval)
+		startWatch(state, hub)
 		slog.Info("serving without a window", "addr", *serveAddr)
 		if err := http.ListenAndServe(*serveAddr, handler); err != nil {
 			log.Fatalf("serve: %v", err)
@@ -185,7 +190,7 @@ func main() {
 	}
 
 	menu := app.NewMenu()
-	statusItem := menu.Add("No reminders")
+	statusItem := menu.Add("No reminders due")
 	statusItem.SetEnabled(false)
 	menu.AddSeparator()
 	menu.Add("Open dox").OnClick(func(*application.Context) {
@@ -199,9 +204,21 @@ func main() {
 	tray.SetMenu(menu)
 
 	if notifier != nil {
-		if authorized, err := notifier.CheckNotificationAuthorization(); err == nil && !authorized {
-			if _, err := notifier.RequestNotificationAuthorization(); err != nil {
-				slog.Warn("notification permission denied", "err", err)
+		// Say out loud which state we are in: otherwise "no banner" is
+		// indistinguishable from "no reminder", and the only fix on a Mac is a
+		// trip to System Settings → Notifications → Dox.
+		authorized, err := notifier.CheckNotificationAuthorization()
+		switch {
+		case err != nil:
+			slog.Warn("notification authorization check failed", "err", err)
+		case authorized:
+			slog.Info("notification permission granted")
+		default:
+			granted, err := notifier.RequestNotificationAuthorization()
+			if err != nil {
+				slog.Warn("notification permission request failed", "err", err)
+			} else {
+				slog.Info("notification permission requested", "granted", granted)
 			}
 		}
 		notifier.OnNotificationResponse(func(result notifications.NotificationResult) {
@@ -215,6 +232,7 @@ func main() {
 	}
 
 	startFeed(state, desktopSink{hub: hub, unread: &unread, item: statusItem, notifier: notifier}, *reminderInterval)
+	startWatch(state, hub)
 
 	if err := app.Run(); err != nil {
 		log.Fatalf("run: %v", err)
@@ -251,6 +269,20 @@ func startFeed(state *store.Store, sink feed.Sink, interval time.Duration) {
 	})
 }
 
+// startWatch tells every open window when the server has changed, so a write
+// made anywhere else (CLI, TUI, another device, the web UI) shows up without a
+// manual refresh. It is deliberately separate from startFeed: the reminder
+// ledger answers "should I notify", this answers "is my copy still current".
+func startWatch(state *store.Store, hub *server.Hub) {
+	go watchChanges(context.Background(), state.SignedIn, changeSource{
+		Client: &http.Client{Timeout: watchClientTimeout},
+		Base:   state.Server,
+		Token:  state.Token,
+	}, func() {
+		hub.Publish(server.Event{Type: "data"})
+	})
+}
+
 // desktopSink turns polled reminders into native notifications, and keeps the
 // tray status line in step with the unread count. Both capabilities are
 // optional: `-serve` passes neither, and an unbundled macOS build passes a nil
@@ -262,22 +294,27 @@ type desktopSink struct {
 	notifier *notifications.NotificationService
 }
 
-func (s desktopSink) Notify(reminder feed.Reminder) {
+func (s desktopSink) Notify(reminder feed.Reminder) error {
 	title := reminder.TodoTitle
 	if title == "" {
 		title = "a todo is due"
 	}
 	if s.notifier == nil {
 		slog.Info("reminder", "todo", reminder.TodoID, "title", title)
-	} else {
-		s.notifier.SendNotification(notifications.NotificationOptions{
-			ID:    reminder.ID,
-			Title: title,
-			Body:  "due now — click to open",
-			Data:  map[string]any{"todoId": reminder.TodoID},
-		})
+	} else if err := s.notifier.SendNotification(notifications.NotificationOptions{
+		ID:    reminder.ID,
+		Title: title,
+		Body:  "due now — click to open",
+		Data:  map[string]any{"todoId": reminder.TodoID},
+	}); err != nil {
+		// macOS refuses the send when the app has no notification permission
+		// (common after re-signing an ad-hoc bundle). Returning it keeps the
+		// reminder unannounced so the next poll retries, and the error is what
+		// the log needs to explain a silence that looks like a bug.
+		return fmt.Errorf("send notification: %w", err)
 	}
 	s.hub.Publish(server.Event{Type: "reminder", TodoID: reminder.TodoID, Title: title})
+	return nil
 }
 
 func (s desktopSink) Unread(count int) {
@@ -288,7 +325,7 @@ func (s desktopSink) Unread(count int) {
 	if count > 0 {
 		s.item.SetLabel(fmt.Sprintf("%d due", count))
 	} else {
-		s.item.SetLabel("No reminders")
+		s.item.SetLabel("No reminders due")
 	}
 }
 
@@ -309,10 +346,13 @@ func mustSub(fsys fs.FS, dir string) fs.FS {
 	return sub
 }
 
-// trayIcon draws a small diamond: a template icon on macOS (black + alpha, the
-// system inverts it), and a slate mark elsewhere. Generated so the repo carries
-// no binary icon that could drift from the bundle.
+// trayIcon is the repo logo as a macOS template image (the system uses its
+// alpha channel, so the ink inverts with the menu bar). Other platforms get a
+// generated slate diamond, which stays legible on both light and dark panels.
 func trayIcon() []byte {
+	if runtime.GOOS == "darwin" {
+		return trayPNG
+	}
 	const size = 22
 	img := image.NewNRGBA(image.Rect(0, 0, size, size))
 
