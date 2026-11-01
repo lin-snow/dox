@@ -24,12 +24,13 @@ import {
 import { ActivitySheet } from "./components/ActivitySheet";
 import { Column } from "./components/Column";
 import { Composer, type Draft } from "./components/Composer";
+import { DoneView } from "./components/DoneView";
 import { HelpSheet } from "./components/HelpSheet";
 import { LiveRegion, useAnnouncer } from "./components/LiveRegion";
 import { Onboarding } from "./components/Onboarding";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SettingsModal } from "./components/SettingsModal";
-import { TopBar } from "./components/TopBar";
+import { TopBar, type View } from "./components/TopBar";
 import { subscribe } from "./events";
 
 const message = (error: unknown) =>
@@ -59,9 +60,10 @@ export function App() {
   const [prefs, setPrefs] = useState<Prefs>({
     lastView: "all",
     notificationsEnabled: true,
-    showCompleted: false,
   });
   const [filter, setFilter] = useState("all");
+  /** Which list the window shows: the board, or the completed todos. */
+  const [view, setView] = useState<View>("board");
   const [todos, setTodos] = useState<Todo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
@@ -201,22 +203,34 @@ export function App() {
   }, [session?.signedIn, openTodo, guard, refreshSession, scheduleRefresh]);
 
   const columns = useMemo(() => {
-    // Finished rows are held in `todos` but kept off the board unless asked
-    // for: nothing is hidden from search, and re-enabling the pref in
-    // Settings re-reveals them without a refetch.
-    const list = prefs.showCompleted
-      ? todos
-      : todos.filter((todo) => !todo.done);
+    // The board is open work only: a ticked todo moves to the Done view
+    // instead of sitting inline. `todos` keeps everything, so search still
+    // reaches a completed todo and the Done view needs no refetch.
+    const open = todos.filter((todo) => !todo.done);
     const scoped =
       filter === "all"
-        ? list
+        ? open
         : filter === "inbox"
-          ? list.filter((todo) => !todo.projectId)
-          : list.filter((todo) => todo.projectId === filter);
+          ? open.filter((todo) => !todo.projectId)
+          : open.filter((todo) => todo.projectId === filter);
     return group(scoped, now);
-  }, [filter, now, prefs.showCompleted, todos]);
+  }, [filter, now, todos]);
 
-  const ordered = useMemo(() => flatten(columns), [columns]);
+  /** Completed todos, most recently ticked first. `updatedAt` is the closest
+   * thing this resource has to "when it was completed", so it is the order the
+   * Done view claims — nothing here is manual. */
+  const doneTodos = useMemo(
+    () =>
+      todos
+        .filter((todo) => todo.done)
+        .sort((a, b) => Number(b.updatedAt ?? 0) - Number(a.updatedAt ?? 0)),
+    [todos],
+  );
+
+  const ordered = useMemo(
+    () => (view === "done" ? doneTodos : flatten(columns)),
+    [columns, doneTodos, view],
+  );
 
   const activeProjects = useMemo(
     () => projects.filter((project) => !project.archived),
@@ -251,11 +265,13 @@ export function App() {
           ? { todo: { ...current.todo, done: next }, preset: current.preset }
           : current,
       );
-      // Completing while finished rows are hidden makes the cursor's own row
-      // disappear, so hand the cursor to the row that takes its place rather
-      // than leaving the selection on something that is no longer drawn.
-      if (next && !prefs.showCompleted && cursorId === todo.id) {
-        const rows = columns[bucketOf(todo, now)];
+      // The row leaves whichever list is on screen — into Done when ticked,
+      // back to the board when reopened — so hand the cursor to the row that
+      // takes its place rather than leaving the selection on something that is
+      // no longer drawn.
+      const leaving = view === "done" ? !next : next;
+      if (leaving && cursorId === todo.id) {
+        const rows = view === "done" ? doneTodos : columns[bucketOf(todo, now)];
         const at = rows.findIndex((item) => item.id === todo.id);
         setCursorId((rows[at + 1] ?? rows[at - 1])?.id ?? null);
       }
@@ -268,7 +284,7 @@ export function App() {
         handleError(caught);
       }
     },
-    [columns, cursorId, handleError, now, prefs.showCompleted, todos],
+    [columns, cursorId, doneTodos, handleError, now, todos, view],
   );
 
   const patchTodo = useCallback(
@@ -404,6 +420,19 @@ export function App() {
       });
   }, []);
 
+  /** Switching lists clears the cursor and any drag: both are scoped to the
+   * list that was on screen, and a selection pointing at a row the new list
+   * does not draw would make the arrow keys jump. */
+  const switchView = useCallback(
+    (next: View) => {
+      setView(next);
+      setCursorId(null);
+      setDrag(null);
+      announce(next === "done" ? "showing done" : "showing board");
+    },
+    [announce],
+  );
+
   const signedIn = useCallback(
     (next: Session) => {
       setSession(next);
@@ -498,6 +527,11 @@ export function App() {
         setSearchOpen(true);
         return;
       }
+      if (meta && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        switchView(view === "done" ? "board" : "done");
+        return;
+      }
       if (meta && event.key.toLowerCase() === "n") {
         event.preventDefault();
         setEditing({ todo: null });
@@ -550,8 +584,10 @@ export function App() {
       const index = ordered.findIndex((todo) => todo.id === cursorId);
 
       // Alt+arrows are the keyboard equivalent of a drag: same reorder, same
-      // server call, so the feature is not pointer-only.
+      // server call, so the feature is not pointer-only. Only the board has an
+      // order to set; the Done list is sorted by recency.
       if (
+        view === "board" &&
         event.altKey &&
         (event.key === "ArrowDown" || event.key === "ArrowUp")
       ) {
@@ -610,7 +646,9 @@ export function App() {
     reorder,
     searchOpen,
     settingsOpen,
+    switchView,
     toggle,
+    view,
   ]);
 
   useEffect(() => {
@@ -677,58 +715,74 @@ export function App() {
       </p>
       <div className="drag" />
       <TopBar
+        view={view}
+        doneCount={doneTodos.length}
+        onView={switchView}
         onSearch={() => setSearchOpen(true)}
         onActivity={() => setActivityOpen(true)}
         onSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="board">
-        {BUCKETS.map((bucket, index) => (
-          <Column
-            key={bucket.key}
-            bucket={bucket.key}
-            label={bucket.label}
-            count={counts[bucket.key]}
-            todos={columns[bucket.key]}
-            projects={activeProjects}
-            filter={filter}
-            cursorId={cursorId}
-            showFilters={index === 0}
-            empty={EMPTY[bucket.key]}
-            addLabel="New todo"
-            dragId={drag?.id ?? null}
-            dropOver={drag?.over ?? null}
-            onFilter={chooseFilter}
-            onCreateProject={(name) => void createProject(name, "")}
-            onAdd={() => setEditing({ todo: null, preset: bucket.key })}
-            onToggle={(todo) => void toggle(todo)}
-            onOpen={(todo) => setEditing({ todo })}
-            onChecklist={toggleCheck}
-            onDragStart={(todo) =>
-              setDrag({ id: todo.id, over: { id: null, bucket: bucket.key } })
-            }
-            onDragOverRow={(todo) =>
-              setDrag((current) =>
-                current
-                  ? { ...current, over: { id: todo.id, bucket: bucket.key } }
-                  : current,
-              )
-            }
-            onDragOverColumn={() =>
-              setDrag((current) =>
-                current
-                  ? { ...current, over: { id: null, bucket: bucket.key } }
-                  : current,
-              )
-            }
-            onDropRow={(todo) =>
-              void dropInto({ id: todo.id, bucket: bucket.key })
-            }
-            onDropColumn={() => void dropInto({ id: null, bucket: bucket.key })}
-            onDragEnd={() => setDrag(null)}
-          />
-        ))}
-      </div>
+      {view === "done" ? (
+        <DoneView
+          todos={doneTodos}
+          projects={activeProjects}
+          cursorId={cursorId}
+          onToggle={(todo) => void toggle(todo)}
+          onOpen={(todo) => setEditing({ todo })}
+          onChecklist={toggleCheck}
+        />
+      ) : (
+        <div className="board">
+          {BUCKETS.map((bucket, index) => (
+            <Column
+              key={bucket.key}
+              bucket={bucket.key}
+              label={bucket.label}
+              count={counts[bucket.key]}
+              todos={columns[bucket.key]}
+              projects={activeProjects}
+              filter={filter}
+              cursorId={cursorId}
+              showFilters={index === 0}
+              empty={EMPTY[bucket.key]}
+              addLabel="New todo"
+              dragId={drag?.id ?? null}
+              dropOver={drag?.over ?? null}
+              onFilter={chooseFilter}
+              onCreateProject={(name) => void createProject(name, "")}
+              onAdd={() => setEditing({ todo: null, preset: bucket.key })}
+              onToggle={(todo) => void toggle(todo)}
+              onOpen={(todo) => setEditing({ todo })}
+              onChecklist={toggleCheck}
+              onDragStart={(todo) =>
+                setDrag({ id: todo.id, over: { id: null, bucket: bucket.key } })
+              }
+              onDragOverRow={(todo) =>
+                setDrag((current) =>
+                  current
+                    ? { ...current, over: { id: todo.id, bucket: bucket.key } }
+                    : current,
+                )
+              }
+              onDragOverColumn={() =>
+                setDrag((current) =>
+                  current
+                    ? { ...current, over: { id: null, bucket: bucket.key } }
+                    : current,
+                )
+              }
+              onDropRow={(todo) =>
+                void dropInto({ id: todo.id, bucket: bucket.key })
+              }
+              onDropColumn={() =>
+                void dropInto({ id: null, bucket: bucket.key })
+              }
+              onDragEnd={() => setDrag(null)}
+            />
+          ))}
+        </div>
+      )}
 
       {editing !== undefined ? (
         <Composer

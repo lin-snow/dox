@@ -29,15 +29,13 @@ func TestDefaultsOnFirstOpen(t *testing.T) {
 	if !prefs.NotificationsEnabled {
 		t.Error("notifications must default to on")
 	}
-	if prefs.ShowCompleted {
-		t.Error("completed todos must default to hidden")
-	}
 }
 
 func TestPartialPrefsDocumentKeepsDefaults(t *testing.T) {
 	dir := t.TempDir()
-	// A document written by an older build: no notifications field at all.
-	raw := `{"server":"","prefs":{"lastView":"today"}}`
+	// A document written by an older build: no notifications field, and a
+	// retired field (showCompleted) that this build no longer has.
+	raw := `{"server":"","prefs":{"lastView":"today","showCompleted":true}}`
 	if err := os.WriteFile(filepath.Join(dir, "desktop.json"), []byte(raw), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -52,9 +50,6 @@ func TestPartialPrefsDocumentKeepsDefaults(t *testing.T) {
 	}
 	if !prefs.NotificationsEnabled {
 		t.Error("an absent notifications flag must keep the default (on)")
-	}
-	if prefs.ShowCompleted {
-		t.Error("an absent showCompleted flag must keep the default (hidden)")
 	}
 }
 

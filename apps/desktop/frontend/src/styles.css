@@ -183,6 +183,13 @@ textarea {
   color: var(--ink);
 }
 
+/* The Done toggle stays lit while that list is on screen: it is the only
+   control in the bar that is a state, not an action. */
+.topbar button[data-on] {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+
 /* ---------- board ---------- */
 
 .board {
@@ -403,6 +410,43 @@ textarea {
 
 .add-row svg {
   opacity: 0.8;
+}
+
+/* ---------- done ---------- */
+
+/* One centered column, not three: completed todos are an archive, so the
+   deadline buckets have nothing to say about them. */
+.done {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding-top: var(--titlebar);
+}
+
+.done-inner {
+  flex: 1;
+  min-height: 0;
+  /* flex:1 is what carries min-height:0 down to the scroll area, so the width
+     cap has to be a max-width: `width` would be overridden by the flex basis. */
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Same left padding as .col-body so the rows line up under the heading. */
+.done-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 13px 200px 22px;
+  scrollbar-width: none;
+}
+
+.done-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ---------- task ---------- */

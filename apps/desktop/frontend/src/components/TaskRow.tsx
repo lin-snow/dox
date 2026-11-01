@@ -54,36 +54,51 @@ export function TaskRow({
   const due = chipDate(ms(todo.dueAt), !!todo.dueAllDay, todo.dueZone);
   const meeting = chipMeeting(ms(todo.startsAt), ms(todo.endsAt));
   const late = isOverdue(todo);
+  const draggable = onDragStart !== undefined;
 
   return (
     <div
       className="task"
       role="listitem"
-      aria-roledescription="sortable"
+      // `sortable` and the hint only make sense where a drop reorders; the
+      // Done list renders the same row without drag.
+      aria-roledescription={draggable ? "sortable" : undefined}
       // One hint, rendered once in App: repeating it per row would make every
       // row's description a paragraph.
-      aria-describedby="task-reorder-hint"
+      aria-describedby={draggable ? "task-reorder-hint" : undefined}
       aria-current={cursor ? "true" : undefined}
       data-done={todo.done || undefined}
       data-cursor={cursor || undefined}
       data-dragging={dragging || undefined}
       data-drop-before={dropBefore || undefined}
-      draggable
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        // Some engines refuse to start a drag with an empty payload.
-        event.dataTransfer.setData("text/plain", todo.id);
-        onDragStart(todo);
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        onDragOver(todo);
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop(todo);
-      }}
+      draggable={draggable}
+      onDragStart={
+        onDragStart
+          ? (event) => {
+              event.dataTransfer.effectAllowed = "move";
+              // Some engines refuse to start a drag with an empty payload.
+              event.dataTransfer.setData("text/plain", todo.id);
+              onDragStart(todo);
+            }
+          : undefined
+      }
+      onDragOver={
+        onDragOver
+          ? (event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              onDragOver(todo);
+            }
+          : undefined
+      }
+      onDrop={
+        onDrop
+          ? (event) => {
+              event.preventDefault();
+              onDrop(todo);
+            }
+          : undefined
+      }
       onDragEnd={onDragEnd}
     >
       <div className="task-main">

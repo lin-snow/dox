@@ -141,24 +141,6 @@ export function SettingsModal({
           </section>
 
           <section className="setting">
-            <h3>Board</h3>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={prefs.showCompleted}
-                onChange={(event) =>
-                  void onPrefs({ showCompleted: event.target.checked })
-                }
-              />
-              <span>Show completed todos</span>
-            </label>
-            <p className="hint">
-              Off keeps finished work out of the columns. Nothing is deleted:
-              turn this back on to see it again, or press ⌘K to search it.
-            </p>
-          </section>
-
-          <section className="setting">
             <h3>Projects</h3>
             {projects.length === 0 ? (
               <p className="hint">No projects yet</p>

@@ -109,6 +109,13 @@ Non-obvious decisions, in order of importance:
    aborts the process with an uncatchable ObjC exception when the binary runs
    outside a bundle, so `notificationsUsable()` skips notification setup instead
    of crashing. `just desktop-build` produces the signed .app.
+6. **The board is open work only; finished todos live in Done.** Ticking a row
+   removes it from its column and hands it to the Done view
+   (`components/DoneView.tsx`, toggled from the top bar or ⌘D), ordered by
+   `updatedAt` — the closest thing the resource has to "when it was completed".
+   There is deliberately no "show completed inline" preference: one place per
+   state, so a row can never be counted twice. Toggling from Done reopens the
+   todo, and the row moves straight back to the board.
 
 Commands: `just desktop-dev` (headless UI + backend), `just desktop-frontend`
 (bundle), `just desktop-build` (signed `apps/desktop/bin/Dox.app`),

@@ -30,11 +30,6 @@ const (
 type Preferences struct {
 	LastView             string `json:"lastView"`
 	NotificationsEnabled bool   `json:"notificationsEnabled"`
-	// ShowCompleted keeps finished todos on the board. Off by default: the
-	// board is a worklist, and a completed row is clutter the moment it is
-	// ticked. Nothing is deleted, so turning it back on re-reveals them, and
-	// search (⌘K) still reaches them meanwhile.
-	ShowCompleted bool `json:"showCompleted"`
 }
 
 type record struct {

@@ -11,6 +11,7 @@ const KEYS: readonly { keys: string; what: string }[] = [
   },
   { keys: "Enter", what: "Open the selected todo" },
   { keys: "Space", what: "Mark done or open" },
+  { keys: "⌘D", what: "Show the done list" },
   { keys: "⌘R", what: "Refresh" },
   { keys: "⌘,", what: "Settings" },
   { keys: "Esc", what: "Close the open panel" },
