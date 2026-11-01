@@ -22,6 +22,7 @@ import (
 	"github.com/lin-snow/dox/apps/server/internal/handler"
 	"github.com/lin-snow/dox/apps/server/internal/notifier"
 	"github.com/lin-snow/dox/apps/server/internal/version"
+	"github.com/lin-snow/dox/apps/server/internal/webui"
 )
 
 const shutdownTimeout = 5 * time.Second
@@ -79,8 +80,18 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	// /healthz is mounted outside the auth chain: probes never carry a token,
 	// and keeping it off the gateway leaves publicPaths untouched.
+	//
+	// The minimal web UI is public for the same reason, but for different
+	// bytes: it is plain static asset served on two exact routes, and it
+	// authenticates itself against /v1 with a bearer token. So publicPaths
+	// keeps its three entries and no cookie/CSRF surface exists. Only GET /
+	// and GET /static/... are claimed; everything else falls through to the
+	// API mux below.
 	root := http.NewServeMux()
 	root.HandleFunc("/healthz", healthHandler(dbConn))
+	web := webui.Handler()
+	root.Handle("GET /{$}", web)
+	root.Handle("GET /static/", web)
 	root.Handle("/", authn.Middleware(authn.NewJWTVerifier(secret))(authLimiter.Middleware(mux)))
 
 	srv := &http.Server{

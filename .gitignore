@@ -11,6 +11,7 @@ build/
 coverage.out
 *.prof
 apps/server/bin/
+apps/desktop/bin/
 
 # Local Docker build staging (mirrors CI artifact layout)
 artifacts/

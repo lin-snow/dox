@@ -5,6 +5,7 @@
   "description": "Self-hosted personal todo app — monorepo root",
   "workspaces": [
     "apps/cli",
+    "apps/desktop/frontend",
     "packages/*"
   ],
   "scripts": {

@@ -15,9 +15,10 @@ default:
 check:
     bash scripts/check.sh
 
-# Run all tests (Go + Bun).
-test:
+# Run all tests (server + desktop Go, Bun).
+test: desktop-frontend
     cd apps/server && go test ./...
+    cd apps/desktop && go test ./...
     bun test
 
 # === Codegen ===
@@ -68,6 +69,46 @@ server-build:
         -ldflags "-s -w -X {{VERSION_PKG}}.version={{SERVER_VERSION}} -X {{VERSION_PKG}}.commit=${commit} -X {{VERSION_PKG}}.date=${date} -X {{VERSION_PKG}}.builtBy=just" \
         -o bin/dox-server ./cmd/dox-server
     echo ">>> built apps/server/bin/dox-server ({{SERVER_VERSION}} ${commit})"
+
+# === Desktop ===
+
+# Build the webview bundle. Required before any Go build of apps/desktop: the
+# frontend is embedded into the binary and is a build artifact, like gen/.
+desktop-frontend:
+    cd apps/desktop/frontend && bun run build
+
+# Rebuild the webview bundle on change (pair with `just desktop-dev`)
+desktop-frontend-watch:
+    cd apps/desktop/frontend && bun run build --watch
+
+# Run the desktop backend headlessly: real UI over HTTP, no window, no keychain
+desktop-dev: desktop-frontend
+    cd apps/desktop && go run . -serve 127.0.0.1:5273 \
+        -config "${TMPDIR:-/tmp}/dox-desktop-dev" -keyring memory -reminder-interval 5s
+
+# Build and ad-hoc sign Dox.app into apps/desktop/bin.
+# private_mac_apis is required for real window translucency: Wails uses a
+# private WKWebView switch to let the macOS vibrancy show through. Drop it only
+# if you need App Store eligibility.
+desktop-build: desktop-frontend
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd apps/desktop
+    version="${SERVER_VERSION#v}"
+    # Rebuild the bundle from scratch: a stale _CodeSignature makes `open`
+    # refuse the app without any visible error.
+    rm -rf bin/Dox.app
+    mkdir -p bin/Dox.app/Contents/MacOS
+    go build -tags private_mac_apis \
+        -ldflags "-X main.version={{SERVER_VERSION}}" \
+        -o bin/Dox.app/Contents/MacOS/dox-desktop .
+    sed "s/__VERSION__/${version}/" packaging/Info.plist > bin/Dox.app/Contents/Info.plist
+    codesign --force --sign - bin/Dox.app
+    echo ">>> built apps/desktop/bin/Dox.app ({{SERVER_VERSION}})"
+
+# Run the desktop Go tests
+desktop-test:
+    cd apps/desktop && go test ./...
 
 # === Client ===
 

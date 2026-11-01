@@ -127,3 +127,31 @@ func TestUpdateTodo_duePatchSemantics(t *testing.T) {
 		t.Fatalf("title patch touched due: %+v, %v", got, err)
 	}
 }
+
+// The board wants notes inline, so asking for them must work without changing
+// what a plain listing returns.
+func TestListTodos_descriptionOnDemand(t *testing.T) {
+	s, _, ctx := newTodoFixture(t)
+	if _, err := s.CreateTodo(ctx, &doxv1.CreateTodoRequest{
+		Title:       "plan",
+		Description: new("- [ ] sketch\n- [x] budget"),
+	}); err != nil {
+		t.Fatalf("CreateTodo: %v", err)
+	}
+
+	plain, err := s.ListTodos(ctx, &doxv1.ListTodosRequest{})
+	if err != nil {
+		t.Fatalf("ListTodos: %v", err)
+	}
+	if got := plain.Todos[0].GetDescription(); got != "" {
+		t.Fatalf("description leaked into a plain listing: %q", got)
+	}
+
+	withBody, err := s.ListTodos(ctx, &doxv1.ListTodosRequest{IncludeDescription: true})
+	if err != nil {
+		t.Fatalf("ListTodos(include_description): %v", err)
+	}
+	if got := withBody.Todos[0].GetDescription(); got != "- [ ] sketch\n- [x] budget" {
+		t.Fatalf("description = %q", got)
+	}
+}

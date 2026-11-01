@@ -39,6 +39,7 @@ Always run `just gen` after editing anything under `proto/` or `apps/server/inte
 proto/dox/v1/                    contract: auth, user, project, invite, todo, event
 apps/server/                     Go binary (cmd/dox-server, internal/*)
 apps/cli/                        TS thin client — CLI (commander) + TUI (Ink/React)
+apps/desktop/                    Wails v3 desktop client — Go backend + React webview
 packages/core/                   shared TS: http client, config, output, per-resource SDKs
 packages/proto-gen/              generated TS message types (buf out)
 docker/, .github/workflows/      release.yml → Docker Hub + draft GH release
@@ -65,6 +66,46 @@ Package responsibilities (do not invent new ones — see `dox-server-layout` mem
 - `app/` — wiring + the retention sweep loop in `cleanup.go`.
 - `config/` — env-driven (`DOX_DB_PATH`, `DOX_LISTEN_ADDR`, `DOX_LOG_LEVEL`, `DOX_EVENT_RETENTION`).
 - `version/` — `version`, `commit`, `date`, `builtBy` are injected via `-ldflags` (see `justfile` / `release.yml`).
+- `webui/` — the minimal, build-stepless web UI: `//go:embed static`, served at exactly `GET /` and `GET /static/...`. It is mounted **outside** the auth chain because it is public static bytes; the page authenticates itself against `/v1` with a bearer token in `sessionStorage`, so `publicPaths` stays at three entries and there is no cookie/CSRF surface. Scope is frozen at sign-in / list / add / toggle / read — a richer UI belongs in `apps/desktop`, not here.
+
+### Desktop (apps/desktop/)
+
+A Wails v3 window over a **loopback HTTP surface** that proxies `/v1` to the
+configured remote server. It is a presentation layer like the CLI: it never runs
+a dox server, never opens SQLite, and keeps no domain cache.
+
+```
+main.go                    window / tray / notifications / headless -serve mode
+internal/proxy/            /v1 + /healthz → remote server, injects the bearer
+internal/server/           /__dox/* control plane (session, prefs, SSE) + bundle
+internal/store/            server URL, identity, UI prefs; JWT in the OS keychain
+internal/feed/             reminder ledger poller → native notifications
+frontend/                  React + Vite; imports @dox/core/browser, never bindings
+packaging/Info.plist       macOS bundle manifest (__VERSION__ is substituted)
+```
+
+Non-obvious decisions, in order of importance:
+
+1. **The webview talks to its own Go backend, not to the server.** `/v1/...` is
+   reverse-proxied, so the UI is same-origin with itself: the dox server needs
+   no CORS middleware, no cookie, and no change to its auth allowlist. The proxy
+   is also the only place the JWT exists in Go — it is stored in the keychain and
+   injected per request, so the renderer never holds the credential.
+2. **One transport, no Wails bindings.** Everything the UI needs is HTTP
+   (`/v1` proxied, `/__dox/*` for session/prefs/events), so the whole app can be
+   driven in a browser with `just desktop-dev`. Deep links and reminder taps
+   reach the UI over SSE (`GET /__dox/events`), not the Wails bridge.
+3. **The frontend is a build artifact.** `apps/desktop/dist` is embedded with
+   `//go:embed`, so `just desktop-frontend` (or any recipe that depends on it)
+   must run before `go build`/`go test` in that module.
+4. **macOS notifications require an .app bundle.** `UNUserNotificationCenter`
+   aborts the process with an uncatchable ObjC exception when the binary runs
+   outside a bundle, so `notificationsUsable()` skips notification setup instead
+   of crashing. `just desktop-build` produces the signed .app.
+
+Commands: `just desktop-dev` (headless UI + backend), `just desktop-frontend`
+(bundle), `just desktop-build` (signed `apps/desktop/bin/Dox.app`),
+`just desktop-test`.
 
 ### Database
 
@@ -90,7 +131,10 @@ Onboarding is non-obvious: read **`docs/onboarding.md`** before touching anythin
 - **RPC is grpc-gateway + HTTP/JSON. Do not propose Connect-RPC** (see `dox-rpc-decision` memory).
 - **Generated code is gitignored.** If a `apps/server/gen/...` or `packages/proto-gen/src/dox/...` import looks missing, run `just gen` — don't try to commit the generated files or edit them.
 - **Thin client.** The CLI/TUI does not cache server state; every action hits the server. Don't add a local cache layer.
+- **The desktop app must not import `apps/server`.** Its Go module has no dependency on the server module, which is what structurally prevents a bundled server (and a second source of truth) from creeping in. Keep the proxy generic HTTP; hand-write the few response structs the reminder poller needs.
+- **The JWT never reaches JavaScript in the desktop app.** It lives in the OS keychain and is injected by the proxy; `/__dox/session` returns identity only. Do not add a binding or endpoint that hands the token to the webview.
 - **Auth public-path allowlist is the security boundary.** Adding a new public endpoint means editing `publicPaths` in `authn/middleware.go` deliberately — anything not in that map requires a JWT.
+- **The web UI owns exactly two public routes.** `webui.Handler` is mounted as `GET /{$}` and `GET /static/`; everything else falls through to the auth-wrapped gateway. Do not add a catch-all or an index fallback there, and do not grow `internal/webui/static` past its frozen scope.
 - **Status codes carry meaning** (`authz/authz.go` docstring): NotFound vs PermissionDenied is a deliberate existence-leak control, not interchangeable.
 - **Bus messages and DB mutations must be tx-bound** — call `bus.Publish` from inside `runInTx` with the tx-bound `*queries.Queries`, never from outside the transaction.
 - **`emit_empty_slices: true`** is set in `sqlc.yaml` — sqlc list results are non-nil empty slices, not `nil`. Handlers and tests rely on this.

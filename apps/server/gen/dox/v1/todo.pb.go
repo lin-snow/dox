@@ -39,9 +39,9 @@ type Todo struct {
 	ProjectId *string `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
 	// User who created the todo.
 	CreatedBy string `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	// Optional long-form body, rendered as markdown by clients. Populated only
-	// by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
-	// payloads small.
+	// Optional long-form body, rendered as markdown by clients. GetTodo,
+	// CreateTodo and UpdateTodo always populate it; ListTodos omits it to keep
+	// list payloads small unless the caller sets include_description.
 	Description *string `protobuf:"bytes,8,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// Optional deadline, UTC unix milliseconds. Drives sorting, Today, and the
 	// overdue badge. Unset = no deadline.
@@ -179,9 +179,12 @@ type ListTodosRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Filter the listing. Unset = everything visible to caller. "inbox" = Inbox
 	// only. A project id = that project only (caller must be owner or member).
-	ProjectId     *string `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ProjectId *string `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3,oneof" json:"project_id,omitempty"`
+	// Include each todo's description. Off by default: a board that renders
+	// notes and checklists inline needs them, a plain list does not.
+	IncludeDescription bool `protobuf:"varint,2,opt,name=include_description,json=includeDescription,proto3" json:"include_description,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ListTodosRequest) Reset() {
@@ -219,6 +222,13 @@ func (x *ListTodosRequest) GetProjectId() string {
 		return *x.ProjectId
 	}
 	return ""
+}
+
+func (x *ListTodosRequest) GetIncludeDescription() bool {
+	if x != nil {
+		return x.IncludeDescription
+	}
+	return false
 }
 
 type ListTodosResponse struct {
@@ -622,10 +632,11 @@ const file_dox_v1_todo_proto_rawDesc = "" +
 	"\f_due_all_dayB\v\n" +
 	"\t_due_zoneB\f\n" +
 	"\n" +
-	"_remind_at\"E\n" +
+	"_remind_at\"v\n" +
 	"\x10ListTodosRequest\x12\"\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01B\r\n" +
+	"project_id\x18\x01 \x01(\tH\x00R\tprojectId\x88\x01\x01\x12/\n" +
+	"\x13include_description\x18\x02 \x01(\bR\x12includeDescriptionB\r\n" +
 	"\v_project_id\"7\n" +
 	"\x11ListTodosResponse\x12\"\n" +
 	"\x05todos\x18\x01 \x03(\v2\f.dox.v1.TodoR\x05todos\" \n" +

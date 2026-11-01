@@ -526,6 +526,13 @@ paths:
                      only. A project id = that project only (caller must be owner or member).
                   schema:
                     type: string
+                - name: includeDescription
+                  in: query
+                  description: |-
+                    Include each todo's description. Off by default: a board that renders
+                     notes and checklists inline needs them, a plain list does not.
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -1184,9 +1191,9 @@ components:
                 description:
                     type: string
                     description: |-
-                        Optional long-form body, rendered as markdown by clients. Populated only
-                         by GetTodo / CreateTodo / UpdateTodo — ListTodos omits it to keep list
-                         payloads small.
+                        Optional long-form body, rendered as markdown by clients. GetTodo,
+                         CreateTodo and UpdateTodo always populate it; ListTodos omits it to keep
+                         list payloads small unless the caller sets include_description.
                 dueAt:
                     type: string
                     description: |-

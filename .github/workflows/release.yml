@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: stable
+          go-version: "1.27.3"
           cache-dependency-path: apps/server/go.sum
 
       - name: Setup Zig for ARM64 cross-compilation

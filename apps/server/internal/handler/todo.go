@@ -95,7 +95,7 @@ func (s *Todo) ListTodos(ctx context.Context, req *doxv1.ListTodosRequest) (*dox
 	}
 	todos := make([]*doxv1.Todo, 0, len(rows))
 	for _, r := range rows {
-		todos = append(todos, r.toProto(false))
+		todos = append(todos, r.toProto(req.GetIncludeDescription()))
 	}
 	return &doxv1.ListTodosResponse{Todos: todos}, nil
 }

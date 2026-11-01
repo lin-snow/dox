@@ -1,8 +1,13 @@
 import type { Fetcher } from "../http";
 import type { Todo, TodoCreateOptions, TodoFilter, TodoPatch } from "./domain";
 
+export interface ListTodosOptions {
+  /** Ask the server to carry each description. Off: lists stay small. */
+  includeDescription?: boolean;
+}
+
 export interface TodoApi {
-  listTodos(filter?: TodoFilter): Promise<Todo[]>;
+  listTodos(filter?: TodoFilter, opts?: ListTodosOptions): Promise<Todo[]>;
   getTodo(id: string): Promise<Todo>;
   createTodo(title: string, opts?: TodoCreateOptions): Promise<Todo>;
   updateTodo(id: string, patch: TodoPatch): Promise<Todo>;
@@ -15,10 +20,16 @@ export class TodoClient implements TodoApi {
     private readonly base: string,
   ) {}
 
-  async listTodos(filter?: TodoFilter): Promise<Todo[]> {
+  async listTodos(
+    filter?: TodoFilter,
+    opts?: ListTodosOptions,
+  ): Promise<Todo[]> {
     const url = new URL(`${this.base}/v1/todos`);
     if (filter) {
       url.searchParams.set("project_id", filter);
+    }
+    if (opts?.includeDescription) {
+      url.searchParams.set("include_description", "true");
     }
     const res = await this.fetcher(new Request(url.toString()));
     const json = (await res.json()) as { todos?: Todo[] };

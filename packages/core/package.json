@@ -6,6 +6,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./browser": "./src/browser.ts",
     "./config": "./src/config/index.ts",
     "./output": "./src/output/index.ts",
     "./http": "./src/http/index.ts",

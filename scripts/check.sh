@@ -19,9 +19,12 @@ STEPS=(
   "go-fmt|$C_HDR_GO|Server: format (gofmt -s -w)|cd apps/server && gofmt -s -w ."
   "go-vet|$C_HDR_GO|Server: vet (go vet ./...)|cd apps/server && go vet ./..."
   "go-lint|$C_HDR_GO|Server: lint (golangci-lint run)|cd apps/server && golangci-lint run"
+  "desktop-web|$C_HDR_TS|Desktop: bundle (vite build)|cd apps/desktop/frontend && bun run build"
+  "desktop-fmt|$C_HDR_GO|Desktop: format (gofmt -s -w)|cd apps/desktop && gofmt -s -w ."
+  "desktop-vet|$C_HDR_GO|Desktop: vet (go vet ./...)|cd apps/desktop && go vet ./..."
   "ts-fmt|$C_HDR_TS|Client: format (prettier --write)|bun x prettier --write --log-level warn ."
   "ts-lint|$C_HDR_TS|Client: lint (eslint --fix)|bun x eslint --fix ."
-  "ts-check|$C_HDR_TS|Client: typecheck (tsc --noEmit)|bun x tsc -p packages/core/tsconfig.json --noEmit && bun x tsc -p apps/cli/tsconfig.json --noEmit"
+  "ts-check|$C_HDR_TS|Client: typecheck (tsc --noEmit)|bun x tsc -p packages/core/tsconfig.json --noEmit && bun x tsc -p apps/cli/tsconfig.json --noEmit && bun x tsc -p apps/desktop/frontend/tsconfig.json --noEmit"
 )
 
 keys=()
